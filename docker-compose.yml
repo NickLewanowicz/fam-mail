@@ -8,7 +8,9 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - POSTGRID_API_KEY=${POSTGRID_API_KEY}
+      - TEST_MODE=${TEST_MODE:-false}
+      - TEST_POSTGRID_KEY=${TEST_POSTGRID_KEY}
+      - REAL_POSTGRID_KEY=${REAL_POSTGRID_KEY}
       - PORT=3000
       - NODE_ENV=production
     restart: unless-stopped
