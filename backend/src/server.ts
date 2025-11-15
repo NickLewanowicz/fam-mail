@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { file } from 'bun'
+import { handlePostcardCreate } from './routes/postcards'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +56,10 @@ export async function handleRequest(req: Request): Promise<Response> {
         },
       }
     )
+  }
+
+  if (url.pathname === '/api/postcards' && req.method === 'POST') {
+    return handlePostcardCreate(req)
   }
 
   if (isProduction && !url.pathname.startsWith('/api')) {
