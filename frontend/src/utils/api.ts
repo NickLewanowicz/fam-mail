@@ -1,4 +1,5 @@
 import type { Address } from '../types/address'
+import { generateFrontHTML } from './postcardTemplate'
 
 export interface PostcardSubmission {
   to: Address
@@ -36,21 +37,7 @@ export async function submitPostcard(
   imageFile: File
 ): Promise<PostcardResponse> {
   const imageBase64 = await fileToBase64(imageFile)
-
-  const frontHTML = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { margin: 0; padding: 0; }
-          img { width: 100%; height: 100%; object-fit: cover; }
-        </style>
-      </head>
-      <body>
-        <img src="${imageBase64}" alt="Postcard" />
-      </body>
-    </html>
-  `
+  const frontHTML = generateFrontHTML(imageBase64)
 
   const submission: PostcardSubmission = {
     to: address,

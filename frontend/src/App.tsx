@@ -3,6 +3,7 @@ import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
 import { AddressForm } from './components/address/AddressForm'
 import { ImageUpload } from './components/postcard/ImageUpload'
+import { PostcardPreview } from './components/postcard/PostcardPreview'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
 
@@ -20,6 +21,7 @@ function App() {
   const [addressFormOpen, setAddressFormOpen] = useState(true)
   const [imageUploadOpen, setImageUploadOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<{ file: File; preview: string } | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
@@ -46,8 +48,10 @@ function App() {
   const handleImageSelect = (file: File, preview: string) => {
     if (file.name) {
       setSelectedImage({ file, preview })
+      setPreviewOpen(true)
     } else {
       setSelectedImage(null)
+      setPreviewOpen(false)
     }
   }
 
@@ -58,6 +62,7 @@ function App() {
     setSubmissionError(null)
     setAddressFormOpen(true)
     setImageUploadOpen(false)
+    setPreviewOpen(false)
   }
 
   const handleSubmit = async () => {
@@ -106,6 +111,14 @@ function App() {
                 selectedImage={selectedImage}
                 isOpen={imageUploadOpen}
                 onToggle={() => setImageUploadOpen(!imageUploadOpen)}
+              />
+            )}
+
+            {selectedImage && (
+              <PostcardPreview
+                imagePreview={selectedImage.preview}
+                isOpen={previewOpen}
+                onToggle={() => setPreviewOpen(!previewOpen)}
               />
             )}
           </div>
