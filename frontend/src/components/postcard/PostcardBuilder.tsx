@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import MDEditor from '@uiw/react-md-editor'
+import { marked } from 'marked'
 import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from '../../utils/postcardTemplate'
 import type { Address } from '../../types/address'
 
@@ -27,7 +28,20 @@ export function PostcardBuilder({
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [activeTab, setActiveTab] = useState<'address' | 'message'>('address')
+  const [messageHTML, setMessageHTML] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    const convertMarkdown = async () => {
+      if (message) {
+        const html = await marked(message)
+        setMessageHTML(html)
+      } else {
+        setMessageHTML('')
+      }
+    }
+    convertMarkdown()
+  }, [message])
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -97,7 +111,7 @@ export function PostcardBuilder({
   const frontHTML = selectedImage
     ? generatePreviewHTML(selectedImage.preview, 'front', showSafeZones)
     : generatePreviewHTML('', 'front', showSafeZones)
-  const backHTML = generatePreviewHTML('', 'back', showSafeZones)
+  const backHTML = generatePreviewHTML('', 'back', showSafeZones, messageHTML)
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -180,8 +194,8 @@ export function PostcardBuilder({
           {!selectedImage ? (
             <div
               className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${isDragging
-                  ? 'border-primary bg-primary/10'
-                  : 'border-base-300 hover:border-primary hover:bg-base-300'
+                ? 'border-primary bg-primary/10'
+                : 'border-base-300 hover:border-primary hover:bg-base-300'
                 }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
