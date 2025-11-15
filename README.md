@@ -44,11 +44,15 @@ Create `backend/.env`:
 
 ```bash
 cd backend
-echo "POSTGRID_API_KEY=your_api_key_here
+echo "TEST_MODE=true
+POSTGRID_TEST_KEY=test_sk_PLACEHOLDER
+POSTGRID_PROD_KEY=sk_PLACEHOLDER
 PORT=3001
 NODE_ENV=development" > .env
 cd ..
 ```
+
+**Note:** Set `TEST_MODE=true` to use the test PostGrid key. Set it to `false` or omit it to use the real PostGrid key.
 
 ### 3. Start Development Servers
 
@@ -72,8 +76,10 @@ pnpm lint                # Check for linting errors
 ## Docker Quick Start
 
 ```bash
-# Create .env with your PostGrid API key
-echo "POSTGRID_API_KEY=your_key_here" > .env
+# Create .env with your PostGrid API keys
+echo "TEST_MODE=true
+POSTGRID_TEST_KEY=test_sk_PLACEHOLDER
+POSTGRID_PROD_KEY=sk_PLACEHOLDER" > .env
 
 # Start with Docker Compose
 docker-compose up -d
@@ -103,17 +109,25 @@ fam-mail/
 
 ### Development (`backend/.env`)
 
-| Variable           | Description           | Required | Default       |
-| ------------------ | --------------------- | -------- | ------------- |
-| `POSTGRID_API_KEY` | Your PostGrid API key | Yes      | -             |
-| `PORT`             | Backend server port   | No       | `3001`        |
-| `NODE_ENV`         | Environment mode      | No       | `development` |
+| Variable              | Description                                      | Required | Default       |
+| --------------------- | ------------------------------------------------ | -------- | ------------- |
+| `TEST_MODE`           | Set to `true` to use test PostGrid key           | No       | `false`       |
+| `POSTGRID_TEST_KEY`   | Your test PostGrid API key (starts with test_)  | Yes*     | -             |
+| `POSTGRID_PROD_KEY`   | Your live PostGrid API key                       | Yes*     | -             |
+| `PORT`                | Backend server port                              | No       | `3001`        |
+| `NODE_ENV`            | Environment mode                                 | No       | `development` |
+
+*At least one API key (test or real) is required depending on `TEST_MODE`
 
 ### Production (`.env` in root)
 
-| Variable           | Description           | Required | Default |
-| ------------------ | --------------------- | -------- | ------- |
-| `POSTGRID_API_KEY` | Your PostGrid API key | Yes      | -       |
+| Variable              | Description                                      | Required | Default |
+| --------------------- | ------------------------------------------------ | -------- | ------- |
+| `TEST_MODE`           | Set to `true` to use test PostGrid key           | No       | `false` |
+| `POSTGRID_TEST_KEY`   | Your test PostGrid API key (starts with test_)  | Yes*     | -       |
+| `POSTGRID_PROD_KEY`   | Your live PostGrid API key                       | Yes*     | -       |
+
+*At least one API key (test or real) is required depending on `TEST_MODE`
 
 ## Contributing
 

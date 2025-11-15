@@ -5,13 +5,13 @@ export class PostGridService {
   private baseUrl: string
   private isTestMode: boolean
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, testMode = false) {
     if (!apiKey) {
       throw new Error('PostGrid API key is required')
     }
     this.apiKey = apiKey
     this.baseUrl = 'https://api.postgrid.com/v1'
-    this.isTestMode = apiKey.startsWith('test_')
+    this.isTestMode = testMode
   }
 
   async createPostcard(request: PostGridPostcardRequest): Promise<PostGridPostcardResponse> {
@@ -56,9 +56,13 @@ export class PostGridService {
 let _postgridService: PostGridService | null = null
 
 try {
-  const apiKey = process.env.POSTGRID_API_KEY
+  const isTestMode = process.env.TEST_MODE === 'true'
+  const apiKey = isTestMode
+    ? process.env.POSTGRID_TEST_KEY
+    : process.env.POSTGRID_PROD_KEY
+
   if (apiKey) {
-    _postgridService = new PostGridService(apiKey)
+    _postgridService = new PostGridService(apiKey, isTestMode)
   }
 } catch {
   // Service will be null if no API key is provided (e.g., during tests)

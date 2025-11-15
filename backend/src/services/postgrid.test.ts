@@ -2,12 +2,17 @@ import { describe, it, expect, mock } from 'bun:test'
 import { PostGridService } from './postgrid'
 
 describe('PostGridService', () => {
-  it('should detect test mode from API key', () => {
-    const testService = new PostGridService('test_sk_PLACEHOLDER')
+  it('should set test mode when flag is true', () => {
+    const testService = new PostGridService('test_sk_PLACEHOLDER', true)
     expect(testService.getTestMode()).toBe(true)
 
-    const liveService = new PostGridService('live_sk_123456')
+    const liveService = new PostGridService('live_sk_123456', false)
     expect(liveService.getTestMode()).toBe(false)
+  })
+
+  it('should default to live mode when flag not provided', () => {
+    const service = new PostGridService('sk_123456')
+    expect(service.getTestMode()).toBe(false)
   })
 
   it('should throw error if API key is missing', () => {
@@ -23,7 +28,7 @@ describe('PostGridService', () => {
     )
     global.fetch = mockFetch as unknown as typeof fetch
 
-    const service = new PostGridService('test_sk_PLACEHOLDER')
+    const service = new PostGridService('test_sk_PLACEHOLDER', true)
     await service.createPostcard({
       to: {
         firstName: 'John',
@@ -58,7 +63,7 @@ describe('PostGridService', () => {
     )
     global.fetch = mockFetch as unknown as typeof fetch
 
-    const service = new PostGridService('test_sk_PLACEHOLDER')
+    const service = new PostGridService('test_sk_PLACEHOLDER', true)
 
     try {
       await service.createPostcard({
