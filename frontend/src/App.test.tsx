@@ -148,9 +148,9 @@ describe('App Component', () => {
 
   it('should render image upload after address is submitted', async () => {
     const user = userEvent.setup()
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
+      ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+      } as Response)
 
     render(<App />)
 
@@ -169,9 +169,9 @@ describe('App Component', () => {
 
   it('should close address form after address is submitted', async () => {
     const user = userEvent.setup()
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
+      ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+      } as Response)
 
     render(<App />)
 
@@ -189,9 +189,9 @@ describe('App Component', () => {
 
   it('should render send postcard button after both address and image are provided', async () => {
     const user = userEvent.setup()
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
+      ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+      } as Response)
 
     render(<App />)
 
@@ -215,9 +215,9 @@ describe('App Component', () => {
 
   it('should show send button only when both address and image are selected', async () => {
     const user = userEvent.setup()
-    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
+      ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+      } as Response)
 
     render(<App />)
 
