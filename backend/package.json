@@ -1,0 +1,25 @@
+{
+  "name": "@fam-mail/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "NODE_ENV=production bun run src/index.ts",
+    "build": "bun build src/index.ts --outdir ./dist --target bun",
+    "test": "bun test",
+    "lint": "eslint src --ext .ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@types/cors": "^2.8.17",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "^8.56.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,155 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 3rem 2rem;
+  text-align: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.tagline {
+  margin: 0.5rem 0 0;
+  font-size: 1.25rem;
+  opacity: 0.95;
+}
+
+.main {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+}
+
+.status-card,
+.info-card,
+.next-steps {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-card h2,
+.info-card h2,
+.next-steps h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.loading {
+  color: #667eea;
+  font-size: 1.1rem;
+}
+
+.success {
+  text-align: center;
+}
+
+.status-icon {
+  font-size: 3rem;
+  margin: 0;
+}
+
+.success p {
+  margin: 0.5rem 0;
+}
+
+.status-text {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.error {
+  text-align: center;
+  color: #ef4444;
+}
+
+.error-message {
+  font-family: monospace;
+  background: #fee;
+  padding: 0.5rem;
+  border-radius: 4px;
+  margin-top: 1rem;
+}
+
+.info-card ul {
+  line-height: 1.8;
+  color: #555;
+}
+
+.info-card li {
+  margin: 0.5rem 0;
+}
+
+.next-steps ol {
+  line-height: 1.8;
+  color: #555;
+}
+
+.next-steps li {
+  margin: 0.75rem 0;
+}
+
+.next-steps code {
+  background: #f3f4f6;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #667eea;
+}
+
+.next-steps a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.next-steps a:hover {
+  text-decoration: underline;
+}
+
+.footer {
+  background: #f9fafb;
+  padding: 2rem;
+  text-align: center;
+  color: #6b7280;
+  border-top: 1px solid #e5e7eb;
+}
+
+.footer p {
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 2rem;
+  }
+
+  .tagline {
+    font-size: 1rem;
+  }
+
+  .main {
+    padding: 1rem;
+  }
+
+  .status-card,
+  .info-card,
+  .next-steps {
+    padding: 1.5rem;
+  }
+}
