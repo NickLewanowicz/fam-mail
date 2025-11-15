@@ -22,8 +22,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/health') {
-    const apiKey = process.env.POSTGRID_API_KEY || ''
-    const isTestMode = apiKey.startsWith('test_')
+    const isTestMode = process.env.TEST_MODE === 'true'
 
     return new Response(
       JSON.stringify({
