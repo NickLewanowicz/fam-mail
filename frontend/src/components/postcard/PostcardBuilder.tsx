@@ -1,22 +1,27 @@
 import { useState, useRef } from 'react'
+import MDEditor from '@uiw/react-md-editor'
 import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from '../../utils/postcardTemplate'
 import type { Address } from '../../types/address'
 
 interface PostcardBuilderProps {
   onAddressChange: (address: Address | null) => void
   onImageChange: (image: { file: File; preview: string } | null) => void
+  onMessageChange: (message: string) => void
   selectedImage: { file: File; preview: string } | null
   recipientAddress: Address | null
+  message: string
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 
-export function PostcardBuilder({ 
-  onAddressChange, 
+export function PostcardBuilder({
+  onAddressChange,
   onImageChange,
+  onMessageChange,
   selectedImage,
-  recipientAddress
+  recipientAddress,
+  message
 }: PostcardBuilderProps) {
   const [showSafeZones, setShowSafeZones] = useState(true)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -36,7 +41,7 @@ export function PostcardBuilder({
 
   const handleFileSelect = async (file: File) => {
     setUploadError(null)
-    
+
     const error = validateFile(file)
     if (error) {
       setUploadError(error)
@@ -74,7 +79,7 @@ export function PostcardBuilder({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
-    
+
     const file = e.dataTransfer.files?.[0]
     if (file) {
       handleFileSelect(file)
@@ -89,14 +94,14 @@ export function PostcardBuilder({
     }
   }
 
-  const frontHTML = selectedImage 
+  const frontHTML = selectedImage
     ? generatePreviewHTML(selectedImage.preview, 'front', showSafeZones)
     : generatePreviewHTML('', 'front', showSafeZones)
   const backHTML = generatePreviewHTML('', 'back', showSafeZones)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold">Create Your Postcard</h2>
         <div className="form-control">
           <label className="label cursor-pointer gap-2">
@@ -127,8 +132,8 @@ export function PostcardBuilder({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-semibold">Front</h3>
             {selectedImage && (
@@ -137,15 +142,17 @@ export function PostcardBuilder({
               </button>
             )}
           </div>
-          
-          <div className="bg-base-200 rounded-lg p-4">
+
+          <div className="bg-base-200 rounded-lg p-3 lg:p-4">
             <div
+              className="mx-auto"
               style={{
                 width: '100%',
                 maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 3}px`,
-                height: `${POSTCARD_6X4_DIMENSIONS.height / 3}px`,
-                margin: '0 auto',
+                aspectRatio: '6/4',
                 boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
               <iframe
@@ -172,11 +179,10 @@ export function PostcardBuilder({
 
           {!selectedImage ? (
             <div
-              className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                isDragging
+              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${isDragging
                   ? 'border-primary bg-primary/10'
                   : 'border-base-300 hover:border-primary hover:bg-base-300'
-              }`}
+                }`}
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
@@ -184,7 +190,7 @@ export function PostcardBuilder({
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-12 w-12 mx-auto mb-4 opacity-50"
+                className="h-10 w-10 mx-auto mb-2 opacity-50"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -196,7 +202,7 @@ export function PostcardBuilder({
                   d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
                 />
               </svg>
-              <p className="text-sm mb-2">
+              <p className="text-sm mb-1">
                 <span className="font-semibold">Click to upload</span> or drag and drop
               </p>
               <p className="text-xs opacity-70">
@@ -212,26 +218,28 @@ export function PostcardBuilder({
               />
             </div>
           ) : (
-            <div className="alert alert-success">
-              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <div className="alert alert-success py-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span>Image uploaded: {selectedImage.file.name}</span>
+              <span className="text-sm">{selectedImage.file.name}</span>
             </div>
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <h3 className="text-lg font-semibold">Back</h3>
-          
-          <div className="bg-base-200 rounded-lg p-4">
+
+          <div className="bg-base-200 rounded-lg p-3 lg:p-4">
             <div
+              className="mx-auto"
               style={{
                 width: '100%',
                 maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 3}px`,
-                height: `${POSTCARD_6X4_DIMENSIONS.height / 3}px`,
-                margin: '0 auto',
+                aspectRatio: '6/4',
                 boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                position: 'relative',
+                overflow: 'hidden',
               }}
             >
               <iframe
@@ -253,63 +261,65 @@ export function PostcardBuilder({
           <div className="card bg-base-100 shadow-lg">
             <div className="card-body p-0">
               <div className="tabs tabs-boxed bg-base-200">
-                <button 
-                  className={`tab tab-lg flex-1 ${activeTab === 'address' ? 'tab-active' : ''}`}
+                <button
+                  className={`tab tab-md lg:tab-lg flex-1 ${activeTab === 'address' ? 'tab-active' : ''}`}
                   onClick={() => setActiveTab('address')}
                 >
                   Address
                 </button>
-                <button 
-                  className={`tab tab-lg flex-1 ${activeTab === 'message' ? 'tab-active' : ''}`}
+                <button
+                  className={`tab tab-md lg:tab-lg flex-1 ${activeTab === 'message' ? 'tab-active' : ''}`}
                   onClick={() => setActiveTab('message')}
                 >
                   Message
                 </button>
               </div>
 
-              <div className="p-4">
+              <div className="p-3 lg:p-4">
                 {activeTab === 'address' && (
                   <div className="space-y-4">
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">First Name</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="input input-bordered"
-                        value={recipientAddress?.firstName || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: e.target.value,
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
-                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">First Name</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="input input-bordered input-sm lg:input-md"
+                          value={recipientAddress?.firstName || ''}
+                          onChange={(e) => onAddressChange({
+                            ...recipientAddress,
+                            firstName: e.target.value,
+                            lastName: recipientAddress?.lastName || '',
+                            addressLine1: recipientAddress?.addressLine1 || '',
+                            city: recipientAddress?.city || '',
+                            provinceOrState: recipientAddress?.provinceOrState || '',
+                            postalOrZip: recipientAddress?.postalOrZip || '',
+                            countryCode: recipientAddress?.countryCode || 'CA',
+                          })}
+                        />
+                      </div>
 
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Last Name</span>
-                      </label>
-                      <input
-                        type="text"
-                        className="input input-bordered"
-                        value={recipientAddress?.lastName || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: recipientAddress?.firstName || '',
-                          lastName: e.target.value,
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">Last Name</span>
+                        </label>
+                        <input
+                          type="text"
+                          className="input input-bordered input-sm lg:input-md"
+                          value={recipientAddress?.lastName || ''}
+                          onChange={(e) => onAddressChange({
+                            ...recipientAddress,
+                            firstName: recipientAddress?.firstName || '',
+                            lastName: e.target.value,
+                            addressLine1: recipientAddress?.addressLine1 || '',
+                            city: recipientAddress?.city || '',
+                            provinceOrState: recipientAddress?.provinceOrState || '',
+                            postalOrZip: recipientAddress?.postalOrZip || '',
+                            countryCode: recipientAddress?.countryCode || 'CA',
+                          })}
+                        />
+                      </div>
                     </div>
 
                     <div className="form-control">
@@ -318,7 +328,7 @@ export function PostcardBuilder({
                       </label>
                       <input
                         type="text"
-                        className="input input-bordered"
+                        className="input input-bordered input-sm lg:input-md"
                         value={recipientAddress?.addressLine1 || ''}
                         onChange={(e) => onAddressChange({
                           ...recipientAddress,
@@ -339,7 +349,7 @@ export function PostcardBuilder({
                       </label>
                       <input
                         type="text"
-                        className="input input-bordered"
+                        className="input input-bordered input-sm lg:input-md"
                         value={recipientAddress?.addressLine2 || ''}
                         onChange={(e) => onAddressChange({
                           ...recipientAddress,
@@ -355,14 +365,14 @@ export function PostcardBuilder({
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="form-control">
                         <label className="label">
                           <span className="label-text">City</span>
                         </label>
                         <input
                           type="text"
-                          className="input input-bordered"
+                          className="input input-bordered input-sm lg:input-md"
                           value={recipientAddress?.city || ''}
                           onChange={(e) => onAddressChange({
                             ...recipientAddress,
@@ -383,7 +393,7 @@ export function PostcardBuilder({
                         </label>
                         <input
                           type="text"
-                          className="input input-bordered"
+                          className="input input-bordered input-sm lg:input-md"
                           value={recipientAddress?.provinceOrState || ''}
                           onChange={(e) => onAddressChange({
                             ...recipientAddress,
@@ -399,14 +409,14 @@ export function PostcardBuilder({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="form-control">
                         <label className="label">
                           <span className="label-text">Postal/Zip Code</span>
                         </label>
                         <input
                           type="text"
-                          className="input input-bordered"
+                          className="input input-bordered input-sm lg:input-md"
                           value={recipientAddress?.postalOrZip || ''}
                           onChange={(e) => onAddressChange({
                             ...recipientAddress,
@@ -426,7 +436,7 @@ export function PostcardBuilder({
                           <span className="label-text">Country</span>
                         </label>
                         <select
-                          className="select select-bordered"
+                          className="select select-bordered select-sm lg:select-md"
                           value={recipientAddress?.countryCode || 'CA'}
                           onChange={(e) => onAddressChange({
                             ...recipientAddress,
@@ -449,22 +459,18 @@ export function PostcardBuilder({
                 )}
 
                 {activeTab === 'message' && (
-                  <div className="space-y-4">
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Your Message</span>
-                      </label>
-                      <textarea
-                        className="textarea textarea-bordered h-48"
-                        placeholder="Write your message here... (Coming soon)"
-                        disabled
+                  <div className="space-y-2">
+                    <label className="label">
+                      <span className="label-text">Your Message</span>
+                      <span className="label-text-alt text-xs opacity-70">Markdown with live preview</span>
+                    </label>
+                    <div data-color-mode="light">
+                      <MDEditor
+                        value={message}
+                        onChange={(val) => onMessageChange(val || '')}
+                        preview="live"
+                        height={300}
                       />
-                    </div>
-                    <div className="alert alert-info">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="text-sm">Message functionality coming soon!</span>
                     </div>
                   </div>
                 )}
