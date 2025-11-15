@@ -231,6 +231,6 @@ export function generatePreviewHTML(
       z-index: 1001;
     "></div>` : ''}
   `
-  
+
   return baseHTML.replace('</body>', `${safeZoneOverlay}</body>`)
 }
