@@ -1,0 +1,183 @@
+import { useForm } from 'react-hook-form'
+import type { Address } from '../../types/address'
+
+interface AddressFormProps {
+  onSubmit: (address: Address) => void
+  initialAddress?: Partial<Address>
+  isOpen?: boolean
+  onToggle?: () => void
+}
+
+export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle }: AddressFormProps) {
+  const { register, handleSubmit, formState: { errors } } = useForm<Address>({
+    defaultValues: {
+      firstName: initialAddress?.firstName || '',
+      lastName: initialAddress?.lastName || '',
+      addressLine1: initialAddress?.addressLine1 || '',
+      addressLine2: initialAddress?.addressLine2 || '',
+      city: initialAddress?.city || 'Ottawa',
+      provinceOrState: initialAddress?.provinceOrState || 'ON',
+      postalOrZip: initialAddress?.postalOrZip || '',
+      countryCode: initialAddress?.countryCode || 'CA',
+    }
+  })
+
+  return (
+    <div className="collapse collapse-arrow bg-base-100 shadow-xl">
+      <input type="checkbox" checked={isOpen} onChange={onToggle || (() => {})} />
+      <div className="collapse-title text-xl font-medium">
+        Recipient Address
+      </div>
+      <div className="collapse-content">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">First Name <span className="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                placeholder="John"
+                className={`input input-bordered ${errors.firstName ? 'input-error' : ''}`}
+                {...register('firstName', { required: 'First name is required' })}
+              />
+              {errors.firstName && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.firstName.message}</span>
+                </label>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Last Name <span className="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                placeholder="Doe"
+                className={`input input-bordered ${errors.lastName ? 'input-error' : ''}`}
+                {...register('lastName', { required: 'Last name is required' })}
+              />
+              {errors.lastName && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.lastName.message}</span>
+                </label>
+              )}
+            </div>
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Address Line 1 <span className="text-error">*</span></span>
+            </label>
+            <input
+              type="text"
+              placeholder="123 Main Street"
+              className={`input input-bordered ${errors.addressLine1 ? 'input-error' : ''}`}
+              {...register('addressLine1', { required: 'Address is required' })}
+            />
+            {errors.addressLine1 && (
+              <label className="label">
+                <span className="label-text-alt text-error">{errors.addressLine1.message}</span>
+              </label>
+            )}
+          </div>
+
+          <div className="form-control">
+            <label className="label">
+              <span className="label-text">Address Line 2</span>
+            </label>
+            <input
+              type="text"
+              placeholder="Apt 4B (optional)"
+              className="input input-bordered"
+              {...register('addressLine2')}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">City <span className="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                placeholder="Ottawa"
+                className={`input input-bordered ${errors.city ? 'input-error' : ''}`}
+                {...register('city', { required: 'City is required' })}
+              />
+              {errors.city && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.city.message}</span>
+                </label>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Province/State <span className="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                placeholder="ON"
+                className={`input input-bordered ${errors.provinceOrState ? 'input-error' : ''}`}
+                {...register('provinceOrState', { required: 'Province/State is required' })}
+              />
+              {errors.provinceOrState && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.provinceOrState.message}</span>
+                </label>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Postal/Zip Code <span className="text-error">*</span></span>
+              </label>
+              <input
+                type="text"
+                placeholder="K1A 0B1"
+                className={`input input-bordered ${errors.postalOrZip ? 'input-error' : ''}`}
+                {...register('postalOrZip', { required: 'Postal/Zip code is required' })}
+              />
+              {errors.postalOrZip && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.postalOrZip.message}</span>
+                </label>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Country <span className="text-error">*</span></span>
+              </label>
+              <select
+                className={`select select-bordered ${errors.countryCode ? 'select-error' : ''}`}
+                {...register('countryCode', { required: 'Country is required' })}
+              >
+                <option value="CA">Canada</option>
+                <option value="US">United States</option>
+                <option value="GB">United Kingdom</option>
+                <option value="AU">Australia</option>
+                <option value="other">Other</option>
+              </select>
+              {errors.countryCode && (
+                <label className="label">
+                  <span className="label-text-alt text-error">{errors.countryCode.message}</span>
+                </label>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button type="submit" className="btn btn-primary">
+              Save Address
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
