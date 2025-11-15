@@ -194,9 +194,9 @@ function App() {
                   <div className="mt-4 space-y-2">
                     <h3 className="font-semibold text-sm opacity-70">Postcard Image</h3>
                     <div className="bg-base-200 rounded-lg p-3 flex justify-center">
-                      <img 
-                        src={selectedImage.preview} 
-                        alt="Sent postcard" 
+                      <img
+                        src={selectedImage.preview}
+                        alt="Sent postcard"
                         className="max-h-64 w-auto rounded-lg"
                       />
                     </div>
@@ -217,7 +217,7 @@ function App() {
                 </div>
 
                 <div className="card-actions justify-between mt-6">
-                  <button 
+                  <button
                     onClick={handleCreateAnother}
                     className="btn btn-ghost"
                   >
@@ -226,11 +226,11 @@ function App() {
                     </svg>
                     Create Another Postcard
                   </button>
-                  
+
                   {submissionSuccess.postcard.url && (
-                    <a 
-                      href={submissionSuccess.postcard.url} 
-                      target="_blank" 
+                    <a
+                      href={submissionSuccess.postcard.url}
+                      target="_blank"
                       rel="noopener noreferrer"
                       className="btn btn-primary btn-sm"
                     >
@@ -258,19 +258,19 @@ function App() {
             <div className="card bg-primary text-primary-content shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">Ready to Send!</h2>
-                
+
                 <div className="my-4 bg-base-100 rounded-lg p-3 flex justify-center">
-                  <img 
-                    src={selectedImage.preview} 
-                    alt="Postcard preview" 
+                  <img
+                    src={selectedImage.preview}
+                    alt="Postcard preview"
                     className="max-h-48 w-auto rounded-lg"
                   />
                 </div>
-                
+
                 <p>Your postcard is ready to be sent to {recipientAddress.firstName} {recipientAddress.lastName} in {recipientAddress.city}, {recipientAddress.provinceOrState}.</p>
                 <div className="card-actions justify-end mt-4">
-                  <button 
-                    className="btn btn-accent" 
+                  <button
+                    className="btn btn-accent"
                     onClick={handleSubmit}
                     disabled={isSubmitting}
                   >

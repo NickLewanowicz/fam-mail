@@ -27,6 +27,11 @@ export class PostGridService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as { message?: string; error?: { type: string; message: string } }
+        console.error('PostGrid API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        })
         throw {
           status: response.status,
           message: errorData.message || 'Failed to create postcard',
