@@ -5,6 +5,7 @@ import React from 'react'
 import '@testing-library/jest-dom/vitest'
 import App from './App'
 import type { Address } from './types/address'
+import type { PostcardResponse } from './utils/api'
 
 global.fetch = vi.fn()
 
@@ -39,20 +40,58 @@ vi.mock('./components/address/AddressForm', () => ({
   ),
 }))
 
-vi.mock('./components/postcard/ImageUpload', () => ({
-  ImageUpload: ({ onImageSelect, isOpen }: { onImageSelect: (file: File, preview: string) => void; isOpen?: boolean }) => (
-    <div data-testid="mock-image-upload">
-      Image Upload (Open: {String(isOpen)})
-      <button onClick={() => {
-        const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
-        onImageSelect(mockFile, 'data:image/jpeg;base64,test')
-      }}>Select Image</button>
+vi.mock('./components/postcard/PostcardPreviewCombined', () => ({
+  PostcardPreviewCombined: ({ 
+    isOpen, 
+    onSuccess, 
+    onError 
+  }: { 
+    recipientAddress: Address; 
+    isOpen?: boolean; 
+    onToggle?: () => void;
+    onSuccess: (response: PostcardResponse) => void; 
+    onError: (error: string) => void 
+  }) => (
+    <div data-testid="mock-postcard-preview-combined">
+      Preview Combined (Open: {String(isOpen)})
+      <button onClick={() => onSuccess({
+        success: true,
+        postcard: {
+          id: 'pc_123',
+          object: 'postcard',
+          live: false,
+          to: {
+            firstName: 'John',
+            lastName: 'Doe',
+            addressLine1: '123 Main St',
+            city: 'Ottawa',
+            provinceOrState: 'ON',
+            postalOrZip: 'K1A 0B1',
+            countryCode: 'CA',
+          },
+          from: {
+            firstName: 'Sender',
+            lastName: 'Name',
+            addressLine1: '456 Test St',
+            city: 'Toronto',
+            provinceOrState: 'ON',
+            postalOrZip: 'M5H 2N2',
+            countryCode: 'CA',
+          },
+          size: '4x6',
+          status: 'ready',
+          createdAt: '2025-11-15T00:00:00Z',
+          updatedAt: '2025-11-15T00:00:00Z',
+        },
+        testMode: true,
+        selectedImage: {
+          file: new File(['test'], 'test.jpg', { type: 'image/jpeg' }),
+          preview: 'data:image/jpeg;base64,test'
+        }
+      })}>Submit Postcard</button>
+      <button onClick={() => onError('Test error')}>Trigger Error</button>
     </div>
   ),
-}))
-
-vi.mock('./utils/api', () => ({
-  submitPostcard: vi.fn(),
 }))
 
 describe('App Component', () => {
@@ -134,7 +173,7 @@ describe('App Component', () => {
     })
   })
 
-  it('should not render image upload initially', async () => {
+  it('should not render preview initially', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
     } as Response)
@@ -142,11 +181,11 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.queryByTestId('mock-image-upload')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('mock-postcard-preview-combined')).not.toBeInTheDocument()
     })
   })
 
-  it('should render image upload after address is submitted', async () => {
+  it('should render preview after address is submitted', async () => {
     const user = userEvent.setup()
       ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
@@ -162,8 +201,8 @@ describe('App Component', () => {
     await user.click(submitButton)
 
     await waitFor(() => {
-      expect(screen.getByTestId('mock-image-upload')).toBeInTheDocument()
-      expect(screen.getByText(/Image Upload \(Open: true\)/)).toBeInTheDocument()
+      expect(screen.getByTestId('mock-postcard-preview-combined')).toBeInTheDocument()
+      expect(screen.getByText(/Preview Combined \(Open: true\)/)).toBeInTheDocument()
     })
   })
 
@@ -187,7 +226,7 @@ describe('App Component', () => {
     })
   })
 
-  it('should render send postcard button after both address and image are provided', async () => {
+  it('should render send postcard button in preview component after address is provided', async () => {
     const user = userEvent.setup()
       ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
@@ -202,18 +241,12 @@ describe('App Component', () => {
     await user.click(screen.getByText('Submit Address'))
 
     await waitFor(() => {
-      expect(screen.getByText('Select Image')).toBeInTheDocument()
-    })
-
-    await user.click(screen.getByText('Select Image'))
-
-    await waitFor(() => {
-      expect(screen.getByText('Ready to Send!')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /send postcard/i })).toBeInTheDocument()
+      expect(screen.getByTestId('mock-postcard-preview-combined')).toBeInTheDocument()
+      expect(screen.getByText('Submit Postcard')).toBeInTheDocument()
     })
   })
 
-  it('should show send button only when both address and image are selected', async () => {
+  it('should show preview component with submit button after address is submitted', async () => {
     const user = userEvent.setup()
       ; (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
@@ -223,17 +256,13 @@ describe('App Component', () => {
 
     await waitFor(() => screen.getByText('Submit Address'))
 
-    expect(screen.queryByRole('button', { name: /send postcard/i })).not.toBeInTheDocument()
+    expect(screen.queryByTestId('mock-postcard-preview-combined')).not.toBeInTheDocument()
 
     await user.click(screen.getByText('Submit Address'))
-    await waitFor(() => screen.getByText('Select Image'))
-
-    expect(screen.queryByRole('button', { name: /send postcard/i })).not.toBeInTheDocument()
-
-    await user.click(screen.getByText('Select Image'))
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /send postcard/i })).toBeInTheDocument()
+      expect(screen.getByTestId('mock-postcard-preview-combined')).toBeInTheDocument()
+      expect(screen.getByText('Submit Postcard')).toBeInTheDocument()
     })
   })
 
