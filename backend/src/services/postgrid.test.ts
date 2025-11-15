@@ -43,12 +43,13 @@ describe('PostGridService', () => {
     })
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.postgrid.com/v1/postcards',
+      'https://api.postgrid.com/print-mail/v1/postcards',
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({
           'x-api-key': 'test_sk_123456',
         }),
+        body: expect.any(URLSearchParams),
       })
     )
   })

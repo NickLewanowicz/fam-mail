@@ -3,7 +3,7 @@ import type { Address } from '../types/address'
 export interface PostcardSubmission {
   to: Address
   frontHTML: string
-  size: '4x6'
+  size: '6x4'
 }
 
 export interface PostcardResponse {
@@ -55,7 +55,7 @@ export async function submitPostcard(
   const submission: PostcardSubmission = {
     to: address,
     frontHTML,
-    size: '4x6'
+    size: '6x4'
   }
 
   const response = await fetch('/api/postcards', {

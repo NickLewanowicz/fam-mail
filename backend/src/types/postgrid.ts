@@ -12,7 +12,7 @@ export interface PostGridAddress {
 export interface PostGridPostcardRequest {
   to: PostGridAddress
   from?: PostGridAddress
-  size?: '4x6' | '6x9' | '6x11'
+  size?: '6x4' | '9x6' | '11x6'
   frontHTML?: string
   backHTML?: string
 }

@@ -80,7 +80,7 @@ describe('submitPostcard', () => {
 
     expect(body.frontHTML).toContain('<!DOCTYPE html>')
     expect(body.frontHTML).toContain('<img src="data:image/jpeg;base64,test"')
-    expect(body.size).toBe('4x6')
+    expect(body.size).toBe('6x4')
   })
 
   it('should throw error on API failure', async () => {
