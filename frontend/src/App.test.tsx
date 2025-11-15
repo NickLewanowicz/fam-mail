@@ -1,8 +1,55 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import React from 'react'
+import '@testing-library/jest-dom/vitest'
 import App from './App'
+import type { Address } from './types/address'
 
 global.fetch = vi.fn()
+
+vi.mock('./components/layout/Header', () => ({
+  Header: ({ testMode }: { testMode?: boolean }) => (
+    <div data-testid="mock-header">Header {testMode && '(Test Mode)'}</div>
+  ),
+}))
+
+vi.mock('./components/status/StatusCard', () => ({
+  StatusCard: ({ isLoading, connected, message, error }: { isLoading: boolean; connected?: boolean; message?: string; error?: string }) => (
+    <div data-testid="mock-status-card">
+      {isLoading ? 'Loading' : connected ? `Connected: ${message}` : `Error: ${error}`}
+    </div>
+  ),
+}))
+
+vi.mock('./components/address/AddressForm', () => ({
+  AddressForm: ({ onSubmit, isOpen }: { onSubmit: (address: Address) => void; initialAddress?: Partial<Address>; isOpen?: boolean }) => (
+    <div data-testid="mock-address-form">
+      Address Form (Open: {String(isOpen)})
+      <button onClick={() => onSubmit({
+        firstName: 'John',
+        lastName: 'Doe',
+        addressLine1: '123 Main St',
+        city: 'Ottawa',
+        provinceOrState: 'ON',
+        postalOrZip: 'K1A 0B1',
+        countryCode: 'CA',
+      })}>Submit Address</button>
+    </div>
+  ),
+}))
+
+vi.mock('./components/postcard/ImageUpload', () => ({
+  ImageUpload: ({ onImageSelect, isOpen }: { onImageSelect: (file: File, preview: string) => void; isOpen?: boolean }) => (
+    <div data-testid="mock-image-upload">
+      Image Upload (Open: {String(isOpen)})
+      <button onClick={() => {
+        const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+        onImageSelect(mockFile, 'data:image/jpeg;base64,test')
+      }}>Select Image</button>
+    </div>
+  ),
+}))
 
 vi.mock('./utils/api', () => ({
   submitPostcard: vi.fn(),
@@ -13,14 +60,29 @@ describe('App Component', () => {
     vi.clearAllMocks()
   })
 
-  it('should render the header', () => {
+  it('should render header with test mode when backend reports test mode', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: true }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Header \(Test Mode\)/)).toBeInTheDocument()
+    })
+  })
+
+  it('should render header without test mode when backend reports live mode', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
     } as Response)
 
     render(<App />)
-    expect(screen.getByText('📮 Fam Mail')).toBeInTheDocument()
-    expect(screen.getByText('Send postcards to the people you love')).toBeInTheDocument()
+
+    await waitFor(() => {
+      const header = screen.getByTestId('mock-header')
+      expect(header.textContent).not.toContain('Test Mode')
+    })
   })
 
   it('should show loading state initially', () => {
@@ -29,10 +91,10 @@ describe('App Component', () => {
     } as Response)
 
     render(<App />)
-    expect(screen.getByText('Connecting to backend...')).toBeInTheDocument()
+    expect(screen.getByText('Loading')).toBeInTheDocument()
   })
 
-  it('should show success state when backend is connected', async () => {
+  it('should show connected status when backend responds successfully', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({
         status: 'ok',
@@ -44,12 +106,11 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Connected •/)).toBeInTheDocument()
-      expect(screen.getByText(/Fam Mail backend is running/)).toBeInTheDocument()
+      expect(screen.getByText('Connected: Fam Mail backend is running')).toBeInTheDocument()
     })
   })
 
-  it('should show error state when backend connection fails', async () => {
+  it('should show error status when backend connection fails', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error('Connection failed')
     )
@@ -57,42 +118,11 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Backend connection failed:/)).toBeInTheDocument()
-      expect(screen.getByText(/Connection failed/)).toBeInTheDocument()
+      expect(screen.getByText('Error: Connection failed')).toBeInTheDocument()
     })
   })
 
-  it('should render the address form', () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
-
-    render(<App />)
-    expect(screen.getByText('Recipient Address')).toBeInTheDocument()
-  })
-
-  it('should render the footer', () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
-
-    render(<App />)
-    expect(screen.getByText('Built with ❤️ for keeping in touch')).toBeInTheDocument()
-  })
-
-  it('should show test mode badge when in test mode', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: true }),
-    } as Response)
-
-    render(<App />)
-
-    await waitFor(() => {
-      expect(screen.getByText('🧪 Test Mode')).toBeInTheDocument()
-    })
-  })
-
-  it('should show send postcard button when address and image are selected', async () => {
+  it('should render address form initially open', async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
     } as Response)
@@ -100,16 +130,24 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Recipient Address')).toBeInTheDocument()
+      expect(screen.getByText(/Address Form \(Open: true\)/)).toBeInTheDocument()
     })
-
-    expect(screen.queryByText('Send Postcard')).not.toBeInTheDocument()
   })
 
-  it('should show error message on submission failure', async () => {
-    const { submitPostcard } = await import('./utils/api')
-    vi.mocked(submitPostcard).mockRejectedValueOnce(new Error('API Error'))
+  it('should not render image upload initially', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
 
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('mock-image-upload')).not.toBeInTheDocument()
+    })
+  })
+
+  it('should render image upload after address is submitted', async () => {
+    const user = userEvent.setup()
     ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
     } as Response)
@@ -117,30 +155,20 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Recipient Address')).toBeInTheDocument()
+      expect(screen.getByText(/Address Form/)).toBeInTheDocument()
+    })
+
+    const submitButton = screen.getByText('Submit Address')
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('mock-image-upload')).toBeInTheDocument()
+      expect(screen.getByText(/Image Upload \(Open: true\)/)).toBeInTheDocument()
     })
   })
 
-  it('should show success message after successful submission', async () => {
-    const { submitPostcard } = await import('./utils/api')
-    vi.mocked(submitPostcard).mockResolvedValueOnce({
-      success: true,
-      postcard: {
-        id: 'pc_123',
-        status: 'ready',
-        to: {
-          firstName: 'John',
-          lastName: 'Doe',
-          addressLine1: '123 Main St',
-          city: 'Ottawa',
-          provinceOrState: 'ON',
-          postalOrZip: 'K1A 0B1',
-          countryCode: 'CA',
-        },
-      },
-      testMode: true,
-    })
-
+  it('should close address form after address is submitted', async () => {
+    const user = userEvent.setup()
     ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
     } as Response)
@@ -148,7 +176,76 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Recipient Address')).toBeInTheDocument()
+      expect(screen.getByText(/Address Form \(Open: true\)/)).toBeInTheDocument()
+    })
+
+    const submitButton = screen.getByText('Submit Address')
+    await user.click(submitButton)
+
+    await waitFor(() => {
+      expect(screen.getByText(/Address Form \(Open: false\)/)).toBeInTheDocument()
+    })
+  })
+
+  it('should render send postcard button after both address and image are provided', async () => {
+    const user = userEvent.setup()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Submit Address')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Submit Address'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Select Image')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Select Image'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Ready to Send!')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /send postcard/i })).toBeInTheDocument()
+    })
+  })
+
+  it('should show send button only when both address and image are selected', async () => {
+    const user = userEvent.setup()
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => screen.getByText('Submit Address'))
+
+    expect(screen.queryByRole('button', { name: /send postcard/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByText('Submit Address'))
+    await waitFor(() => screen.getByText('Select Image'))
+
+    expect(screen.queryByRole('button', { name: /send postcard/i })).not.toBeInTheDocument()
+
+    await user.click(screen.getByText('Select Image'))
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /send postcard/i })).toBeInTheDocument()
+    })
+  })
+
+  it('should render footer', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Built with ❤️ for keeping in touch')).toBeInTheDocument()
     })
   })
 })

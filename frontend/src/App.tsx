@@ -51,6 +51,15 @@ function App() {
     }
   }
 
+  const handleCreateAnother = () => {
+    setRecipientAddress(null)
+    setSelectedImage(null)
+    setSubmissionSuccess(null)
+    setSubmissionError(null)
+    setAddressFormOpen(true)
+    setImageUploadOpen(false)
+  }
+
   const handleSubmit = async () => {
     if (!recipientAddress || !selectedImage) return
 
@@ -181,6 +190,19 @@ function App() {
                   </div>
                 </div>
 
+                {selectedImage && (
+                  <div className="mt-4 space-y-2">
+                    <h3 className="font-semibold text-sm opacity-70">Postcard Image</h3>
+                    <div className="bg-base-200 rounded-lg p-3 flex justify-center">
+                      <img 
+                        src={selectedImage.preview} 
+                        alt="Sent postcard" 
+                        className="max-h-64 w-auto rounded-lg"
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-4 space-y-2">
                   <h3 className="font-semibold text-sm opacity-70">Recipient</h3>
                   <div className="bg-base-200 rounded-lg p-3">
@@ -194,8 +216,18 @@ function App() {
                   </div>
                 </div>
 
-                {submissionSuccess.postcard.url && (
-                  <div className="card-actions justify-end mt-4">
+                <div className="card-actions justify-between mt-6">
+                  <button 
+                    onClick={handleCreateAnother}
+                    className="btn btn-ghost"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Another Postcard
+                  </button>
+                  
+                  {submissionSuccess.postcard.url && (
                     <a 
                       href={submissionSuccess.postcard.url} 
                       target="_blank" 
@@ -207,8 +239,8 @@ function App() {
                       </svg>
                       View on PostGrid
                     </a>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {submissionSuccess.testMode && (
                   <div className="alert alert-warning mt-4">
@@ -226,6 +258,15 @@ function App() {
             <div className="card bg-primary text-primary-content shadow-xl">
               <div className="card-body">
                 <h2 className="card-title">Ready to Send!</h2>
+                
+                <div className="my-4 bg-base-100 rounded-lg p-3 flex justify-center">
+                  <img 
+                    src={selectedImage.preview} 
+                    alt="Postcard preview" 
+                    className="max-h-48 w-auto rounded-lg"
+                  />
+                </div>
+                
                 <p>Your postcard is ready to be sent to {recipientAddress.firstName} {recipientAddress.lastName} in {recipientAddress.city}, {recipientAddress.provinceOrState}.</p>
                 <div className="card-actions justify-end mt-4">
                   <button 
