@@ -130,22 +130,6 @@ export function PostcardBuilder({
         </div>
       </div>
 
-      {showSafeZones && (
-        <div className="alert alert-info">
-          <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div className="text-sm">
-            <p className="font-semibold">Safe Zone Guide:</p>
-            <ul className="list-disc list-inside mt-1">
-              <li><span className="text-success font-bold">Green</span>: Safe zone - keep important content here</li>
-              <li><span className="text-warning font-bold">Yellow</span>: Bleed zone - design can extend here</li>
-              <li><span className="text-error font-bold">Red</span>: Address block - reserved area</li>
-            </ul>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         <div className="space-y-3">
           <div className="flex items-center justify-between">

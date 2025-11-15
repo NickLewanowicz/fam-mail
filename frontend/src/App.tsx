@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Header } from './components/layout/Header'
-import { StatusCard } from './components/status/StatusCard'
 import { PostcardBuilder } from './components/postcard/PostcardBuilder'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
@@ -70,17 +69,14 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-base-200" data-theme="light">
-      <Header testMode={backendStatus.testMode} />
+      <Header 
+        testMode={backendStatus.testMode} 
+        connected={backendStatus.connected}
+        isLoading={isLoading}
+      />
 
       <main className="flex-1 container mx-auto px-4 py-6 lg:py-8">
         <div className="space-y-4 lg:space-y-6">
-          <StatusCard
-            isLoading={isLoading}
-            connected={backendStatus.connected}
-            message={backendStatus.message}
-            error={backendStatus.error}
-          />
-
           {!submissionSuccess && (
             <>
               <PostcardBuilder

@@ -9,15 +9,12 @@ import type { Address } from './types/address'
 global.fetch = vi.fn()
 
 vi.mock('./components/layout/Header', () => ({
-  Header: ({ testMode }: { testMode?: boolean }) => (
-    <div data-testid="mock-header">Header {testMode && '(Test Mode)'}</div>
-  ),
-}))
-
-vi.mock('./components/status/StatusCard', () => ({
-  StatusCard: ({ isLoading, connected, message, error }: { isLoading: boolean; connected?: boolean; message?: string; error?: string }) => (
-    <div data-testid="mock-status-card">
-      {isLoading ? 'Loading' : connected ? `Connected: ${message}` : `Error: ${error}`}
+  Header: ({ testMode, connected, isLoading }: { testMode?: boolean; connected?: boolean; isLoading?: boolean }) => (
+    <div data-testid="mock-header">
+      Header
+      {isLoading && ' (Loading)'}
+      {connected && ' (Connected)'}
+      {testMode && ' (Test Mode)'}
     </div>
   ),
 }))
@@ -102,7 +99,7 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Header \(Test Mode\)/)).toBeInTheDocument()
+      expect(screen.getByText(/Header.*Test Mode/)).toBeInTheDocument()
     })
   })
 
@@ -112,7 +109,7 @@ describe('App Component', () => {
     } as Response)
 
     render(<App />)
-    expect(screen.getByText('Loading')).toBeInTheDocument()
+    expect(screen.getByText(/Header.*Loading/)).toBeInTheDocument()
   })
 
   it('should render postcard builder', async () => {
