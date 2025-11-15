@@ -3,49 +3,102 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { ImageUpload } from './ImageUpload'
 
 describe('ImageUpload', () => {
-  it('should render collapsed by default', () => {
-    render(<ImageUpload isOpen={false} />)
+  it('should render the image upload component', () => {
+    const onImageSelect = vi.fn()
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} />)
+    
     expect(screen.getByText('Postcard Image')).toBeInTheDocument()
   })
 
-  it('should render expanded when isOpen is true', () => {
-    render(<ImageUpload isOpen={true} />)
-    expect(screen.getByText('Image upload functionality coming soon!')).toBeInTheDocument()
+  it('should render drag and drop area when no image selected', () => {
+    const onImageSelect = vi.fn()
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} />)
+    
+    expect(screen.getByText(/drag and drop your image here/i)).toBeInTheDocument()
   })
 
-  it('should show file input when expanded', () => {
-    render(<ImageUpload isOpen={true} />)
-    const fileInput = screen.getByLabelText(/upload your postcard image/i)
+  it('should render file input', () => {
+    const onImageSelect = vi.fn()
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} />)
+    
+    const fileInput = document.querySelector('#postcard-image-upload')
     expect(fileInput).toBeInTheDocument()
     expect(fileInput).toHaveAttribute('type', 'file')
-    expect(fileInput).toHaveAttribute('accept', 'image/*')
+    expect(fileInput).toHaveAttribute('accept', 'image/*,application/pdf')
   })
 
-  it('should call onImageSelect when file is selected', () => {
-    const mockOnImageSelect = vi.fn()
-    render(<ImageUpload isOpen={true} onImageSelect={mockOnImageSelect} />)
+  it('should validate file type', () => {
+    const onImageSelect = vi.fn()
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} />)
     
-    const fileInput = screen.getByLabelText(/upload your postcard image/i) as HTMLInputElement
-    const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
+    const fileInput = document.querySelector('#postcard-image-upload') as HTMLInputElement
+    const invalidFile = new File(['content'], 'test.txt', { type: 'text/plain' })
     
-    Object.defineProperty(fileInput, 'files', {
-      value: [file],
-      writable: false,
-    })
+    fireEvent.change(fileInput, { target: { files: [invalidFile] } })
     
-    fireEvent.change(fileInput)
-    
-    expect(mockOnImageSelect).toHaveBeenCalledWith(file)
+    expect(screen.getByText(/please upload a jpg, png, or pdf file/i)).toBeInTheDocument()
+    expect(onImageSelect).not.toHaveBeenCalled()
   })
 
-  it('should display placeholder image preview', () => {
-    render(<ImageUpload isOpen={true} />)
-    expect(screen.getByText('🖼️')).toBeInTheDocument()
-    expect(screen.getByText('Image preview will appear here')).toBeInTheDocument()
+  it('should validate file size', () => {
+    const onImageSelect = vi.fn()
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} />)
+    
+    const fileInput = document.querySelector('#postcard-image-upload') as HTMLInputElement
+    const largeFile = new File(['content'], 'large.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(largeFile, 'size', { value: 11 * 1024 * 1024 })
+    
+    fireEvent.change(fileInput, { target: { files: [largeFile] } })
+    
+    expect(screen.getByText(/file size must be less than 10mb/i)).toBeInTheDocument()
+    expect(onImageSelect).not.toHaveBeenCalled()
   })
 
-  it('should show file format requirements', () => {
-    render(<ImageUpload isOpen={true} />)
-    expect(screen.getByText(/Accepted formats: JPG, PNG, GIF/i)).toBeInTheDocument()
+  it('should show preview after valid file selection', async () => {
+    const onImageSelect = vi.fn()
+    const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(mockFile, 'size', { value: 1024 * 1024 })
+    
+    const selectedImage = {
+      file: mockFile,
+      preview: 'data:image/jpeg;base64,test'
+    }
+    
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} selectedImage={selectedImage} />)
+    
+    const img = screen.getByAltText('Postcard preview')
+    expect(img).toHaveAttribute('src', 'data:image/jpeg;base64,test')
+    expect(screen.getByText(/test.jpg/i)).toBeInTheDocument()
+  })
+
+  it('should allow removing selected image', () => {
+    const onImageSelect = vi.fn()
+    const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+    const selectedImage = {
+      file: mockFile,
+      preview: 'data:image/jpeg;base64,test'
+    }
+    
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} selectedImage={selectedImage} />)
+    
+    const removeButton = screen.getByRole('button', { name: /remove/i })
+    fireEvent.click(removeButton)
+    
+    expect(onImageSelect).toHaveBeenCalled()
+  })
+
+  it('should display selected image file size', () => {
+    const onImageSelect = vi.fn()
+    const mockFile = new File(['content'], 'test.jpg', { type: 'image/jpeg' })
+    Object.defineProperty(mockFile, 'size', { value: 2 * 1024 * 1024 })
+    
+    const selectedImage = {
+      file: mockFile,
+      preview: 'data:image/jpeg;base64,test'
+    }
+    
+    render(<ImageUpload onImageSelect={onImageSelect} isOpen={true} selectedImage={selectedImage} />)
+    
+    expect(screen.getByText(/2\.00 mb/i)).toBeInTheDocument()
   })
 })
