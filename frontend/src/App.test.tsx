@@ -4,6 +4,10 @@ import App from './App'
 
 global.fetch = vi.fn()
 
+vi.mock('./utils/api', () => ({
+  submitPostcard: vi.fn(),
+}))
+
 describe('App Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -85,6 +89,66 @@ describe('App Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('🧪 Test Mode')).toBeInTheDocument()
+    })
+  })
+
+  it('should show send postcard button when address and image are selected', async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Recipient Address')).toBeInTheDocument()
+    })
+
+    expect(screen.queryByText('Send Postcard')).not.toBeInTheDocument()
+  })
+
+  it('should show error message on submission failure', async () => {
+    const { submitPostcard } = await import('./utils/api')
+    vi.mocked(submitPostcard).mockRejectedValueOnce(new Error('API Error'))
+
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Recipient Address')).toBeInTheDocument()
+    })
+  })
+
+  it('should show success message after successful submission', async () => {
+    const { submitPostcard } = await import('./utils/api')
+    vi.mocked(submitPostcard).mockResolvedValueOnce({
+      success: true,
+      postcard: {
+        id: 'pc_123',
+        status: 'ready',
+        to: {
+          firstName: 'John',
+          lastName: 'Doe',
+          addressLine1: '123 Main St',
+          city: 'Ottawa',
+          provinceOrState: 'ON',
+          postalOrZip: 'K1A 0B1',
+          countryCode: 'CA',
+        },
+      },
+      testMode: true,
+    })
+
+    ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
+    } as Response)
+
+    render(<App />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Recipient Address')).toBeInTheDocument()
     })
   })
 })
