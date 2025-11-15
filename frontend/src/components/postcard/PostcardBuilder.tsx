@@ -277,64 +277,34 @@ export function PostcardBuilder({
 
               <div className="p-3 lg:p-4">
                 {activeTab === 'address' && (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">First Name</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="input input-bordered input-sm lg:input-md"
-                          value={recipientAddress?.firstName || ''}
-                          onChange={(e) => onAddressChange({
-                            ...recipientAddress,
-                            firstName: e.target.value,
-                            lastName: recipientAddress?.lastName || '',
-                            addressLine1: recipientAddress?.addressLine1 || '',
-                            city: recipientAddress?.city || '',
-                            provinceOrState: recipientAddress?.provinceOrState || '',
-                            postalOrZip: recipientAddress?.postalOrZip || '',
-                            countryCode: recipientAddress?.countryCode || 'CA',
-                          })}
-                        />
-                      </div>
-
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Last Name</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="input input-bordered input-sm lg:input-md"
-                          value={recipientAddress?.lastName || ''}
-                          onChange={(e) => onAddressChange({
-                            ...recipientAddress,
-                            firstName: recipientAddress?.firstName || '',
-                            lastName: e.target.value,
-                            addressLine1: recipientAddress?.addressLine1 || '',
-                            city: recipientAddress?.city || '',
-                            provinceOrState: recipientAddress?.provinceOrState || '',
-                            postalOrZip: recipientAddress?.postalOrZip || '',
-                            countryCode: recipientAddress?.countryCode || 'CA',
-                          })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Address Line 1</span>
-                      </label>
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input
                         type="text"
+                        placeholder="First Name"
                         className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.addressLine1 || ''}
+                        value={recipientAddress?.firstName || ''}
+                        onChange={(e) => onAddressChange({
+                          ...recipientAddress,
+                          firstName: e.target.value,
+                          lastName: recipientAddress?.lastName || '',
+                          addressLine1: recipientAddress?.addressLine1 || '',
+                          city: recipientAddress?.city || '',
+                          provinceOrState: recipientAddress?.provinceOrState || '',
+                          postalOrZip: recipientAddress?.postalOrZip || '',
+                          countryCode: recipientAddress?.countryCode || 'CA',
+                        })}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Last Name"
+                        className="input input-bordered input-sm lg:input-md"
+                        value={recipientAddress?.lastName || ''}
                         onChange={(e) => onAddressChange({
                           ...recipientAddress,
                           firstName: recipientAddress?.firstName || '',
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: e.target.value,
+                          lastName: e.target.value,
+                          addressLine1: recipientAddress?.addressLine1 || '',
                           city: recipientAddress?.city || '',
                           provinceOrState: recipientAddress?.provinceOrState || '',
                           postalOrZip: recipientAddress?.postalOrZip || '',
@@ -343,117 +313,112 @@ export function PostcardBuilder({
                       />
                     </div>
 
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text">Address Line 2 (Optional)</span>
-                      </label>
+                    <input
+                      type="text"
+                      placeholder="Address Line 1"
+                      className="input input-bordered input-sm lg:input-md w-full"
+                      value={recipientAddress?.addressLine1 || ''}
+                      onChange={(e) => onAddressChange({
+                        ...recipientAddress,
+                        firstName: recipientAddress?.firstName || '',
+                        lastName: recipientAddress?.lastName || '',
+                        addressLine1: e.target.value,
+                        city: recipientAddress?.city || '',
+                        provinceOrState: recipientAddress?.provinceOrState || '',
+                        postalOrZip: recipientAddress?.postalOrZip || '',
+                        countryCode: recipientAddress?.countryCode || 'CA',
+                      })}
+                    />
+
+                    <input
+                      type="text"
+                      placeholder="Address Line 2 (Optional)"
+                      className="input input-bordered input-sm lg:input-md w-full"
+                      value={recipientAddress?.addressLine2 || ''}
+                      onChange={(e) => onAddressChange({
+                        ...recipientAddress,
+                        firstName: recipientAddress?.firstName || '',
+                        lastName: recipientAddress?.lastName || '',
+                        addressLine1: recipientAddress?.addressLine1 || '',
+                        addressLine2: e.target.value,
+                        city: recipientAddress?.city || '',
+                        provinceOrState: recipientAddress?.provinceOrState || '',
+                        postalOrZip: recipientAddress?.postalOrZip || '',
+                        countryCode: recipientAddress?.countryCode || 'CA',
+                      })}
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <input
                         type="text"
+                        placeholder="City"
                         className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.addressLine2 || ''}
+                        value={recipientAddress?.city || ''}
                         onChange={(e) => onAddressChange({
                           ...recipientAddress,
                           firstName: recipientAddress?.firstName || '',
                           lastName: recipientAddress?.lastName || '',
                           addressLine1: recipientAddress?.addressLine1 || '',
-                          addressLine2: e.target.value,
-                          city: recipientAddress?.city || '',
+                          city: e.target.value,
                           provinceOrState: recipientAddress?.provinceOrState || '',
+                          postalOrZip: recipientAddress?.postalOrZip || '',
+                          countryCode: recipientAddress?.countryCode || 'CA',
+                        })}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Province/State"
+                        className="input input-bordered input-sm lg:input-md"
+                        value={recipientAddress?.provinceOrState || ''}
+                        onChange={(e) => onAddressChange({
+                          ...recipientAddress,
+                          firstName: recipientAddress?.firstName || '',
+                          lastName: recipientAddress?.lastName || '',
+                          addressLine1: recipientAddress?.addressLine1 || '',
+                          city: recipientAddress?.city || '',
+                          provinceOrState: e.target.value,
                           postalOrZip: recipientAddress?.postalOrZip || '',
                           countryCode: recipientAddress?.countryCode || 'CA',
                         })}
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">City</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="input input-bordered input-sm lg:input-md"
-                          value={recipientAddress?.city || ''}
-                          onChange={(e) => onAddressChange({
-                            ...recipientAddress,
-                            firstName: recipientAddress?.firstName || '',
-                            lastName: recipientAddress?.lastName || '',
-                            addressLine1: recipientAddress?.addressLine1 || '',
-                            city: e.target.value,
-                            provinceOrState: recipientAddress?.provinceOrState || '',
-                            postalOrZip: recipientAddress?.postalOrZip || '',
-                            countryCode: recipientAddress?.countryCode || 'CA',
-                          })}
-                        />
-                      </div>
-
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Province/State</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="input input-bordered input-sm lg:input-md"
-                          value={recipientAddress?.provinceOrState || ''}
-                          onChange={(e) => onAddressChange({
-                            ...recipientAddress,
-                            firstName: recipientAddress?.firstName || '',
-                            lastName: recipientAddress?.lastName || '',
-                            addressLine1: recipientAddress?.addressLine1 || '',
-                            city: recipientAddress?.city || '',
-                            provinceOrState: e.target.value,
-                            postalOrZip: recipientAddress?.postalOrZip || '',
-                            countryCode: recipientAddress?.countryCode || 'CA',
-                          })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Postal/Zip Code</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="input input-bordered input-sm lg:input-md"
-                          value={recipientAddress?.postalOrZip || ''}
-                          onChange={(e) => onAddressChange({
-                            ...recipientAddress,
-                            firstName: recipientAddress?.firstName || '',
-                            lastName: recipientAddress?.lastName || '',
-                            addressLine1: recipientAddress?.addressLine1 || '',
-                            city: recipientAddress?.city || '',
-                            provinceOrState: recipientAddress?.provinceOrState || '',
-                            postalOrZip: e.target.value,
-                            countryCode: recipientAddress?.countryCode || 'CA',
-                          })}
-                        />
-                      </div>
-
-                      <div className="form-control">
-                        <label className="label">
-                          <span className="label-text">Country</span>
-                        </label>
-                        <select
-                          className="select select-bordered select-sm lg:select-md"
-                          value={recipientAddress?.countryCode || 'CA'}
-                          onChange={(e) => onAddressChange({
-                            ...recipientAddress,
-                            firstName: recipientAddress?.firstName || '',
-                            lastName: recipientAddress?.lastName || '',
-                            addressLine1: recipientAddress?.addressLine1 || '',
-                            city: recipientAddress?.city || '',
-                            provinceOrState: recipientAddress?.provinceOrState || '',
-                            postalOrZip: recipientAddress?.postalOrZip || '',
-                            countryCode: e.target.value,
-                          })}
-                        >
-                          <option value="CA">Canada</option>
-                          <option value="US">United States</option>
-                          <option value="GB">United Kingdom</option>
-                        </select>
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <input
+                        type="text"
+                        placeholder="Postal/Zip Code"
+                        className="input input-bordered input-sm lg:input-md"
+                        value={recipientAddress?.postalOrZip || ''}
+                        onChange={(e) => onAddressChange({
+                          ...recipientAddress,
+                          firstName: recipientAddress?.firstName || '',
+                          lastName: recipientAddress?.lastName || '',
+                          addressLine1: recipientAddress?.addressLine1 || '',
+                          city: recipientAddress?.city || '',
+                          provinceOrState: recipientAddress?.provinceOrState || '',
+                          postalOrZip: e.target.value,
+                          countryCode: recipientAddress?.countryCode || 'CA',
+                        })}
+                      />
+                      <select
+                        className="select select-bordered select-sm lg:select-md"
+                        value={recipientAddress?.countryCode || 'CA'}
+                        onChange={(e) => onAddressChange({
+                          ...recipientAddress,
+                          firstName: recipientAddress?.firstName || '',
+                          lastName: recipientAddress?.lastName || '',
+                          addressLine1: recipientAddress?.addressLine1 || '',
+                          city: recipientAddress?.city || '',
+                          provinceOrState: recipientAddress?.provinceOrState || '',
+                          postalOrZip: recipientAddress?.postalOrZip || '',
+                          countryCode: e.target.value,
+                        })}
+                      >
+                        <option value="">Select Country</option>
+                        <option value="CA">Canada</option>
+                        <option value="US">United States</option>
+                        <option value="GB">United Kingdom</option>
+                      </select>
                     </div>
                   </div>
                 )}
