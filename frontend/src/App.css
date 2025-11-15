@@ -10,6 +10,7 @@
   padding: 3rem 2rem;
   text-align: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  position: relative;
 }
 
 .header h1 {
@@ -22,6 +23,29 @@
   margin: 0.5rem 0 0;
   font-size: 1.25rem;
   opacity: 0.95;
+}
+
+.test-mode-badge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #fbbf24;
+  color: #78350f;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.test-mode-info {
+  color: #f59e0b;
+  font-weight: 600;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fffbeb;
+  border-radius: 6px;
+  border: 1px solid #fef3c7;
 }
 
 .main {
@@ -141,6 +165,12 @@
 
   .tagline {
     font-size: 1rem;
+  }
+
+  .test-mode-badge {
+    position: static;
+    display: inline-block;
+    margin-top: 1rem;
   }
 
   .main {
