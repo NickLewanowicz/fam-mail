@@ -17,12 +17,12 @@ describe('submitPostcard', () => {
 
   beforeEach(() => {
     global.fetch = vi.fn()
-    
+
     const mockFileReader = {
       result: null as string | ArrayBuffer | null,
       onload: null as ((event: ProgressEvent<FileReader>) => void) | null,
       onerror: null as ((event: ProgressEvent<FileReader>) => void) | null,
-      readAsDataURL: function() {
+      readAsDataURL: function () {
         setTimeout(() => {
           if (this.onload) {
             this.result = 'data:image/jpeg;base64,test'
@@ -31,7 +31,7 @@ describe('submitPostcard', () => {
         }, 0)
       },
     }
-    
+
     global.FileReader = vi.fn().mockImplementation(() => mockFileReader) as unknown as typeof FileReader
   })
 
@@ -80,7 +80,7 @@ describe('submitPostcard', () => {
 
     expect(body.frontHTML).toContain('<!DOCTYPE html>')
     expect(body.frontHTML).toContain('<img src="data:image/jpeg;base64,test"')
-    expect(body.size).toBe('4x6')
+    expect(body.size).toBe('6x4')
   })
 
   it('should throw error on API failure', async () => {
