@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
 import { AddressForm } from './components/address/AddressForm'
-import { ImageUpload } from './components/postcard/ImageUpload'
-import { submitPostcard, type PostcardResponse } from './utils/api'
+import { PostcardPreviewCombined } from './components/postcard/PostcardPreviewCombined'
+import type { PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
 
 interface BackendStatus {
@@ -18,9 +18,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [recipientAddress, setRecipientAddress] = useState<Address | null>(null)
   const [addressFormOpen, setAddressFormOpen] = useState(true)
-  const [imageUploadOpen, setImageUploadOpen] = useState(false)
-  const [selectedImage, setSelectedImage] = useState<{ file: File; preview: string } | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
 
@@ -40,43 +38,25 @@ function App() {
   const handleAddressSubmit = (address: Address) => {
     setRecipientAddress(address)
     setAddressFormOpen(false)
-    setImageUploadOpen(true)
+    setPreviewOpen(true)
   }
 
-  const handleImageSelect = (file: File, preview: string) => {
-    if (file.name) {
-      setSelectedImage({ file, preview })
-    } else {
-      setSelectedImage(null)
-    }
+  const handleSubmitSuccess = (response: PostcardResponse) => {
+    setSubmissionSuccess(response)
+    setSubmissionError(null)
+  }
+
+  const handleSubmitError = (error: string) => {
+    setSubmissionError(error)
+    setSubmissionSuccess(null)
   }
 
   const handleCreateAnother = () => {
     setRecipientAddress(null)
-    setSelectedImage(null)
     setSubmissionSuccess(null)
     setSubmissionError(null)
     setAddressFormOpen(true)
-    setImageUploadOpen(false)
-  }
-
-  const handleSubmit = async () => {
-    if (!recipientAddress || !selectedImage) return
-
-    setIsSubmitting(true)
-    setSubmissionError(null)
-    setSubmissionSuccess(null)
-
-    try {
-      const response = await submitPostcard(recipientAddress, selectedImage.file)
-      setSubmissionSuccess(response)
-      setAddressFormOpen(false)
-      setImageUploadOpen(false)
-    } catch (error) {
-      setSubmissionError(error instanceof Error ? error.message : 'Failed to submit postcard')
-    } finally {
-      setIsSubmitting(false)
-    }
+    setPreviewOpen(false)
   }
 
   return (
@@ -92,23 +72,26 @@ function App() {
             error={backendStatus.error}
           />
 
-          <div className="space-y-4">
-            <AddressForm
-              onSubmit={handleAddressSubmit}
-              initialAddress={recipientAddress || undefined}
-              isOpen={addressFormOpen}
-              onToggle={() => setAddressFormOpen(!addressFormOpen)}
-            />
-
-            {recipientAddress && (
-              <ImageUpload
-                onImageSelect={handleImageSelect}
-                selectedImage={selectedImage}
-                isOpen={imageUploadOpen}
-                onToggle={() => setImageUploadOpen(!imageUploadOpen)}
+          {!submissionSuccess && (
+            <div className="space-y-4">
+              <AddressForm
+                onSubmit={handleAddressSubmit}
+                initialAddress={recipientAddress || undefined}
+                isOpen={addressFormOpen}
+                onToggle={() => setAddressFormOpen(!addressFormOpen)}
               />
-            )}
-          </div>
+
+              {recipientAddress && (
+                <PostcardPreviewCombined
+                  recipientAddress={recipientAddress}
+                  isOpen={previewOpen}
+                  onToggle={() => setPreviewOpen(!previewOpen)}
+                  onSuccess={handleSubmitSuccess}
+                  onError={handleSubmitError}
+                />
+              )}
+            </div>
+          )}
 
           {submissionError && (
             <div className="alert alert-error">
@@ -190,12 +173,12 @@ function App() {
                   </div>
                 </div>
 
-                {selectedImage && (
+                {submissionSuccess.selectedImage && (
                   <div className="mt-4 space-y-2">
                     <h3 className="font-semibold text-sm opacity-70">Postcard Image</h3>
                     <div className="bg-base-200 rounded-lg p-3 flex justify-center">
                       <img
-                        src={selectedImage.preview}
+                        src={submissionSuccess.selectedImage.preview}
                         alt="Sent postcard"
                         className="max-h-64 w-auto rounded-lg"
                       />
@@ -254,44 +237,7 @@ function App() {
             </div>
           )}
 
-          {recipientAddress && selectedImage && !submissionSuccess && (
-            <div className="card bg-primary text-primary-content shadow-xl">
-              <div className="card-body">
-                <h2 className="card-title">Ready to Send!</h2>
 
-                <div className="my-4 bg-base-100 rounded-lg p-3 flex justify-center">
-                  <img
-                    src={selectedImage.preview}
-                    alt="Postcard preview"
-                    className="max-h-48 w-auto rounded-lg"
-                  />
-                </div>
-
-                <p>Your postcard is ready to be sent to {recipientAddress.firstName} {recipientAddress.lastName} in {recipientAddress.city}, {recipientAddress.provinceOrState}.</p>
-                <div className="card-actions justify-end mt-4">
-                  <button
-                    className="btn btn-accent"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <span className="loading loading-spinner loading-sm"></span>
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                        Send Postcard
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </main>
 
