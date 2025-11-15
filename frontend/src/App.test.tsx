@@ -5,6 +5,7 @@ import React from 'react'
 import '@testing-library/jest-dom/vitest'
 import App from './App'
 import type { Address } from './types/address'
+import type { PostcardResponse } from './utils/api'
 
 global.fetch = vi.fn()
 
@@ -48,7 +49,7 @@ vi.mock('./components/postcard/PostcardPreviewCombined', () => ({
     recipientAddress: Address; 
     isOpen?: boolean; 
     onToggle?: () => void;
-    onSuccess: (response: any) => void; 
+    onSuccess: (response: PostcardResponse) => void; 
     onError: (error: string) => void 
   }) => (
     <div data-testid="mock-postcard-preview-combined">
