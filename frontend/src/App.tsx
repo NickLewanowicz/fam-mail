@@ -21,7 +21,7 @@ function App() {
   const [message, setMessage] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
-  const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
+  const [submissionSuccess, setSubmissionSuccess] = useState<(PostcardResponse & { selectedImage?: { file: File; preview: string }; message?: string }) | null>(null)
   const [confirmationMessageHTML, setConfirmationMessageHTML] = useState<string>('')
 
   useEffect(() => {
@@ -212,7 +212,7 @@ function App() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-center mb-2 opacity-60">Front</p>
-                        <div className="bg-base-200 rounded-lg p-3">
+                        <div className="bg-base-200 rounded-lg p-3 lg:p-4">
                           <div
                             className="mx-auto"
                             style={{
@@ -242,7 +242,7 @@ function App() {
                       </div>
                       <div>
                         <p className="text-xs text-center mb-2 opacity-60">Back</p>
-                        <div className="bg-base-200 rounded-lg p-3">
+                        <div className="bg-base-200 rounded-lg p-3 lg:p-4">
                           <div
                             className="mx-auto"
                             style={{
