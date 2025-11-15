@@ -1,34 +1,40 @@
-import { useState, useEffect } from 'react';
-import './App.css';
+import { useState, useEffect } from 'react'
+import './App.css'
 
 interface BackendStatus {
-  message?: string;
-  connected?: boolean;
-  error?: string;
+  message?: string
+  connected?: boolean
+  testMode?: boolean
+  error?: string
 }
 
 function App() {
-  const [backendStatus, setBackendStatus] = useState<BackendStatus>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [backendStatus, setBackendStatus] = useState<BackendStatus>({})
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    fetch('/api/test')
+    fetch('/api/health')
       .then(res => res.json())
       .then(data => {
-        setBackendStatus(data);
-        setIsLoading(false);
+        setBackendStatus({ ...data, connected: true })
+        setIsLoading(false)
       })
       .catch(err => {
-        setBackendStatus({ error: err.message });
-        setIsLoading(false);
-      });
-  }, []);
+        setBackendStatus({ error: err.message })
+        setIsLoading(false)
+      })
+  }, [])
 
   return (
     <div className="app">
       <header className="header">
         <h1>📮 Fam Mail</h1>
         <p className="tagline">Send postcards to the people you love</p>
+        {backendStatus.testMode && (
+          <div className="test-mode-badge">
+            🧪 Test Mode Active
+          </div>
+        )}
       </header>
 
       <main className="main">
@@ -41,6 +47,11 @@ function App() {
               <p className="status-icon">✅</p>
               <p>{backendStatus.message}</p>
               <p className="status-text">Frontend and backend are communicating successfully!</p>
+              {backendStatus.testMode && (
+                <p className="test-mode-info">
+                  ⚠️ Running in test mode - no real postcards will be sent
+                </p>
+              )}
             </div>
           ) : (
             <div className="error">
@@ -59,6 +70,7 @@ function App() {
             <li>✅ Vite + React frontend with TypeScript</li>
             <li>✅ Docker support for easy deployment</li>
             <li>✅ pnpm workspace configuration</li>
+            <li>✅ Test mode enabled with PostGrid test API key</li>
             <li>⏳ PostGrid API integration (coming soon)</li>
             <li>⏳ Postcard creation UI (coming soon)</li>
           </ul>
@@ -68,7 +80,7 @@ function App() {
           <h2>Next Steps</h2>
           <ol>
             <li>Get your PostGrid API key from <a href="https://www.postgrid.com/" target="_blank" rel="noopener noreferrer">postgrid.com</a></li>
-            <li>Add your API key to <code>backend/.env</code></li>
+            <li>Your test API key is configured in <code>backend/.env</code></li>
             <li>Build the postcard creation form</li>
             <li>Integrate with PostGrid API</li>
             <li>Deploy with Docker!</li>
@@ -80,7 +92,7 @@ function App() {
         <p>Built with ❤️ for keeping in touch</p>
       </footer>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

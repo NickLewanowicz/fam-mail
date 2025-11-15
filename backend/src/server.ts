@@ -1,31 +1,35 @@
-import { join } from 'path';
-import { file } from 'bun';
+import { join } from 'path'
+import { file } from 'bun'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-};
+}
 
-const isProduction = process.env.NODE_ENV === 'production';
-const frontendDistPath = join(import.meta.dir, '../../frontend/dist');
+const isProduction = process.env.NODE_ENV === 'production'
+const frontendDistPath = join(import.meta.dir, '../../frontend/dist')
 
 export async function handleRequest(req: Request): Promise<Response> {
-  const url = new URL(req.url);
-  
+  const url = new URL(req.url)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
       headers: corsHeaders,
-    });
+    })
   }
 
   if (url.pathname === '/api/health') {
+    const apiKey = process.env.POSTGRID_API_KEY || ''
+    const isTestMode = apiKey.startsWith('test_')
+
     return new Response(
       JSON.stringify({
         status: 'ok',
         timestamp: new Date().toISOString(),
         message: 'Fam Mail backend is running',
+        testMode: isTestMode,
       }),
       {
         status: 200,
@@ -34,7 +38,7 @@ export async function handleRequest(req: Request): Promise<Response> {
           ...corsHeaders,
         },
       }
-    );
+    )
   }
 
   if (url.pathname === '/api/test') {
@@ -50,24 +54,24 @@ export async function handleRequest(req: Request): Promise<Response> {
           ...corsHeaders,
         },
       }
-    );
+    )
   }
 
   if (isProduction && !url.pathname.startsWith('/api')) {
     try {
-      const filePath = join(frontendDistPath, url.pathname);
-      
-      const bunFile = file(filePath);
+      const filePath = join(frontendDistPath, url.pathname)
+
+      const bunFile = file(filePath)
       if (await bunFile.exists()) {
-        return new Response(bunFile);
+        return new Response(bunFile)
       }
-      
-      const indexFile = file(join(frontendDistPath, 'index.html'));
+
+      const indexFile = file(join(frontendDistPath, 'index.html'))
       if (await indexFile.exists()) {
-        return new Response(indexFile);
+        return new Response(indexFile)
       }
     } catch (error) {
-      console.error('Error serving static file:', error);
+      console.error('Error serving static file:', error)
     }
   }
 
@@ -80,5 +84,5 @@ export async function handleRequest(req: Request): Promise<Response> {
         ...corsHeaders,
       },
     }
-  );
+  )
 }
