@@ -4,6 +4,8 @@ import { generateFrontHTML } from './postcardTemplate'
 export interface PostcardSubmission {
   to: Address
   frontHTML: string
+  backHTML?: string
+  message?: string
   size: '6x4'
 }
 
@@ -35,7 +37,8 @@ export interface PostcardResponse {
 
 export async function submitPostcard(
   address: Address,
-  imageFile: File
+  imageFile: File,
+  message?: string
 ): Promise<PostcardResponse> {
   const imageBase64 = await fileToBase64(imageFile)
   const frontHTML = generateFrontHTML(imageBase64)
@@ -44,6 +47,10 @@ export async function submitPostcard(
     to: address,
     frontHTML,
     size: '6x4'
+  }
+
+  if (message) {
+    submission.message = message
   }
 
   const response = await fetch('/api/postcards', {

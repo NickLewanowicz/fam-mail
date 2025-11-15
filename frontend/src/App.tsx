@@ -17,6 +17,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true)
   const [recipientAddress, setRecipientAddress] = useState<Address | null>(null)
   const [selectedImage, setSelectedImage] = useState<{ file: File; preview: string } | null>(null)
+  const [message, setMessage] = useState<string>('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
@@ -41,7 +42,7 @@ function App() {
     setSubmissionError(null)
 
     try {
-      const response = await submitPostcard(recipientAddress, selectedImage.file)
+      const response = await submitPostcard(recipientAddress, selectedImage.file, message)
       setSubmissionSuccess({ ...response, selectedImage })
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'Failed to send postcard')
@@ -53,25 +54,26 @@ function App() {
   const handleCreateAnother = () => {
     setRecipientAddress(null)
     setSelectedImage(null)
+    setMessage('')
     setSubmissionSuccess(null)
     setSubmissionError(null)
   }
 
-  const isReadyToSend = recipientAddress && 
-    recipientAddress.firstName && 
-    recipientAddress.lastName && 
-    recipientAddress.addressLine1 && 
-    recipientAddress.city && 
-    recipientAddress.provinceOrState && 
-    recipientAddress.postalOrZip && 
+  const isReadyToSend = recipientAddress &&
+    recipientAddress.firstName &&
+    recipientAddress.lastName &&
+    recipientAddress.addressLine1 &&
+    recipientAddress.city &&
+    recipientAddress.provinceOrState &&
+    recipientAddress.postalOrZip &&
     selectedImage
 
   return (
-    <div className="min-h-screen flex flex-col bg-base-200" data-theme="fammail">
+    <div className="min-h-screen flex flex-col bg-base-200" data-theme="light">
       <Header testMode={backendStatus.testMode} />
 
-      <main className="flex-1 container mx-auto px-4 py-8 max-w-4xl">
-        <div className="space-y-6">
+      <main className="flex-1 container mx-auto px-4 py-6 lg:py-8">
+        <div className="space-y-4 lg:space-y-6">
           <StatusCard
             isLoading={isLoading}
             connected={backendStatus.connected}
@@ -86,6 +88,8 @@ function App() {
                 onAddressChange={setRecipientAddress}
                 selectedImage={selectedImage}
                 onImageChange={setSelectedImage}
+                message={message}
+                onMessageChange={setMessage}
               />
 
               {isReadyToSend && (
