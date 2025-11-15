@@ -18,6 +18,7 @@ function App() {
   const [recipientAddress, setRecipientAddress] = useState<Address | null>(null)
   const [addressFormOpen, setAddressFormOpen] = useState(true)
   const [imageUploadOpen, setImageUploadOpen] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<{ file: File; preview: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/health')
@@ -38,8 +39,12 @@ function App() {
     setImageUploadOpen(true)
   }
 
-  const handleImageSelect = (file: File) => {
-    console.log('Image selected:', file.name)
+  const handleImageSelect = (file: File, preview: string) => {
+    if (file.name) {
+      setSelectedImage({ file, preview })
+    } else {
+      setSelectedImage(null)
+    }
   }
 
   return (
@@ -56,20 +61,21 @@ function App() {
           />
 
           <div className="space-y-4">
-            <AddressForm 
+            <AddressForm
               onSubmit={handleAddressSubmit}
               initialAddress={recipientAddress || undefined}
               isOpen={addressFormOpen}
               onToggle={() => setAddressFormOpen(!addressFormOpen)}
             />
 
-            {recipientAddress && (
-              <ImageUpload 
-                onImageSelect={handleImageSelect}
-                isOpen={imageUploadOpen}
-                onToggle={() => setImageUploadOpen(!imageUploadOpen)}
-              />
-            )}
+                      {recipientAddress && (
+            <ImageUpload
+              onImageSelect={handleImageSelect}
+              selectedImage={selectedImage}
+              isOpen={imageUploadOpen}
+              onToggle={() => setImageUploadOpen(!imageUploadOpen)}
+            />
+          )}
           </div>
 
           {recipientAddress && (
