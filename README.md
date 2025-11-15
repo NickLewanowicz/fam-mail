@@ -61,11 +61,12 @@ The frontend will be at `http://localhost:5173` and backend at `http://localhost
 ## Commands
 
 ```bash
-pnpm dev          # Start both frontend and backend
-pnpm build        # Build for production
-pnpm start        # Run production build
-pnpm test         # Run all tests
-pnpm lint         # Check for linting errors
+pnpm dev                 # Start both frontend and backend
+pnpm build               # Build for production
+pnpm start               # Run production build
+pnpm test                # Run all tests
+pnpm lint                # Check for linting errors
+./scripts/ci-local.sh    # Run full CI checks locally before pushing
 ```
 
 ## Docker Quick Start
