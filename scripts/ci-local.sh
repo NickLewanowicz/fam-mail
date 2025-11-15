@@ -38,3 +38,18 @@ echo ""
 echo "================================================"
 echo "✅ All CI checks passed!"
 echo "================================================"
+
+if command -v docker &> /dev/null; then
+    echo ""
+    echo "🐳 Docker is available. Testing Docker build..."
+    docker build -t fam-mail:local-test . > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "✅ Docker build successful!"
+    else
+        echo "❌ Docker build failed. Run 'docker build -t fam-mail:local-test .' for details"
+        exit 1
+    fi
+else
+    echo ""
+    echo "ℹ️  Docker not available. Skipping Docker build test."
+fi
