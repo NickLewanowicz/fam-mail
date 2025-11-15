@@ -52,7 +52,6 @@ function App() {
             isLoading={isLoading}
             connected={backendStatus.connected}
             message={backendStatus.message}
-            testMode={backendStatus.testMode}
             error={backendStatus.error}
           />
 
