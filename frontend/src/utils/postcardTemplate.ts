@@ -102,9 +102,11 @@ export function generateFrontHTML(imageBase64: string): string {
 </html>`
 }
 
-export function generateBackHTML(message?: string): string {
+export function generateBackHTML(messageHTML?: string): string {
   const dims = POSTCARD_6X4_DIMENSIONS
   const zones = calculateSafeZones(dims, true)
+
+  const displayMessage = messageHTML || '<p style="color: #999; font-style: italic;">Your message will appear here...</p>'
 
   return `<!DOCTYPE html>
 <html>
@@ -132,9 +134,18 @@ export function generateBackHTML(message?: string): string {
       height: ${zones.safe.height}px;
       padding: 20px;
       font-size: 24px;
-      line-height: 1.5;
+      line-height: 1.6;
       color: #333;
+      overflow: hidden;
     }
+    .message-area h1 { font-size: 36px; margin-bottom: 16px; font-weight: bold; }
+    .message-area h2 { font-size: 32px; margin-bottom: 14px; font-weight: bold; }
+    .message-area h3 { font-size: 28px; margin-bottom: 12px; font-weight: bold; }
+    .message-area p { margin-bottom: 12px; }
+    .message-area strong { font-weight: bold; }
+    .message-area em { font-style: italic; }
+    .message-area ul, .message-area ol { margin-left: 30px; margin-bottom: 12px; }
+    .message-area li { margin-bottom: 6px; }
     .divider {
       position: absolute;
       left: ${dims.width / 2}px;
@@ -160,7 +171,7 @@ export function generateBackHTML(message?: string): string {
 </head>
 <body>
   <div class="message-area">
-    ${message || 'Your message here...'}
+    ${displayMessage}
   </div>
   <div class="divider"></div>
   <div class="address-area">
@@ -173,15 +184,16 @@ export function generateBackHTML(message?: string): string {
 export function generatePreviewHTML(
   imageBase64: string,
   side: 'front' | 'back',
-  showSafeZones = true
+  showSafeZones = true,
+  messageHTML?: string
 ): string {
   const dims = POSTCARD_6X4_DIMENSIONS
   const zones = calculateSafeZones(dims, side === 'back')
-  
-  const baseHTML = side === 'front' 
+
+  const baseHTML = side === 'front'
     ? generateFrontHTML(imageBase64)
-    : generateBackHTML()
-  
+    : generateBackHTML(messageHTML)
+
   if (!showSafeZones) {
     return baseHTML
   }
