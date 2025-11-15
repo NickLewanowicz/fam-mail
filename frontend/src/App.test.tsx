@@ -25,12 +25,15 @@ vi.mock('./components/status/StatusCard', () => ({
 vi.mock('./components/postcard/PostcardBuilder', () => ({
   PostcardBuilder: ({ 
     onAddressChange, 
-    onImageChange
+    onImageChange,
+    onMessageChange
   }: { 
     recipientAddress: Address | null;
     onAddressChange: (address: Address | null) => void;
     selectedImage: { file: File; preview: string } | null;
     onImageChange: (image: { file: File; preview: string } | null) => void;
+    message: string;
+    onMessageChange: (message: string) => void;
   }) => (
     <div data-testid="mock-postcard-builder">
       Postcard Builder
@@ -47,12 +50,13 @@ vi.mock('./components/postcard/PostcardBuilder', () => ({
         const mockFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
         onImageChange({ file: mockFile, preview: 'data:image/jpeg;base64,test' })
       }}>Select Image</button>
+      <button onClick={() => onMessageChange('Test message')}>Write Message</button>
     </div>
   ),
 }))
 
 vi.mock('./utils/api', () => ({
-  submitPostcard: vi.fn(() => Promise.resolve({
+  submitPostcard: vi.fn((_address, _image, _message) => Promise.resolve({
     success: true,
     postcard: {
       id: 'pc_123',
