@@ -58,23 +58,13 @@ describe('App Component', () => {
     })
   })
 
-  it('should render the info card', () => {
+  it('should render the address form', () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
     } as Response)
 
     render(<App />)
-    expect(screen.getByText('Getting Started')).toBeInTheDocument()
-    expect(screen.getByText(/This is a starter template for Fam Mail/i)).toBeInTheDocument()
-  })
-
-  it('should render the next steps section', () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
-    } as Response)
-
-    render(<App />)
-    expect(screen.getByText('Next Steps')).toBeInTheDocument()
+    expect(screen.getByText('Recipient Address')).toBeInTheDocument()
   })
 
   it('should render the footer', () => {
@@ -94,8 +84,8 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('🧪 Test Mode Active')).toBeInTheDocument()
-      expect(screen.getByText('⚠️ Running in test mode - no real postcards will be sent')).toBeInTheDocument()
+      expect(screen.getByText('🧪 Test Mode')).toBeInTheDocument()
+      expect(screen.getByText('Running in test mode - no real postcards will be sent')).toBeInTheDocument()
     })
   })
 })
