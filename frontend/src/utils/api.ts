@@ -10,10 +10,21 @@ export interface PostcardResponse {
   success: boolean
   postcard?: {
     id: string
-    status: string
+    object: 'postcard'
+    live: boolean
     to: Address
+    from: Address
     url?: string
+    frontTemplate?: string
+    backTemplate?: string
+    size: string
+    mailedDate?: string
     expectedDeliveryDate?: string
+    status: 'ready' | 'rendered' | 'submitted' | 'processed' | 'delivered' | 'failed'
+    carrier?: string
+    trackingNumber?: string
+    createdAt: string
+    updatedAt: string
   }
   testMode?: boolean
   error?: string
