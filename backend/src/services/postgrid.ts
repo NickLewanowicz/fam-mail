@@ -17,7 +17,7 @@ export class PostGridService {
   async createPostcard(request: PostGridPostcardRequest): Promise<PostGridPostcardResponse> {
     try {
       const formData = new URLSearchParams()
-      
+
       formData.append('to[firstName]', request.to.firstName)
       formData.append('to[lastName]', request.to.lastName)
       formData.append('to[addressLine1]', request.to.addressLine1)
@@ -28,7 +28,7 @@ export class PostGridService {
       formData.append('to[provinceOrState]', request.to.provinceOrState)
       formData.append('to[postalOrZip]', request.to.postalOrZip)
       formData.append('to[countryCode]', request.to.countryCode)
-      
+
       if (request.frontHTML) {
         formData.append('frontHTML', request.frontHTML)
       }

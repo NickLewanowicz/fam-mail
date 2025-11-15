@@ -9,7 +9,7 @@ describe('handlePostcardCreate', () => {
     })
 
     const response = await handlePostcardCreate(req)
-    const data = await response.json()
+    const data = await response.json() as { error?: string }
 
     expect(response.status).toBe(400)
     expect(data.error).toContain('Missing required address fields')
@@ -32,7 +32,7 @@ describe('handlePostcardCreate', () => {
     })
 
     const response = await handlePostcardCreate(req)
-    const data = await response.json()
+    const data = await response.json() as { error?: string }
 
     expect(response.status).toBe(400)
     expect(data.error).toContain('frontHTML or backHTML')
