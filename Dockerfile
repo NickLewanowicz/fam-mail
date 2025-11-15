@@ -1,19 +1,14 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-FROM base AS dependencies
-COPY package.json pnpm-workspace.yaml ./
+FROM base AS build
+RUN bun install --global pnpm
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
-RUN bun install --global pnpm
 RUN pnpm install --frozen-lockfile
-
-FROM base AS build
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/backend/node_modules ./backend/node_modules
-COPY --from=dependencies /app/frontend/node_modules ./frontend/node_modules
-COPY . .
-RUN bun install --global pnpm
+COPY backend ./backend
+COPY frontend ./frontend
 RUN pnpm build
 
 FROM base AS release
