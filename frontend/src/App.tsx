@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
+import { marked } from 'marked'
 import { Header } from './components/layout/Header'
 import { PostcardBuilder } from './components/postcard/PostcardBuilder'
 import { submitPostcard, type PostcardResponse } from './utils/api'
+import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from './utils/postcardTemplate'
 import type { Address } from './types/address'
 
 interface BackendStatus {
@@ -20,6 +22,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
+  const [confirmationMessageHTML, setConfirmationMessageHTML] = useState<string>('')
 
   useEffect(() => {
     fetch('/api/health')
@@ -42,7 +45,9 @@ function App() {
 
     try {
       const response = await submitPostcard(recipientAddress, selectedImage.file, message)
-      setSubmissionSuccess({ ...response, selectedImage })
+      const messageHTML = message ? await marked(message) : ''
+      setConfirmationMessageHTML(messageHTML)
+      setSubmissionSuccess({ ...response, selectedImage, message })
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : 'Failed to send postcard')
     } finally {
@@ -56,6 +61,7 @@ function App() {
     setMessage('')
     setSubmissionSuccess(null)
     setSubmissionError(null)
+    setConfirmationMessageHTML('')
   }
 
   const isReadyToSend = recipientAddress &&
@@ -69,8 +75,8 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-base-200" data-theme="light">
-      <Header 
-        testMode={backendStatus.testMode} 
+      <Header
+        testMode={backendStatus.testMode}
         connected={backendStatus.connected}
         isLoading={isLoading}
       />
@@ -202,13 +208,68 @@ function App() {
 
                 {submissionSuccess.selectedImage && (
                   <div className="mt-4 space-y-2">
-                    <h3 className="font-semibold text-sm opacity-70">Postcard Image</h3>
-                    <div className="bg-base-200 rounded-lg p-3 flex justify-center">
-                      <img
-                        src={submissionSuccess.selectedImage.preview}
-                        alt="Sent postcard"
-                        className="max-h-64 w-auto rounded-lg"
-                      />
+                    <h3 className="font-semibold text-sm opacity-70">Postcard</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-center mb-2 opacity-60">Front</p>
+                        <div className="bg-base-200 rounded-lg p-3">
+                          <div
+                            className="mx-auto"
+                            style={{
+                              width: '100%',
+                              maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 3}px`,
+                              aspectRatio: '6/4',
+                              boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <iframe
+                              srcDoc={generatePreviewHTML(submissionSuccess.selectedImage.preview, 'front', false)}
+                              title="Postcard Front"
+                              style={{
+                                width: `${POSTCARD_6X4_DIMENSIONS.width}px`,
+                                height: `${POSTCARD_6X4_DIMENSIONS.height}px`,
+                                transform: 'scale(0.333)',
+                                transformOrigin: 'top left',
+                                border: 'none',
+                                display: 'block',
+                              }}
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-center mb-2 opacity-60">Back</p>
+                        <div className="bg-base-200 rounded-lg p-3">
+                          <div
+                            className="mx-auto"
+                            style={{
+                              width: '100%',
+                              maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 3}px`,
+                              aspectRatio: '6/4',
+                              boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                              position: 'relative',
+                              overflow: 'hidden',
+                            }}
+                          >
+                            <iframe
+                              srcDoc={generatePreviewHTML('', 'back', false, confirmationMessageHTML)}
+                              title="Postcard Back"
+                              style={{
+                                width: `${POSTCARD_6X4_DIMENSIONS.width}px`,
+                                height: `${POSTCARD_6X4_DIMENSIONS.height}px`,
+                                transform: 'scale(0.333)',
+                                transformOrigin: 'top left',
+                                border: 'none',
+                                display: 'block',
+                              }}
+                              sandbox="allow-same-origin"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
