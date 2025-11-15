@@ -30,6 +30,7 @@ export interface PostcardResponse {
   testMode?: boolean
   error?: string
   details?: unknown
+  selectedImage?: { file: File; preview: string }
 }
 
 export async function submitPostcard(
