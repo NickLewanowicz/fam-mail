@@ -1,5 +1,6 @@
 import { join } from 'path'
 import { file } from 'bun'
+import { handlePostcardCreate } from './routes/postcards'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,8 +22,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/health') {
-    const apiKey = process.env.POSTGRID_API_KEY || ''
-    const isTestMode = apiKey.startsWith('test_')
+    const isTestMode = process.env.TEST_MODE === 'true'
 
     return new Response(
       JSON.stringify({
@@ -55,6 +55,10 @@ export async function handleRequest(req: Request): Promise<Response> {
         },
       }
     )
+  }
+
+  if (url.pathname === '/api/postcards' && req.method === 'POST') {
+    return handlePostcardCreate(req)
   }
 
   if (isProduction && !url.pathname.startsWith('/api')) {
