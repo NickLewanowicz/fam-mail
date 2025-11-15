@@ -10,23 +10,46 @@ export class PostGridService {
       throw new Error('PostGrid API key is required')
     }
     this.apiKey = apiKey
-    this.baseUrl = 'https://api.postgrid.com/v1'
+    this.baseUrl = 'https://api.postgrid.com/print-mail/v1'
     this.isTestMode = testMode
   }
 
   async createPostcard(request: PostGridPostcardRequest): Promise<PostGridPostcardResponse> {
     try {
+      const formData = new URLSearchParams()
+
+      formData.append('to[firstName]', request.to.firstName)
+      formData.append('to[lastName]', request.to.lastName)
+      formData.append('to[addressLine1]', request.to.addressLine1)
+      if (request.to.addressLine2) {
+        formData.append('to[addressLine2]', request.to.addressLine2)
+      }
+      formData.append('to[city]', request.to.city)
+      formData.append('to[provinceOrState]', request.to.provinceOrState)
+      formData.append('to[postalOrZip]', request.to.postalOrZip)
+      formData.append('to[countryCode]', request.to.countryCode)
+
+      if (request.frontHTML) {
+        formData.append('frontHTML', request.frontHTML)
+      }
+      formData.append('backHTML', request.backHTML || 'Thank you!')
+      formData.append('size', request.size || '6x4')
+
       const response = await fetch(`${this.baseUrl}/postcards`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'x-api-key': this.apiKey,
         },
-        body: JSON.stringify(request),
+        body: formData,
       })
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as { message?: string; error?: { type: string; message: string } }
+        console.error('PostGrid API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        })
         throw {
           status: response.status,
           message: errorData.message || 'Failed to create postcard',
