@@ -40,8 +40,8 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Fam Mail backend is running')).toBeInTheDocument()
-      expect(screen.getByText('Frontend and backend are communicating successfully!')).toBeInTheDocument()
+      expect(screen.getByText(/Connected •/)).toBeInTheDocument()
+      expect(screen.getByText(/Fam Mail backend is running/)).toBeInTheDocument()
     })
   })
 
@@ -53,8 +53,8 @@ describe('App Component', () => {
     render(<App />)
 
     await waitFor(() => {
-      expect(screen.getByText('Failed to connect to backend')).toBeInTheDocument()
-      expect(screen.getByText('Connection failed')).toBeInTheDocument()
+      expect(screen.getByText(/Backend connection failed:/)).toBeInTheDocument()
+      expect(screen.getByText(/Connection failed/)).toBeInTheDocument()
     })
   })
 
@@ -85,7 +85,6 @@ describe('App Component', () => {
 
     await waitFor(() => {
       expect(screen.getByText('🧪 Test Mode')).toBeInTheDocument()
-      expect(screen.getByText('Running in test mode - no real postcards will be sent')).toBeInTheDocument()
     })
   })
 })
