@@ -3,15 +3,6 @@ import type { PostGridPostcardRequest } from '../types/postgrid'
 
 export async function handlePostcardCreate(req: Request): Promise<Response> {
   try {
-    if (!postgridService) {
-      return new Response(
-        JSON.stringify({
-          error: 'PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable.'
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-      )
-    }
-
     const body = await req.json()
     const { to, frontHTML, backHTML, size = '6x4' } = body
 
@@ -26,6 +17,15 @@ export async function handlePostcardCreate(req: Request): Promise<Response> {
       return new Response(
         JSON.stringify({ error: 'At least one of frontHTML or backHTML is required' }),
         { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
+      )
+    }
+
+    if (!postgridService) {
+      return new Response(
+        JSON.stringify({ 
+          error: 'PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable.' 
+        }),
+        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
       )
     }
 

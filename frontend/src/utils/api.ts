@@ -36,7 +36,7 @@ export async function submitPostcard(
   imageFile: File
 ): Promise<PostcardResponse> {
   const imageBase64 = await fileToBase64(imageFile)
-  
+
   const frontHTML = `
     <!DOCTYPE html>
     <html>
