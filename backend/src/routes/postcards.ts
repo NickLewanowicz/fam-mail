@@ -1,6 +1,43 @@
 import { marked } from 'marked'
+import DOMPurify from 'isomorphic-dompurify'
 import { postgridService } from '../services/postgrid'
 import type { PostGridPostcardRequest } from '../types/postgrid'
+
+// Security headers
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
+const securityHeaders = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin'
+}
+
+function addSecurityHeaders(response: Response): Response {
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+  return response
+}
+
+function createJsonResponse(data: any, status: number = 200): Response {
+  const response = new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+    }
+  )
+  return addSecurityHeaders(response)
+}
 
 export async function handlePostcardCreate(req: Request): Promise<Response> {
   try {
@@ -23,32 +60,28 @@ export async function handlePostcardCreate(req: Request): Promise<Response> {
     const { to, frontHTML, backHTML, message, size = '6x4' } = body
 
     if (!to || !to.firstName || !to.lastName || !to.addressLine1 || !to.city || !to.provinceOrState || !to.postalOrZip || !to.countryCode) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required address fields' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-      )
+      return createJsonResponse({ error: 'Missing required address fields' }, 400)
     }
 
     if (!frontHTML && !backHTML && !message) {
-      return new Response(
-        JSON.stringify({ error: 'At least one of frontHTML, backHTML, or message is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-      )
+      return createJsonResponse({ error: 'At least one of frontHTML, backHTML, or message is required' }, 400)
     }
 
     if (!postgridService) {
-      return new Response(
-        JSON.stringify({
-          error: 'PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable.'
-        }),
-        { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } }
-      )
+      return createJsonResponse({
+        error: 'PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable.'
+      }, 500)
     }
 
     let finalBackHTML = backHTML
 
     if (message) {
-      const messageHTML = await marked(message)
+      const markedHTML = await marked(message)
+      const messageHTML = DOMPurify.sanitize(markedHTML, {
+        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
+        ALLOWED_ATTR: ['class'],
+        FORBID_ATTR: ['onclick', 'onload', 'onerror', 'style']
+      })
       finalBackHTML = `
         <!DOCTYPE html>
         <html>
@@ -101,35 +134,17 @@ export async function handlePostcardCreate(req: Request): Promise<Response> {
 
     const result = await postgridService.createPostcard(postcardRequest)
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        postcard: result,
-        testMode: postgridService.getTestMode(),
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    )
+    return createJsonResponse({
+      success: true,
+      postcard: result,
+      testMode: postgridService.getTestMode(),
+    })
   } catch (error: unknown) {
     const status = (error as { status?: number }).status || 500
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: (error as { message?: string }).message || 'Failed to create postcard',
-        details: (error as { error?: unknown }).error,
-      }),
-      {
-        status,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    )
+    return createJsonResponse({
+      success: false,
+      error: (error as { message?: string }).message || 'Failed to create postcard',
+      details: (error as { error?: unknown }).error,
+    }, status)
   }
 }

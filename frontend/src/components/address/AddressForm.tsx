@@ -4,31 +4,27 @@ import type { Address } from '../../types/address'
 interface AddressFormProps {
   onSubmit: (address: Address) => void
   initialAddress?: Partial<Address>
-  isOpen?: boolean
-  onToggle?: () => void
 }
 
-export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle }: AddressFormProps) {
-  const { register, handleSubmit, formState: { errors } } = useForm<Address>({
+export function AddressForm({ onSubmit, initialAddress }: AddressFormProps) {
+  const { register, handleSubmit, formState: { errors }, trigger } = useForm<Address>({
     defaultValues: {
       firstName: initialAddress?.firstName || '',
       lastName: initialAddress?.lastName || '',
       addressLine1: initialAddress?.addressLine1 || '',
       addressLine2: initialAddress?.addressLine2 || '',
-      city: initialAddress?.city || 'Ottawa',
-      provinceOrState: initialAddress?.provinceOrState || 'ON',
+      city: initialAddress?.city || '',
+      provinceOrState: initialAddress?.provinceOrState || '',
       postalOrZip: initialAddress?.postalOrZip || '',
       countryCode: initialAddress?.countryCode || 'CA',
-    }
+    },
+    mode: 'onChange',
   })
 
   return (
-    <div className="collapse collapse-arrow bg-base-100 shadow-xl">
-      <input type="checkbox" checked={isOpen} onChange={onToggle || (() => {})} />
-      <div className="collapse-title text-xl font-medium">
-        Recipient Address
-      </div>
-      <div className="collapse-content">
+    <div className="bg-base-100 shadow-xl rounded-lg">
+      <div className="p-6">
+        <h2 className="text-xl font-medium mb-6">Recipient Address</h2>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="form-control">
@@ -39,7 +35,10 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
                 type="text"
                 placeholder="John"
                 className={`input input-bordered ${errors.firstName ? 'input-error' : ''}`}
-                {...register('firstName', { required: 'First name is required' })}
+                {...register('firstName', {
+                  required: 'First name is required',
+                  onChange: () => trigger('firstName')
+                })}
               />
               {errors.firstName && (
                 <label className="label">
@@ -56,7 +55,10 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
                 type="text"
                 placeholder="Doe"
                 className={`input input-bordered ${errors.lastName ? 'input-error' : ''}`}
-                {...register('lastName', { required: 'Last name is required' })}
+                {...register('lastName', {
+                  required: 'Last name is required',
+                  onChange: () => trigger('lastName')
+                })}
               />
               {errors.lastName && (
                 <label className="label">
@@ -74,7 +76,10 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
               type="text"
               placeholder="123 Main Street"
               className={`input input-bordered ${errors.addressLine1 ? 'input-error' : ''}`}
-              {...register('addressLine1', { required: 'Address is required' })}
+              {...register('addressLine1', {
+                required: 'Address is required',
+                onChange: () => trigger('addressLine1')
+              })}
             />
             {errors.addressLine1 && (
               <label className="label">
@@ -102,9 +107,12 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
               </label>
               <input
                 type="text"
-                placeholder="Ottawa"
+                placeholder="City"
                 className={`input input-bordered ${errors.city ? 'input-error' : ''}`}
-                {...register('city', { required: 'City is required' })}
+                {...register('city', {
+                  required: 'City is required',
+                  onChange: () => trigger('city')
+                })}
               />
               {errors.city && (
                 <label className="label">
@@ -119,9 +127,12 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
               </label>
               <input
                 type="text"
-                placeholder="ON"
+                placeholder="Province/State"
                 className={`input input-bordered ${errors.provinceOrState ? 'input-error' : ''}`}
-                {...register('provinceOrState', { required: 'Province/State is required' })}
+                {...register('provinceOrState', {
+                  required: 'Province/State is required',
+                  onChange: () => trigger('provinceOrState')
+                })}
               />
               {errors.provinceOrState && (
                 <label className="label">
@@ -138,9 +149,12 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
               </label>
               <input
                 type="text"
-                placeholder="K1A 0B1"
+                placeholder="Postal/Zip Code"
                 className={`input input-bordered ${errors.postalOrZip ? 'input-error' : ''}`}
-                {...register('postalOrZip', { required: 'Postal/Zip code is required' })}
+                {...register('postalOrZip', {
+                  required: 'Postal/Zip code is required',
+                  onChange: () => trigger('postalOrZip')
+                })}
               />
               {errors.postalOrZip && (
                 <label className="label">
@@ -155,7 +169,10 @@ export function AddressForm({ onSubmit, initialAddress, isOpen = true, onToggle 
               </label>
               <select
                 className={`select select-bordered ${errors.countryCode ? 'select-error' : ''}`}
-                {...register('countryCode', { required: 'Country is required' })}
+                {...register('countryCode', {
+                  required: 'Country is required',
+                  onChange: () => trigger('countryCode')
+                })}
               >
                 <option value="CA">Canada</option>
                 <option value="US">United States</option>

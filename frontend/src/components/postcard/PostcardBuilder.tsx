@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import MDEditor from '@uiw/react-md-editor'
 import { marked } from 'marked'
 import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from '../../utils/postcardTemplate'
+import { AddressForm } from '../address/AddressForm'
 import type { Address } from '../../types/address'
 
 interface PostcardBuilderProps {
@@ -27,7 +28,6 @@ export function PostcardBuilder({
   const [showSafeZones, setShowSafeZones] = useState(true)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [activeTab, setActiveTab] = useState<'address' | 'message'>('address')
   const [messageHTML, setMessageHTML] = useState<string>('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -113,6 +113,19 @@ export function PostcardBuilder({
     : generatePreviewHTML('', 'front', showSafeZones)
   const backHTML = generatePreviewHTML('', 'back', showSafeZones, messageHTML)
 
+  // Handle address form submission
+  const handleAddressSubmit = (address: Address) => {
+    onAddressChange(address)
+  }
+
+  // Calculate progress for visual feedback
+  const progressSteps = [
+    recipientAddress?.firstName && recipientAddress?.lastName && recipientAddress?.addressLine1,
+    message.trim(),
+    selectedImage
+  ]
+  const progressPercentage = (progressSteps.filter(Boolean).length / progressSteps.length) * 100
+
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -130,6 +143,17 @@ export function PostcardBuilder({
         </div>
       </div>
 
+      {/* Progress Indicator */}
+      <div className="w-full bg-base-300 rounded-full h-3">
+        <div
+          className="bg-primary h-3 rounded-full transition-all duration-300 ease-out"
+          style={{ width: `${progressPercentage}%` }}
+        ></div>
+      </div>
+      <p className="text-sm text-center opacity-70">
+        Complete: {progressSteps.filter(Boolean).length} of {progressSteps.length} steps
+      </p>
+
       {showSafeZones && (
         <div className="alert alert-info">
           <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
@@ -146,313 +170,168 @@ export function PostcardBuilder({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Front</h3>
-            {selectedImage && (
-              <button onClick={handleRemoveImage} className="btn btn-ghost btn-xs">
-                Change Image
-              </button>
-            )}
-          </div>
+      {/* Single Column Layout */}
+      <div className="space-y-6">
+        {/* Step 1: Address */}
+        <AddressForm
+          onSubmit={handleAddressSubmit}
+          initialAddress={recipientAddress || undefined}
+        />
 
-          <div className="bg-base-200 rounded-lg p-3 lg:p-4">
-            <div
-              className="mx-auto"
-              style={{
-                width: '100%',
-                maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 3}px`,
-                aspectRatio: '6/4',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <iframe
-                srcDoc={frontHTML}
-                title="Postcard Front Preview"
-                style={{
-                  width: `${POSTCARD_6X4_DIMENSIONS.width}px`,
-                  height: `${POSTCARD_6X4_DIMENSIONS.height}px`,
-                  transform: 'scale(0.333)',
-                  transformOrigin: 'top left',
-                  border: 'none',
-                  display: 'block',
-                }}
-                sandbox="allow-same-origin"
-              />
-            </div>
-          </div>
-
-          {uploadError && (
-            <div className="alert alert-error">
-              <span className="text-sm">{uploadError}</span>
-            </div>
-          )}
-
-          {!selectedImage ? (
-            <div
-              className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${isDragging
-                ? 'border-primary bg-primary/10'
-                : 'border-base-300 hover:border-primary hover:bg-base-300'
-                }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-10 w-10 mx-auto mb-2 opacity-50"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+        {/* Step 2: Message */}
+        <div className="bg-base-100 shadow-xl rounded-lg">
+          <div className="p-6">
+            <h2 className="text-xl font-medium mb-6">Message Content</h2>
+            <div className="space-y-2">
+              <label className="label">
+                <span className="label-text">Your Message</span>
+                <span className="label-text-alt text-xs opacity-70">Markdown with live preview</span>
+              </label>
+              <div data-color-mode="light">
+                <MDEditor
+                  value={message}
+                  onChange={(val) => onMessageChange(val || '')}
+                  preview="live"
+                  height={300}
                 />
-              </svg>
-              <p className="text-sm mb-1">
-                <span className="font-semibold">Click to upload</span> or drag and drop
-              </p>
-              <p className="text-xs opacity-70">
-                JPG, PNG or GIF (max {MAX_FILE_SIZE / 1024 / 1024}MB)
-              </p>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept={ALLOWED_TYPES.join(',')}
-                onChange={handleFileInputChange}
-                className="hidden"
-                id="postcard-front-image"
-              />
+              </div>
             </div>
-          ) : (
-            <div className="alert alert-success py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span className="text-sm">{selectedImage.file.name}</span>
-            </div>
-          )}
+          </div>
         </div>
 
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold">Back</h3>
+        {/* Step 3: Image Upload and Preview */}
+        <div className="bg-base-100 shadow-xl rounded-lg">
+          <div className="p-6">
+            <h2 className="text-xl font-medium mb-6">Postcard Image</h2>
 
-          <div className="bg-base-200 rounded-lg p-3 lg:p-4">
-            <div
-              className="mx-auto"
-              style={{
-                width: '100%',
-                maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 3}px`,
-                aspectRatio: '6/4',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <iframe
-                srcDoc={backHTML}
-                title="Postcard Back Preview"
-                style={{
-                  width: `${POSTCARD_6X4_DIMENSIONS.width}px`,
-                  height: `${POSTCARD_6X4_DIMENSIONS.height}px`,
-                  transform: 'scale(0.333)',
-                  transformOrigin: 'top left',
-                  border: 'none',
-                  display: 'block',
-                }}
-                sandbox="allow-same-origin"
-              />
-            </div>
-          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Upload Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Upload Image</h3>
 
-          <div className="card bg-base-100 shadow-lg">
-            <div className="card-body p-0">
-              <div className="tabs tabs-boxed bg-base-200">
-                <button
-                  className={`tab tab-md lg:tab-lg flex-1 ${activeTab === 'address' ? 'tab-active' : ''}`}
-                  onClick={() => setActiveTab('address')}
-                >
-                  Address
-                </button>
-                <button
-                  className={`tab tab-md lg:tab-lg flex-1 ${activeTab === 'message' ? 'tab-active' : ''}`}
-                  onClick={() => setActiveTab('message')}
-                >
-                  Message
-                </button>
+                {uploadError && (
+                  <div className="alert alert-error">
+                    <span className="text-sm">{uploadError}</span>
+                  </div>
+                )}
+
+                {!selectedImage ? (
+                  <div
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragging
+                      ? 'border-primary bg-primary/10'
+                      : 'border-base-300 hover:border-primary hover:bg-base-300'
+                      }`}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-12 w-12 mx-auto mb-4 opacity-50"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                      />
+                    </svg>
+                    <p className="text-sm mb-2">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs opacity-70">
+                      JPG, PNG or GIF (max {MAX_FILE_SIZE / 1024 / 1024}MB)
+                    </p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={ALLOWED_TYPES.join(',')}
+                      onChange={handleFileInputChange}
+                      className="hidden"
+                      id="postcard-front-image"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="alert alert-success">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{selectedImage.file.name}</span>
+                    </div>
+                    <button onClick={handleRemoveImage} className="btn btn-ghost btn-block">
+                      Change Image
+                    </button>
+                  </div>
+                )}
               </div>
 
-              <div className="p-3 lg:p-4">
-                {activeTab === 'address' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="First Name"
-                        className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.firstName || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: e.target.value,
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Last Name"
-                        className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.lastName || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: recipientAddress?.firstName || '',
-                          lastName: e.target.value,
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
-                    </div>
-
-                    <input
-                      type="text"
-                      placeholder="Address Line 1"
-                      className="input input-bordered input-sm lg:input-md w-full"
-                      value={recipientAddress?.addressLine1 || ''}
-                      onChange={(e) => onAddressChange({
-                        ...recipientAddress,
-                        firstName: recipientAddress?.firstName || '',
-                        lastName: recipientAddress?.lastName || '',
-                        addressLine1: e.target.value,
-                        city: recipientAddress?.city || '',
-                        provinceOrState: recipientAddress?.provinceOrState || '',
-                        postalOrZip: recipientAddress?.postalOrZip || '',
-                        countryCode: recipientAddress?.countryCode || 'CA',
-                      })}
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Address Line 2 (Optional)"
-                      className="input input-bordered input-sm lg:input-md w-full"
-                      value={recipientAddress?.addressLine2 || ''}
-                      onChange={(e) => onAddressChange({
-                        ...recipientAddress,
-                        firstName: recipientAddress?.firstName || '',
-                        lastName: recipientAddress?.lastName || '',
-                        addressLine1: recipientAddress?.addressLine1 || '',
-                        addressLine2: e.target.value,
-                        city: recipientAddress?.city || '',
-                        provinceOrState: recipientAddress?.provinceOrState || '',
-                        postalOrZip: recipientAddress?.postalOrZip || '',
-                        countryCode: recipientAddress?.countryCode || 'CA',
-                      })}
-                    />
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="City"
-                        className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.city || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: recipientAddress?.firstName || '',
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: e.target.value,
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
-                      <input
-                        type="text"
-                        placeholder="Province/State"
-                        className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.provinceOrState || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: recipientAddress?.firstName || '',
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: e.target.value,
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <input
-                        type="text"
-                        placeholder="Postal/Zip Code"
-                        className="input input-bordered input-sm lg:input-md"
-                        value={recipientAddress?.postalOrZip || ''}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: recipientAddress?.firstName || '',
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: e.target.value,
-                          countryCode: recipientAddress?.countryCode || 'CA',
-                        })}
-                      />
-                      <select
-                        className="select select-bordered select-sm lg:select-md"
-                        value={recipientAddress?.countryCode || 'CA'}
-                        onChange={(e) => onAddressChange({
-                          ...recipientAddress,
-                          firstName: recipientAddress?.firstName || '',
-                          lastName: recipientAddress?.lastName || '',
-                          addressLine1: recipientAddress?.addressLine1 || '',
-                          city: recipientAddress?.city || '',
-                          provinceOrState: recipientAddress?.provinceOrState || '',
-                          postalOrZip: recipientAddress?.postalOrZip || '',
-                          countryCode: e.target.value,
-                        })}
-                      >
-                        <option value="">Select Country</option>
-                        <option value="CA">Canada</option>
-                        <option value="US">United States</option>
-                        <option value="GB">United Kingdom</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'message' && (
+              {/* Preview Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Live Preview</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Front Preview */}
                   <div className="space-y-2">
-                    <label className="label">
-                      <span className="label-text">Your Message</span>
-                      <span className="label-text-alt text-xs opacity-70">Markdown with live preview</span>
-                    </label>
-                    <div data-color-mode="light">
-                      <MDEditor
-                        value={message}
-                        onChange={(val) => onMessageChange(val || '')}
-                        preview="live"
-                        height={300}
-                      />
+                    <h4 className="text-sm font-medium text-center">Front</h4>
+                    <div className="bg-base-200 rounded-lg p-3 flex justify-center items-center">
+                      <div
+                        style={{
+                          width: '100%',
+                          maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 4}px`,
+                          aspectRatio: '6/4',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                        }}
+                      >
+                        <iframe
+                          srcDoc={frontHTML}
+                          title="Postcard Front Preview"
+                          style={{
+                            width: `${POSTCARD_6X4_DIMENSIONS.width}px`,
+                            height: `${POSTCARD_6X4_DIMENSIONS.height}px`,
+                            transform: 'scale(0.25)',
+                            transformOrigin: 'top left',
+                            border: 'none',
+                            display: 'block',
+                          }}
+                          sandbox="allow-same-origin"
+                        />
+                      </div>
                     </div>
                   </div>
-                )}
+
+                  {/* Back Preview */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium text-center">Back</h4>
+                    <div className="bg-base-200 rounded-lg p-3 flex justify-center items-center">
+                      <div
+                        style={{
+                          width: '100%',
+                          maxWidth: `${POSTCARD_6X4_DIMENSIONS.width / 4}px`,
+                          aspectRatio: '6/4',
+                          boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+                        }}
+                      >
+                        <iframe
+                          srcDoc={backHTML}
+                          title="Postcard Back Preview"
+                          style={{
+                            width: `${POSTCARD_6X4_DIMENSIONS.width}px`,
+                            height: `${POSTCARD_6X4_DIMENSIONS.height}px`,
+                            transform: 'scale(0.25)',
+                            transformOrigin: 'top left',
+                            border: 'none',
+                            display: 'block',
+                          }}
+                          sandbox="allow-same-origin"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

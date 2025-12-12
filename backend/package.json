@@ -12,12 +12,13 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@types/cors": "^2.8.17",
-    "cors": "^2.8.5",
+    "helmet": "^8.1.0",
+    "isomorphic-dompurify": "^2.34.0",
     "marked": "^17.0.0"
   },
   "devDependencies": {
     "@types/bun": "^1.0.0",
+    "@types/helmet": "^4.0.0",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",

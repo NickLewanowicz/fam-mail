@@ -1,11 +1,57 @@
 import { join } from 'path'
 import { file } from 'bun'
 import { handlePostcardCreate } from './routes/postcards'
+import { handleEmailWebhook, handleWebhookHealth } from './routes/webhook'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
+// Security headers using helmet's default configuration
+const securityHeaders = {
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'cross-origin',
+  'DNS-Prefetch-Control': 'off',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+  'Strict-Transport-Security': 'max-age=15552000; includeSubDomains'
+}
+
+function addSecurityHeaders(response: Response): Response {
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    response.headers.set(key, value)
+  })
+  return response
+}
+
+function createJsonResponse(data: any, status: number = 200): Response {
+  const response = new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+      },
+    }
+  )
+  return addSecurityHeaders(response)
+}
+
+function createCorsResponse(): Response {
+  return addSecurityHeaders(
+    new Response(null, {
+      status: 204,
+      headers: corsHeaders,
+    })
+  )
 }
 
 const isProduction = process.env.NODE_ENV === 'production'
@@ -15,50 +61,38 @@ export async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    })
+    return createCorsResponse()
   }
 
   if (url.pathname === '/api/health') {
     const isTestMode = process.env.TEST_MODE === 'true'
 
-    return new Response(
-      JSON.stringify({
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        message: 'Fam Mail backend is running',
-        testMode: isTestMode,
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    )
+    return createJsonResponse({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      message: 'Fam Mail backend is running',
+      testMode: isTestMode,
+    })
   }
 
   if (url.pathname === '/api/test') {
-    return new Response(
-      JSON.stringify({
-        message: 'Hello from Fam Mail backend!',
-        connected: true,
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          ...corsHeaders,
-        },
-      }
-    )
+    return createJsonResponse({
+      message: 'Hello from Fam Mail backend!',
+      connected: true,
+    })
   }
 
   if (url.pathname === '/api/postcards' && req.method === 'POST') {
     return handlePostcardCreate(req)
+  }
+
+  // Email webhook endpoints
+  if (url.pathname === '/api/webhook/email' && req.method === 'POST') {
+    return handleEmailWebhook(req)
+  }
+
+  if (url.pathname === '/api/webhook/health' && req.method === 'GET') {
+    return handleWebhookHealth(req)
   }
 
   if (isProduction && !url.pathname.startsWith('/api')) {
@@ -79,14 +113,5 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
-  return new Response(
-    JSON.stringify({ error: 'Not Found' }),
-    {
-      status: 404,
-      headers: {
-        'Content-Type': 'application/json',
-        ...corsHeaders,
-      },
-    }
-  )
+  return createJsonResponse({ error: 'Not Found' }, 404)
 }
