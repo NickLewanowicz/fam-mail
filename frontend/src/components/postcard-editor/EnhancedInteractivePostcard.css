@@ -1,0 +1,286 @@
+/* Enhanced Interactive Postcard Styles */
+
+.enhanced-postcard-wrapper {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* 3D Postcard Container */
+.postcard-3d-container {
+  position: relative;
+  width: 100%;
+  height: 350px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto;
+}
+
+/* Postcard Flipper */
+.postcard-flipper {
+  width: 525px; /* 6 inches at 87.5 DPI for screen display */
+  height: 350px; /* 4 inches at 87.5 DPI for screen display */
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+  aspect-ratio: 3/2; /* Ensure 6:4 (3:2) aspect ratio */
+  max-width: 90%; /* Ensure responsive behavior */
+}
+
+/* Postcard Faces */
+.postcard-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+/* Backface visibility for different browsers */
+.backface-hidden {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+}
+
+/* Face transformations */
+.postcard-front {
+  transform: rotateY(0deg);
+  z-index: 2;
+}
+
+.postcard-back {
+  transform: rotateY(180deg);
+}
+
+/* Controls Container */
+.controls-container {
+  margin-top: 2rem;
+  user-select: none;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.progress {
+  background-color: #e5e7eb;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  transition: width 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* Keyboard Help */
+.keyboard-help {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.keyboard-help kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: #444;
+  background-color: #f8f8f8;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+/* Flip Button Animation */
+.btn-circle:hover svg {
+  transform: scale(1.1);
+  transition: transform 0.2s ease;
+}
+
+/* Side Indicator Animation */
+[role="tablist"] [role="tab"] {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+[role="tablist"] [role="tab"]:hover:not([aria-selected="true"]) {
+  background-color: #e5e7eb;
+}
+
+/* Focus Management */
+.enhanced-postcard-wrapper *:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .postcard-face {
+    border: 2px solid #000;
+  }
+
+  .enhanced-postcard-wrapper *:focus {
+    outline: 3px solid #000;
+    outline-offset: 2px;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .postcard-flipper {
+    transition: none;
+  }
+
+  .postcard-face {
+    transition: none;
+  }
+
+  .enhanced-postcard-wrapper * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile Optimizations - maintaining 3:2 aspect ratio */
+@media (max-width: 768px) {
+  .enhanced-postcard-wrapper {
+    padding: 0.5rem;
+  }
+
+  .postcard-3d-container {
+    height: 280px;
+  }
+
+  .postcard-flipper {
+    width: 420px; /* 6 inches at 70 DPI */
+    height: 280px; /* 4 inches at 70 DPI */
+    max-width: 90vw;
+  }
+
+  .controls-container {
+    margin-top: 1.5rem;
+  }
+
+  .keyboard-help {
+    max-width: 100%;
+  }
+}
+
+/* Small mobile screens - maintaining 3:2 aspect ratio */
+@media (max-width: 480px) {
+  .postcard-3d-container {
+    height: 240px;
+  }
+
+  .postcard-flipper {
+    width: 360px; /* 6 inches at 60 DPI */
+    height: 240px; /* 4 inches at 60 DPI */
+    max-width: 95vw;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .postcard-3d-container {
+    cursor: grab;
+  }
+
+  .postcard-3d-container:active {
+    cursor: grabbing;
+  }
+
+  .btn-circle {
+    touch-action: manipulation;
+  }
+
+  /* Larger touch targets */
+  [role="tab"] {
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* Large screens - maintaining 3:2 aspect ratio */
+@media (min-width: 1024px) {
+  .postcard-3d-container {
+    height: 400px;
+  }
+
+  .postcard-flipper {
+    width: 600px; /* 6 inches at 100 DPI */
+    height: 400px; /* 4 inches at 100 DPI */
+    max-width: 80%;
+  }
+}
+
+/* Print styles */
+@media print {
+  .controls-container,
+  .progress-bar-container,
+  .keyboard-help,
+  .loading-overlay {
+    display: none !important;
+  }
+
+  .postcard-3d-container {
+    height: auto;
+    perspective: none;
+  }
+
+  .postcard-flipper {
+    transform: none !important;
+  }
+
+  .postcard-face {
+    position: relative !important;
+    transform: none !important;
+    margin-bottom: 1rem;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}
+
+/* CSS Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Utility classes for animation */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}

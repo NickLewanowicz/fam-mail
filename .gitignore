@@ -29,3 +29,10 @@ coverage/
 .cache/
 temp/
 tmp/
+
+.claude_sessions/
+frontend/.claude_sessions/
+test-results/
+frontend/test-results/
+frontend/tests/
+frontend/playwright-report/

@@ -1,0 +1,56 @@
+.postcard-container {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.postcard-side {
+  width: 480px; /* 6 inches at 80 DPI for screen display */
+  height: 320px; /* 4 inches at 80 DPI for screen display */
+  aspect-ratio: 3/2; /* Ensure 6:4 (3:2) aspect ratio */
+  position: relative;
+}
+
+.postcard-side-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Responsive adjustments - maintaining 3:2 aspect ratio */
+@media (max-width: 1024px) {
+  .postcard-container {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .postcard-side {
+    width: 360px; /* 6 inches at ~60 DPI */
+    height: 240px; /* 4 inches at ~60 DPI */
+    max-width: 90vw; /* Ensure it fits on smaller screens */
+  }
+}
+
+@media (max-width: 480px) {
+  .postcard-side {
+    width: 320px; /* 6 inches at ~53 DPI */
+    height: 213.33px; /* 4 inches at ~53 DPI */
+    max-width: 90vw; /* Ensure it fits on smaller screens */
+  }
+}
+
+/* Print styles - show both sides */
+@media print {
+  .postcard-container {
+    flex-direction: row;
+    break-inside: avoid;
+  }
+
+  .postcard-side {
+    page-break-inside: avoid;
+  }
+}

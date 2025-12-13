@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
 import { PostcardBuilder } from './components/postcard/PostcardBuilder'
+import { ModalTestPage } from './ModalTestPage'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
 
@@ -21,6 +22,7 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
+  const [showModalTest, setShowModalTest] = useState(false)
 
   useEffect(() => {
     fetch('/api/health')
@@ -81,7 +83,20 @@ function App() {
             error={backendStatus.error}
           />
 
-          {!submissionSuccess && (
+          {/* Modal Test Toggle */}
+          <div className="flex justify-center">
+            <button
+              className={`btn ${showModalTest ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setShowModalTest(!showModalTest)}
+            >
+              {showModalTest ? 'Hide' : 'Show'} Modal Test Page
+            </button>
+          </div>
+
+          {/* Show Modal Test Page or Regular Builder */}
+          {showModalTest ? (
+            <ModalTestPage />
+          ) : !submissionSuccess ? (
             <>
               <PostcardBuilder
                 recipientAddress={recipientAddress}
@@ -122,7 +137,7 @@ function App() {
                 </div>
               )}
             </>
-          )}
+          ) : null}
 
           {submissionError && (
             <div className="alert alert-error">
