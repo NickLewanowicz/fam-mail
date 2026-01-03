@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "bun:test";
-import { Database } from "./database";
+import { Database } from "./index";
 import { unlinkSync } from "fs";
 import { join } from "path";
 
