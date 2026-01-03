@@ -1,12 +1,12 @@
 import { serve } from 'bun';
 import { handleRequest } from './server';
+import { getConfig } from './config';
 
-const isProduction = process.env.NODE_ENV === 'production';
-const PORT = process.env.PORT || (isProduction ? 3000 : 3001);
+const config = getConfig();
 
 serve({
-  port: PORT,
+  port: config.server.port,
   fetch: handleRequest,
 });
 
-console.log(`🚀 Fam Mail backend running on http://localhost:${PORT}`);
+console.log(`🚀 Fam Mail backend running on http://localhost:${config.server.port}`);

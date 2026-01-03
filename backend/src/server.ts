@@ -2,6 +2,11 @@ import { join } from 'path'
 import { file } from 'bun'
 import { handlePostcardCreate } from './routes/postcards'
 import { handleEmailWebhook, handleWebhookHealth } from './routes/webhook'
+import { getConfig } from './config'
+import { Database } from './database'
+import { IMAPService } from './services/imap'
+import { PostGridService } from './services/postgrid'
+import { NotificationService } from './services/notifications'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -54,7 +59,48 @@ function createCorsResponse(): Response {
   )
 }
 
-const isProduction = process.env.NODE_ENV === 'production'
+const config = getConfig()
+const db = new Database(config.database.path)
+
+// Initialize PostGrid
+const postgrid = new PostGridService({
+  mode: config.postgrid.mode,
+  testApiKey: config.postgrid.testApiKey,
+  liveApiKey: config.postgrid.liveApiKey,
+  forceTestMode: config.postgrid.forceTestMode,
+  webhookSecret: config.postgrid.webhookSecret,
+  size: config.postgrid.size,
+  senderId: config.postgrid.senderId,
+})
+
+// Initialize notifications
+const notifications = new NotificationService({
+  smtp: {
+    host: process.env.SMTP_HOST || "localhost",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    user: process.env.SMTP_USER || "",
+    password: process.env.SMTP_PASSWORD || "",
+  },
+  from: process.env.EMAIL_FROM || "noreply@fammail.com",
+})
+
+// Initialize IMAP service
+const imap = new IMAPService(
+  config.imap,
+  db,
+  {
+    provider: config.llm.provider,
+    apiKey: config.llm.apiKey,
+    model: config.llm.model,
+    endpoint: config.llm.endpoint,
+    maxTokens: config.llm.maxTokens,
+  }
+)
+
+// Start IMAP polling on server start
+imap.start().catch(console.error)
+
+const isProduction = config.server.nodeEnv === 'production'
 const frontendDistPath = join(import.meta.dir, '../../frontend/dist')
 
 export async function handleRequest(req: Request): Promise<Response> {
@@ -65,13 +111,17 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/health') {
-    const isTestMode = process.env.TEST_MODE === 'true'
-
     return createJsonResponse({
-      status: 'ok',
+      status: 'healthy',
+      version: '1.0.0',
       timestamp: new Date().toISOString(),
       message: 'Fam Mail backend is running',
-      testMode: isTestMode,
+      services: {
+        imap: 'connected',
+        postgrid: config.postgrid.forceTestMode ? 'test (forced)' : config.postgrid.mode,
+        database: 'connected',
+        notifications: 'ready',
+      },
     })
   }
 
@@ -115,3 +165,6 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   return createJsonResponse({ error: 'Not Found' }, 404)
 }
+
+// Export for testing
+export { db, postgrid, notifications, imap }
