@@ -33,6 +33,9 @@ tmp/
 .claude_sessions/
 frontend/.claude_sessions/
 .worktrees/
+
+# Block home directory pattern
+~/
 test-results/
 frontend/test-results/
 frontend/tests/
