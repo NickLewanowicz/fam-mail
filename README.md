@@ -1,19 +1,23 @@
 # Fam Mail
 
-A simple, lightweight wrapper around the PostGrid API for sending postcards to friends and family. Perfect for birthdays, special events, or just staying in touch the old-fashioned way.
+Email-to-postcard conversion service. Monitor an email inbox, detect postcard requests via subject line filtering, use LLM to parse email content, and send physical postcards via USPS through PostGrid.
 
 ## What is Fam Mail?
 
-Fam Mail is a straightforward web application that makes it incredibly easy to send physical postcards through the mail. Simply load the page, upload an image, add your message and recipient details, and let PostGrid handle the rest. No authentication, no complexity—just a clean interface for spreading joy through the mail.
+Fam Mail is an automated email-to-postcard conversion service. It monitors an IMAP inbox for emails with specific subject lines, uses LLM-powered parsing to extract recipient details, messages, and images, then sends physical postcards via USPS through PostGrid. Perfect for automated birthday cards, special events, or staying in touch through email-to-mail conversion.
 
 **What is PostGrid?** PostGrid is a service that provides APIs for sending physical mail programmatically. Learn more at [postgrid.com](https://www.postgrid.com/).
 
 ## Features
 
-- 🎨 Simple, intuitive UI for creating postcards
-- 📮 Direct integration with PostGrid API
+- 📧 IMAP email polling with configurable subject filtering
+- 🤖 LLM-powered email parsing (OpenRouter, Ollama, custom endpoints)
+- 📮 PostGrid API integration with test/live modes
+- ✉️ Email notifications for success/failure
+- 🔒 Force-test mode safety feature
+- 💾 SQLite database for tracking processed emails
 - 🐳 Docker container for easy deployment
-- 🔒 Environment-based configuration (no hardcoded secrets)
+- 🔒 Environment-based configuration (30+ configurable options)
 - 💪 Fully type-safe with TypeScript
 - 🚀 Fast development with Bun and Vite
 
@@ -31,6 +35,7 @@ Fam Mail is a straightforward web application that makes it incredibly easy to s
 - [Bun](https://bun.sh/) (v1.0+)
 - [pnpm](https://pnpm.io/) (v8+)
 - [PostGrid API Key](https://www.postgrid.com/)
+- IMAP email account with app-specific password
 
 ### 1. Install Dependencies
 
@@ -40,19 +45,18 @@ pnpm install
 
 ### 2. Configure Environment
 
-Create `backend/.env`:
+Copy `.env.example` to `backend/.env` and fill in your values:
 
 ```bash
-cd backend
-echo "TEST_MODE=true
-POSTGRID_TEST_KEY=test_sk_PLACEHOLDER
-POSTGRID_PROD_KEY=sk_PLACEHOLDER
-PORT=3001
-NODE_ENV=development" > .env
-cd ..
+cp .env.example backend/.env
+# Edit backend/.env with your configuration
 ```
 
-**Note:** Set `TEST_MODE=true` to use the test PostGrid key. Set it to `false` or omit it to use the real PostGrid key.
+Required configuration includes:
+- PostGrid API keys (test and live)
+- IMAP email credentials
+- LLM provider settings (OpenRouter, Ollama, or custom endpoint)
+- SMTP settings for email notifications (optional)
 
 ### 3. Start Development Servers
 
@@ -60,7 +64,7 @@ cd ..
 pnpm dev
 ```
 
-The frontend will be at `http://localhost:5173` and backend at `http://localhost:3001`.
+The frontend will be at `http://localhost:5173` and backend at `http://localhost:8484`.
 
 ## Commands
 
@@ -76,15 +80,14 @@ pnpm lint                # Check for linting errors
 ## Docker Quick Start
 
 ```bash
-# Create .env with your PostGrid API keys
-echo "TEST_MODE=true
-POSTGRID_TEST_KEY=test_sk_PLACEHOLDER
-POSTGRID_PROD_KEY=sk_PLACEHOLDER" > .env
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your configuration
 
 # Start with Docker Compose
 docker-compose up -d
 
-# Open http://localhost:3000
+# Backend runs on port 8484
 ```
 
 ## Project Structure
@@ -92,6 +95,10 @@ docker-compose up -d
 ```
 fam-mail/
 ├── backend/          # Bun backend service
+│   └── src/
+│       ├── services/ # IMAP, LLM, PostGrid, notifications
+│       ├── config/   # Configuration schema
+│       └── database/ # SQLite database operations
 ├── frontend/         # Vite + React + TypeScript frontend
 ├── docs/             # Documentation
 ├── docker-compose.yml
@@ -107,27 +114,31 @@ fam-mail/
 
 ## Environment Variables
 
-### Development (`backend/.env`)
+Fam Mail uses extensive configuration through environment variables. See `.env.example` for the complete list with 30+ configurable options.
 
-| Variable              | Description                                      | Required | Default       |
-| --------------------- | ------------------------------------------------ | -------- | ------------- |
-| `TEST_MODE`           | Set to `true` to use test PostGrid key           | No       | `false`       |
-| `POSTGRID_TEST_KEY`   | Your test PostGrid API key (starts with test_)  | Yes*     | -             |
-| `POSTGRID_PROD_KEY`   | Your live PostGrid API key                       | Yes*     | -             |
-| `PORT`                | Backend server port                              | No       | `3001`        |
-| `NODE_ENV`            | Environment mode                                 | No       | `development` |
+### Key Variables
 
-*At least one API key (test or real) is required depending on `TEST_MODE`
+| Category | Variable | Description | Required |
+| ---------- | --------- | ----------- | -------- |
+| **PostGrid** | `POSTGRID_MODE` | Test or live mode | Yes |
+| | `POSTGRID_TEST_API_KEY` | Test API key | Yes |
+| | `POSTGRID_LIVE_API_KEY` | Live API key | Yes |
+| | `POSTGRID_FORCE_TEST_MODE` | Force test mode for safety | No |
+| **IMAP** | `IMAP_HOST` | IMAP server hostname | Yes |
+| | `IMAP_USER` | IMAP username | Yes |
+| | `IMAP_PASSWORD` | IMAP password/app-specific | Yes |
+| | `SUBJECT_FILTER` | Email subject filter | Yes |
+| | `POLL_INTERVAL_SECONDS` | Polling frequency | No |
+| **LLM** | `LLM_PROVIDER` | openrouter, ollama, or custom | Yes |
+| | `LLM_API_KEY` | LLM API key | Depends |
+| | `LLM_MODEL` | Model name | Yes |
+| **Database** | `DATABASE_PATH` | SQLite database path | No |
+| **Server** | `PORT` | Backend server port | No (8484) |
+| | `LOG_LEVEL` | debug, info, warn, error | No |
+| **SMTP** | `SMTP_HOST` | SMTP server for notifications | No |
+| | `SMTP_USER` | SMTP username | No |
 
-### Production (`.env` in root)
-
-| Variable              | Description                                      | Required | Default |
-| --------------------- | ------------------------------------------------ | -------- | ------- |
-| `TEST_MODE`           | Set to `true` to use test PostGrid key           | No       | `false` |
-| `POSTGRID_TEST_KEY`   | Your test PostGrid API key (starts with test_)  | Yes*     | -       |
-| `POSTGRID_PROD_KEY`   | Your live PostGrid API key                       | Yes*     | -       |
-
-*At least one API key (test or real) is required depending on `TEST_MODE`
+See `.env.example` for all available options and defaults.
 
 ## Contributing
 
