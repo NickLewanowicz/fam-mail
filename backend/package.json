@@ -15,11 +15,13 @@
     "helmet": "^8.1.0",
     "imapflow": "^1.2.4",
     "isomorphic-dompurify": "^2.34.0",
-    "marked": "^17.0.0"
+    "marked": "^17.0.0",
+    "nodemailer": "^7.0.12"
   },
   "devDependencies": {
     "@types/bun": "^1.0.0",
     "@types/helmet": "^4.0.0",
+    "@types/nodemailer": "^7.0.4",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.56.0",
