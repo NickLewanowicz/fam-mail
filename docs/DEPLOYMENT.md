@@ -6,14 +6,14 @@ This guide covers deploying Fam Mail to production, including Docker deployment 
 
 ### Development
 
-- Backend runs on port 3001
+- Backend runs on port 8484
 - Frontend dev server runs on port 5173
 - Hot reload enabled for both services
 - CORS configured for local development
 
 ### Production
 
-- Single port (3000) serves both backend API and frontend static files
+- Single port (8484) serves both backend API and frontend static files
 - Optimized builds for both services
 - Environment variables for configuration
 - No CORS needed (same origin)
@@ -30,7 +30,7 @@ pnpm build
 pnpm start
 ```
 
-The application will be available at `http://localhost:3001` (or `http://localhost:3000` when `NODE_ENV=production`).
+The application will be available at `http://localhost:8484`.
 
 ## Docker Deployment
 
@@ -40,20 +40,21 @@ The application will be available at `http://localhost:3001` (or `http://localho
 # Build the image
 docker build -t fam-mail .
 
-# Run the container
+# Run the container (see .env.example for all environment variables)
 docker run -d \
-  -p 3000:3000 \
-  -e POSTGRID_API_KEY=your_api_key_here \
+  -p 8484:8484 \
+  --env-file .env \
   --name fam-mail \
   fam-mail
 ```
 
 ### Option 2: Docker Compose (Recommended)
 
-1. Create `.env` in the project root:
+1. Create `.env` in the project root from the example:
 
-```env
-POSTGRID_API_KEY=your_api_key_here
+```bash
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
 2. Start the application:
@@ -74,7 +75,7 @@ docker-compose logs -f
 docker-compose down
 ```
 
-The application will be available at `http://localhost:3000`.
+The application will be available at `http://localhost:8484`.
 
 ## Self-Hosting
 
@@ -97,7 +98,8 @@ cd fam-mail
 2. **Create `.env` file:**
 
 ```bash
-echo "POSTGRID_API_KEY=your_api_key_here" > .env
+cp .env.example .env
+# Edit .env with your configuration
 ```
 
 3. **Start with Docker Compose:**
@@ -116,7 +118,7 @@ server {
     server_name your-domain.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:8484;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -153,21 +155,38 @@ sudo systemctl start certbot.timer
 
 ## Environment Variables
 
-### Required
+See `.env.example` for the complete configuration schema with all available environment variables.
 
-- `POSTGRID_API_KEY` - Your PostGrid API key from [postgrid.com](https://www.postgrid.com/)
+### Key Configuration Sections
 
-### Optional
+**PostGrid API Configuration**
+- `POSTGRID_MODE` - Set to `test` or `live`
+- `POSTGRID_TEST_API_KEY` - Test API key for development
+- `POSTGRID_LIVE_API_KEY` - Production API key
+- `POSTCARD_SIZE` - Postcard size (default: `4x6`)
 
-- `PORT` - Server port (default: 3001 dev, 3000 prod)
+**IMAP Configuration**
+- `IMAP_HOST` - IMAP server address
+- `IMAP_USER` - Email username
+- `IMAP_PASSWORD` - Email password or app-specific password
+- `SUBJECT_FILTER` - Filter emails by subject line
+
+**LLM Configuration**
+- `LLM_PROVIDER` - Provider name (e.g., `openrouter`)
+- `LLM_API_KEY` - API key for the LLM provider
+- `LLM_MODEL` - Model identifier
+
+**Server Configuration**
+- `PORT` - Server port (default: `8484`)
 - `NODE_ENV` - Environment mode (`development` or `production`)
+- `DATABASE_PATH` - SQLite database file path
 
 ## Health Checks
 
 The application includes a health check endpoint:
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:8484/api/health
 ```
 
 Response:
@@ -220,8 +239,8 @@ docker-compose up -d --build
 ### Port Already in Use
 
 ```bash
-# Check what's using port 3000
-sudo lsof -i :3000
+# Check what's using port 8484
+sudo lsof -i :8484
 
 # Kill the process if needed
 sudo kill -9 <PID>
