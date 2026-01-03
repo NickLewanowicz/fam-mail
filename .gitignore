@@ -34,8 +34,8 @@ tmp/
 frontend/.claude_sessions/
 .worktrees/
 
-# Block home directory pattern
-~/
+# Block home directory pattern - NOTE: ~/ pattern is ineffective for git
+# The patterns .claude_sessions/ and frontend/.claude_sessions/ below handle actual directories
 test-results/
 frontend/test-results/
 frontend/tests/
