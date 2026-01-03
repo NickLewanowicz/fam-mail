@@ -1,26 +1,30 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-FROM base AS build
-RUN bun install --global pnpm
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY backend/package.json ./backend/
-COPY frontend/package.json ./frontend/
-RUN pnpm install --frozen-lockfile
-COPY backend ./backend
-COPY frontend ./frontend
-RUN pnpm build
+# Install dependencies
+FROM base AS install
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
+# Build backend
+FROM install AS build-backend
+COPY backend/package.json backend/pnpm-lock.yaml ./backend/
+RUN cd backend && pnpm install --frozen-lockfile
+COPY backend/tsconfig.json backend/src ./backend/
+RUN cd backend && bun build src/index.ts --outdir ./dist
+
+# Production image
 FROM base AS release
-COPY --from=build /app/backend/dist ./backend/dist
-COPY --from=build /app/backend/node_modules ./backend/node_modules
-COPY --from=build /app/backend/package.json ./backend/
-COPY --from=build /app/frontend/dist ./frontend/dist
+COPY --from=install /app/node_modules ./node_modules
+COPY --from=build-backend /app/backend/dist ./backend/dist
+COPY backend/src/database/schema.sql ./backend/src/database/
 
+# Create data directory
+RUN mkdir -p /data
+
+ENV PORT=8484
 ENV NODE_ENV=production
-ENV PORT=3000
 
-EXPOSE 3000
+EXPOSE 8484
 
-WORKDIR /app/backend
-CMD ["bun", "run", "start"]
+CMD ["bun", "run", "backend/dist/index.js"]

@@ -1,22 +1,16 @@
-version: '3.8'
-
 services:
-  fam-mail:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - TEST_MODE=${TEST_MODE:-false}
-      - POSTGRID_TEST_KEY=${POSTGRID_TEST_KEY}
-      - POSTGRID_PROD_KEY=${POSTGRID_PROD_KEY}
-      - PORT=3000
-      - NODE_ENV=production
+  fammail:
+    build: .
+    container_name: fammail
     restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+    ports:
+      - "8484:8484"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8484/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
