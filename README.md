@@ -110,7 +110,6 @@ fam-mail/
 
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment, Docker, and self-hosting
 - **[Contributing Guide](docs/CONTRIBUTING.md)** - Guidelines for contributors
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - Technical details and project structure
 
 ## Environment Variables
 
