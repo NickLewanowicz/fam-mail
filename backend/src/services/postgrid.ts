@@ -1,17 +1,63 @@
 import type { PostGridPostcardRequest, PostGridPostcardResponse, PostGridError } from '../types/postgrid'
 
+export interface PostGridConfig {
+  mode: "test" | "live";
+  testApiKey: string;
+  liveApiKey: string;
+  forceTestMode: boolean;
+  webhookSecret: string;
+  size: "4x6" | "6x9";
+  senderId: string;
+}
+
 export class PostGridService {
+  private config: PostGridConfig
   private apiKey: string
   private baseUrl: string
   private isTestMode: boolean
 
-  constructor(apiKey?: string, testMode = false) {
-    if (!apiKey) {
-      throw new Error('PostGrid API key is required')
-    }
-    this.apiKey = apiKey
+  constructor(configOrApiKey?: PostGridConfig | string, testMode = false) {
     this.baseUrl = 'https://api.postgrid.com/print-mail/v1'
-    this.isTestMode = testMode
+
+    // Support both old and new constructor patterns
+    if (typeof configOrApiKey === 'string' || configOrApiKey === undefined) {
+      // Legacy constructor: PostGridService(apiKey, testMode)
+      if (!configOrApiKey) {
+        throw new Error('PostGrid API key is required')
+      }
+      this.apiKey = configOrApiKey
+      this.isTestMode = testMode
+      // Create a minimal config for compatibility
+      this.config = {
+        mode: testMode ? 'test' : 'live',
+        testApiKey: configOrApiKey,
+        liveApiKey: configOrApiKey,
+        forceTestMode: false,
+        webhookSecret: '',
+        size: '4x6',
+        senderId: '',
+      }
+    } else {
+      // New constructor: PostGridService(config)
+      this.config = configOrApiKey
+      this.isTestMode = configOrApiKey.mode === 'test' || configOrApiKey.forceTestMode
+      this.apiKey = this.getActiveKey()
+    }
+  }
+
+  getActiveKey(): string {
+    if (this.config.forceTestMode || this.config.mode === "test") {
+      return this.config.testApiKey;
+    }
+    return this.config.liveApiKey;
+  }
+
+  getEffectiveMode(): "test" | "live" {
+    if (this.config.forceTestMode) {
+      console.warn("FORCE TEST MODE ENABLED - Using test API regardless of POSTGRID_MODE");
+      return "test";
+    }
+    return this.config.mode;
   }
 
   async createPostcard(request: PostGridPostcardRequest): Promise<PostGridPostcardResponse> {

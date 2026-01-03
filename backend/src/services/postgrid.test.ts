@@ -77,4 +77,34 @@ describe('PostGridService', () => {
       expect((error as { message: string }).message).toBe('Invalid address')
     }
   })
+
+  describe("PostGridService - Force Test Mode", () => {
+    it("should use test key when forceTestMode is true", () => {
+      const service = new PostGridService({
+        testApiKey: "test_key",
+        liveApiKey: "live_key",
+        mode: "live",
+        forceTestMode: true,
+        webhookSecret: "secret",
+        size: "4x6",
+        senderId: "sender_123",
+      })
+
+      expect(service.getActiveKey()).toBe("test_key")
+    })
+
+    it("should use live key when forceTestMode is false and mode is live", () => {
+      const service = new PostGridService({
+        testApiKey: "test_key",
+        liveApiKey: "live_key",
+        mode: "live",
+        forceTestMode: false,
+        webhookSecret: "secret",
+        size: "4x6",
+        senderId: "sender_123",
+      })
+
+      expect(service.getActiveKey()).toBe("live_key")
+    })
+  })
 })
