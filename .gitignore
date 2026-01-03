@@ -32,6 +32,7 @@ tmp/
 
 .claude_sessions/
 frontend/.claude_sessions/
+.worktrees/
 test-results/
 frontend/test-results/
 frontend/tests/
