@@ -45,7 +45,10 @@ describe("Email-to-Postcard Integration", () => {
         provider: "openai",
         apiKey: "test-key",
         model: "gpt-4",
-      }
+        endpoint: "https://api.openai.com/v1",
+        maxTokens: 1000,
+      },
+      postgrid
     );
 
     // Test subject filter matching

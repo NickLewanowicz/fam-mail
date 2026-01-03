@@ -1,6 +1,8 @@
 import { ImapFlow } from "imapflow";
 import { Database } from "../database";
 import { LLMService } from "./llm";
+import { PostGridService } from "./postgrid";
+import type { PostGridPostcardRequest } from "../types/postgrid";
 
 interface IMAPConfig {
   host: string;
@@ -42,13 +44,16 @@ export class IMAPService {
   private client?: ImapFlow;
   private pollTimer?: ReturnType<typeof setInterval>;
   private llm: LLMService;
+  private postgrid: PostGridService;
 
   constructor(
     private config: IMAPConfig,
     private db: Database,
-    llmConfig: Parameters<typeof LLMService.prototype>[0]
+    llmConfig: Parameters<typeof LLMService.prototype>[0],
+    postgridService: PostGridService
   ) {
     this.llm = new LLMService(llmConfig);
+    this.postgrid = postgridService;
   }
 
   matchesSubject(subject: string): boolean {
@@ -138,10 +143,72 @@ export class IMAPService {
       });
 
       console.log(`Parsed email for ${parsed.recipient.name}`);
-      // TODO: Call PostGrid service with parsed data
+
+      // Parse recipient name into first and last name
+      const nameParts = parsed.recipient.name.trim().split(/\s+/);
+      const firstName = nameParts[0] || parsed.recipient.name;
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      // Construct PostGrid request
+      const postcardRequest: PostGridPostcardRequest = {
+        to: {
+          firstName,
+          lastName,
+          addressLine1: parsed.recipient.addressLine1,
+          addressLine2: parsed.recipient.addressLine2,
+          city: parsed.recipient.city,
+          provinceOrState: parsed.recipient.state,
+          postalOrZip: parsed.recipient.zipCode,
+          countryCode: parsed.recipient.country,
+        },
+        backHTML: parsed.message,
+      };
+
+      // Call PostGrid API
+      const postgridResult = await this.postgrid.createPostcard(postcardRequest);
+      console.log(`Created PostGrid postcard: ${postgridResult.id}`);
+
+      // Store result in database
+      const postcardId = `pc_${msg.id}`;
+      this.db.insertPostcard({
+        id: postcardId,
+        emailMessageId: msg.id,
+        senderEmail: msg.envelope.from[0]?.address || "",
+        recipientName: parsed.recipient.name,
+        recipientAddress: JSON.stringify({
+          addressLine1: parsed.recipient.addressLine1,
+          addressLine2: parsed.recipient.addressLine2,
+          city: parsed.recipient.city,
+          state: parsed.recipient.state,
+          zipCode: parsed.recipient.zipCode,
+          country: parsed.recipient.country,
+        }),
+        postgridPostcardId: postgridResult.id,
+        postgridMode: this.postgrid.getEffectiveMode(),
+        forcedTestMode: this.postgrid.getTestMode(),
+        status: "sent",
+      });
 
     } catch (error) {
       console.error(`Error processing ${msg.id}:`, error);
+
+      // Store failure in database
+      try {
+        const postcardId = `pc_${msg.id}`;
+        this.db.insertPostcard({
+          id: postcardId,
+          emailMessageId: msg.id,
+          senderEmail: msg.envelope.from[0]?.address || "",
+          recipientName: "Unknown",
+          recipientAddress: "{}",
+          postgridMode: this.postgrid.getEffectiveMode(),
+          forcedTestMode: this.postgrid.getTestMode(),
+          status: "failed",
+          errorMessage: error instanceof Error ? error.message : String(error),
+        });
+      } catch (dbError) {
+        console.error(`Failed to store error for ${msg.id}:`, dbError);
+      }
     }
   }
 }

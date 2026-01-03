@@ -94,7 +94,8 @@ const imap = new IMAPService(
     model: config.llm.model,
     endpoint: config.llm.endpoint,
     maxTokens: config.llm.maxTokens,
-  }
+  },
+  postgrid
 )
 
 // Start IMAP polling on server start
