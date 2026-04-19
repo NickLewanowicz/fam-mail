@@ -1,13 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
-  "project": "fam-mail",
-  "description": "Email-to-postcard service with React frontend and Bun backend",
-  "model": "claude-sonnet-4-6",
-  "commands": {
-    "test": "cd backend && bun test && cd ../frontend && npx vitest run",
-    "lint": "cd backend && pnpm lint && cd ../frontend && pnpm lint",
-    "build": "cd frontend && pnpm build"
-  },
+  "model": "claude-sonnet-4-20250514",
   "permissions": {
     "allow": [
       "Bash(pnpm:*)",
@@ -15,14 +8,23 @@
       "Bash(npx:*)",
       "Bash(gh:*)",
       "Bash(git:*)",
-      "Bash(docker:*)"
+      "Bash(docker:*)",
+      "Bash(cd:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(mkdir:*)"
+    ],
+    "ask": [
+      "Bash(git push *)",
+      "Bash(gh pr merge *)"
     ],
     "deny": [
-      "Bash(git push --force*)",
-      "Bash(git push -f*)",
-      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(rm -rf /)",
       "Read(./.env)",
-      "Read(./.env.*)"
+      "Read(./.env.*)",
+      "Read(backend/.env)",
+      "Read(backend/.env.*)"
     ]
   }
 }

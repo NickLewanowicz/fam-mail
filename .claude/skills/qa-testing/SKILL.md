@@ -1,6 +1,6 @@
 ---
 name: qa-testing
-description: Run comprehensive QA including unit tests, linting, build verification, and visual QA for fam-mail
+description: Use when asked to run full QA, pre-release checks, verify CI locally, or audit tests/lint/build for fam-mail (not for single-file edits).
 ---
 
 ## What I do
@@ -18,7 +18,7 @@ Execute a full QA pass on the fam-mail codebase: static analysis, unit tests, bu
 ### 1. Backend tests
 
 ```bash
-cd backend && pnpm test 2>&1
+cd backend && bun test 2>&1
 ```
 
 Expect all tests to pass; note unintended skips.
@@ -65,13 +65,15 @@ cd backend && npx tsc --noEmit 2>&1
 ### 8. Security audit
 
 ```bash
-cd /path/to/fam-mail && pnpm audit 2>&1 || true
+# From the project root
+pnpm audit 2>&1 || true
 ```
 
 ### 9. Docker image (optional)
 
 ```bash
-cd /path/to/fam-mail && docker build -t fam-mail:qa-test . 2>&1
+# From the project root
+docker build -t fam-mail:qa-test . 2>&1
 ```
 
 ## Report template

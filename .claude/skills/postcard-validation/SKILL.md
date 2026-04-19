@@ -1,6 +1,6 @@
 ---
 name: postcard-validation
-description: Domain knowledge for postcard address, image, and message validation rules required by PostGrid
+description: Use when implementing or debugging postcard validation, PostGrid API errors, address/image/message rules, or PRs touching postcard send flows (PostGrid constraints).
 ---
 
 ## What I do
