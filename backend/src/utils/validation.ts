@@ -5,6 +5,8 @@
  * Every field is validated before the API call is made.
  */
 
+import DOMPurify from 'isomorphic-dompurify'
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -247,7 +249,6 @@ export function validateImage(base64Data: string): ValidationResult {
   // Magic bytes check
   if (buffer.length < 4) {
     errors.push({ field: 'image', message: 'Image data is too short to be valid' })
-    return { valid: errors.length === 0, errors }
   }
 
   const isJPEG = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
@@ -261,4 +262,34 @@ export function validateImage(base64Data: string): ValidationResult {
   }
 
   return { valid: errors.length === 0, errors }
+}
+
+/**
+ * Sanitize HTML content before sending to PostGrid.
+ *
+ * PostGrid renders the HTML into a physical postcard. Any malicious HTML
+ * (script injection, event handlers, iframes, etc.) must be stripped to
+ * prevent content injection that wastes real money on abusive postcards.
+ *
+ * This function uses DOMPurify with a restrictive allowlist of safe tags
+ * and attributes suitable for postcard rendering.
+ */
+export function sanitizeHTML(html: string): string {
+  return DOMPurify.sanitize(html, {
+    // Only allow tags that are useful for postcard layout and text formatting
+    ALLOWED_TAGS: [
+      'html', 'head', 'body', 'meta', 'title', 'style',
+      'div', 'span', 'p', 'br', 'hr',
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'strong', 'em', 'b', 'i', 'u', 's',
+      'ul', 'ol', 'li',
+      'blockquote', 'code', 'pre',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'img', 'a',
+    ],
+    ALLOWED_ATTR: ['class', 'href', 'src', 'alt', 'charset', 'name', 'content'],
+    FORBID_ATTR: ['onclick', 'onload', 'onerror', 'onmouseover', 'onfocus', 'onblur', 'style'],
+    // Strip tag contents of forbidden elements entirely
+    FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'textarea', 'select', 'button', 'link', 'svg'],
+  })
 }

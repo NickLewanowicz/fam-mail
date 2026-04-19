@@ -5,7 +5,7 @@ import type { User } from '../models/user'
 import { jsonResponse } from '../utils/response'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
-import { validateAddress, validateMessage, validateSize } from '../utils/validation'
+import { validateAddress, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
 import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 
@@ -278,8 +278,8 @@ export class DraftRoutes {
         to: draft.recipientAddress,
         from: draft.senderAddress,
         size: postGridSize,
-        frontHTML: draft.frontHTML,
-        backHTML: finalBackHTML,
+        frontHTML: draft.frontHTML ? sanitizeHTML(draft.frontHTML) : undefined,
+        backHTML: finalBackHTML ? sanitizeHTML(finalBackHTML) : undefined,
       }
 
       const result = await this.postgrid.createPostcard(postcardRequest)

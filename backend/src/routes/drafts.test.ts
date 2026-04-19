@@ -715,7 +715,8 @@ describe("DraftRoutes", () => {
       const response = await routes.publish(req, user1);
 
       expect(response.status).toBe(200);
-      expect(capturedRequest.backHTML).toBe("<html><body>Custom back</body></html>");
+      // sanitizeHTML strips <html>/<body> wrappers; only body content remains
+      expect(capturedRequest.backHTML).toBe("Custom back");
     });
 
     it("should map draft size to PostGrid size format", async () => {

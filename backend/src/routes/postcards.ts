@@ -4,7 +4,7 @@ import { getPostgridService } from '../services/postgrid'
 import type { PostGridPostcardRequest } from '../types/postgrid'
 import type { User } from '../models/user'
 import type { Database } from '../database'
-import { validateAddress, validateImage, validateMessage, validateSize } from '../utils/validation'
+import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
 import { jsonResponse } from '../middleware/headers'
 
 export async function handlePostcardCreate(req: Request, user: User, db: Database): Promise<Response> {
@@ -150,8 +150,8 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       to,
       from,
       size: size as '6x4' | '9x6' | '11x6',
-      frontHTML,
-      backHTML: finalBackHTML,
+      frontHTML: frontHTML ? sanitizeHTML(frontHTML) : undefined,
+      backHTML: finalBackHTML ? sanitizeHTML(finalBackHTML) : undefined,
     }
 
     const result = await postgridService.createPostcard(postcardRequest)

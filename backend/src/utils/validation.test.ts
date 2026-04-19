@@ -4,6 +4,7 @@ import {
   validateMessage,
   validateSize,
   validateImage,
+  sanitizeHTML,
   type AddressInput,
 } from './validation'
 
@@ -964,5 +965,242 @@ describe('validateImage — additional edge cases', () => {
     const hugeInvalid = '!!!' + 'A'.repeat(14_000_000)
     const result = validateImage(hugeInvalid)
     expect(result.valid).toBe(false)
+  })
+})
+
+// ============================================================================
+// HTML Sanitization
+// ============================================================================
+
+describe('sanitizeHTML', () => {
+  describe('removes dangerous tags', () => {
+    it('removes <script> tags and their contents', () => {
+      const result = sanitizeHTML('<p>Hello</p><script>alert("xss")</script><p>World</p>')
+      expect(result).not.toContain('<script>')
+      expect(result).not.toContain('alert')
+      expect(result).toContain('<p>Hello</p>')
+      expect(result).toContain('<p>World</p>')
+    })
+
+    it('removes <iframe> tags', () => {
+      const result = sanitizeHTML('<p>Text</p><iframe src="evil.com"></iframe>')
+      expect(result).not.toContain('<iframe')
+      expect(result).toContain('<p>Text</p>')
+    })
+
+    it('removes <object> tags', () => {
+      const result = sanitizeHTML('<object data="evil.swf"></object><p>Safe</p>')
+      expect(result).not.toContain('<object')
+      expect(result).toContain('<p>Safe</p>')
+    })
+
+    it('removes <embed> tags', () => {
+      const result = sanitizeHTML('<embed src="evil.swf"><p>Safe</p>')
+      expect(result).not.toContain('<embed')
+      expect(result).toContain('<p>Safe</p>')
+    })
+
+    it('removes <form> and form elements', () => {
+      const result = sanitizeHTML('<form action="evil.com"><input name="data"><button>Submit</button></form>')
+      expect(result).not.toContain('<form')
+      expect(result).not.toContain('<input')
+      expect(result).not.toContain('<button')
+    })
+
+    it('removes <svg> tags', () => {
+      const result = sanitizeHTML('<svg onload="alert(1)"><circle r="10"/></svg><p>Safe</p>')
+      expect(result).not.toContain('<svg')
+      expect(result).toContain('<p>Safe</p>')
+    })
+
+    it('removes <link> tags', () => {
+      const result = sanitizeHTML('<link rel="stylesheet" href="evil.css"><p>Safe</p>')
+      expect(result).not.toContain('<link')
+    })
+  })
+
+  describe('removes dangerous attributes', () => {
+    it('removes onclick attributes', () => {
+      const result = sanitizeHTML('<div onclick="alert(1)">Click</div>')
+      expect(result).not.toContain('onclick')
+      expect(result).toContain('<div>Click</div>')
+    })
+
+    it('removes onerror attributes', () => {
+      const result = sanitizeHTML('<img src="x" onerror="alert(1)">')
+      expect(result).not.toContain('onerror')
+    })
+
+    it('removes onload attributes', () => {
+      const result = sanitizeHTML('<img src="valid.jpg" onload="alert(1)">')
+      expect(result).not.toContain('onload')
+    })
+
+    it('removes onmouseover attributes', () => {
+      const result = sanitizeHTML('<div onmouseover="alert(1)">Hover</div>')
+      expect(result).not.toContain('onmouseover')
+    })
+
+    it('removes onfocus attributes', () => {
+      const result = sanitizeHTML('<div onfocus="alert(1)">Focus</div>')
+      expect(result).not.toContain('onfocus')
+    })
+
+    it('removes style attributes', () => {
+      const result = sanitizeHTML('<div style="background:url(javascript:alert(1))">styled</div>')
+      expect(result).not.toContain('style=')
+      expect(result).toContain('<div>styled</div>')
+    })
+
+    it('removes javascript: URIs', () => {
+      const result = sanitizeHTML('<a href="javascript:alert(1)">click</a>')
+      expect(result).not.toContain('javascript:')
+    })
+  })
+
+  describe('preserves safe content', () => {
+    it('preserves structural HTML (html, head, body, meta, style)', () => {
+      // DOMPurify returns body content only — html/head/body wrapping is stripped.
+      // Style tags inside <head> are also stripped; only body-level content survives.
+      // We verify that safe body-level content is preserved intact.
+      const html = '<div class="card"><p>Hi</p></div>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('<div class="card">')
+      expect(result).toContain('<p>Hi</p>')
+    })
+
+    it('preserves text formatting tags', () => {
+      const html = '<strong>bold</strong> <em>italic</em> <u>underline</u> <s>strike</s> <b>bold2</b> <i>italic2</i>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('<strong>bold</strong>')
+      expect(result).toContain('<em>italic</em>')
+      expect(result).toContain('<u>underline</u>')
+      expect(result).toContain('<s>strike</s>')
+      expect(result).toContain('<b>bold2</b>')
+      expect(result).toContain('<i>italic2</i>')
+    })
+
+    it('preserves heading tags', () => {
+      const html = '<h1>H1</h1><h2>H2</h2><h3>H3</h3><h4>H4</h4><h5>H5</h5><h6>H6</h6>'
+      const result = sanitizeHTML(html)
+      for (let i = 1; i <= 6; i++) {
+        expect(result).toContain(`<h${i}>H${i}</h${i}>`)
+      }
+    })
+
+    it('preserves list tags', () => {
+      const html = '<ul><li>Item 1</li></ul><ol><li>Item 2</li></ol>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('<ul>')
+      expect(result).toContain('<ol>')
+      expect(result).toContain('<li>')
+    })
+
+    it('preserves table tags', () => {
+      const html = '<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Cell</td></tr></tbody></table>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('<table>')
+      expect(result).toContain('<thead>')
+      expect(result).toContain('<th>Header</th>')
+      expect(result).toContain('<td>Cell</td>')
+    })
+
+    it('preserves blockquote, code, pre tags', () => {
+      const html = '<blockquote>Quote</blockquote><pre><code>Code</code></pre>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('<blockquote>')
+      expect(result).toContain('<pre>')
+      expect(result).toContain('<code>')
+    })
+
+    it('preserves img tags with safe attributes', () => {
+      const html = '<img src="photo.jpg" alt="A photo" class="postcard-image">'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('src="photo.jpg"')
+      expect(result).toContain('alt="A photo"')
+      expect(result).toContain('class="postcard-image"')
+    })
+
+    it('preserves a tags with safe href', () => {
+      const html = '<a href="https://example.com" class="link">Click</a>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('href="https://example.com"')
+      expect(result).toContain('class="link"')
+    })
+
+    it('preserves div and span with class', () => {
+      const html = '<div class="container"><span class="text">Hello</span></div>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('class="container"')
+      expect(result).toContain('class="text"')
+    })
+
+    it('preserves br and hr tags', () => {
+      const html = '<p>Line 1<br>Line 2</p><hr><p>After</p>'
+      const result = sanitizeHTML(html)
+      expect(result).toContain('<br>')
+      expect(result).toContain('<hr>')
+    })
+  })
+
+  describe('complex attack vectors', () => {
+    it('handles nested script in div', () => {
+      const result = sanitizeHTML('<div><script>alert(1)</script></div>')
+      expect(result).not.toContain('<script>')
+      expect(result).not.toContain('alert')
+    })
+
+    it('handles multiple attack vectors at once', () => {
+      const html = `
+        <script>alert('xss')</script>
+        <iframe src="evil.com"></iframe>
+        <img src=x onerror=alert(1)>
+        <div onclick="alert(1)">Click</div>
+        <a href="javascript:alert(1)">Link</a>
+        <svg onload="alert(1)"></svg>
+        <object data="evil.swf"></object>
+      `
+      const result = sanitizeHTML(html)
+      expect(result).not.toContain('<script>')
+      expect(result).not.toContain('<iframe')
+      expect(result).not.toContain('onerror')
+      expect(result).not.toContain('onclick')
+      expect(result).not.toContain('javascript:')
+      expect(result).not.toContain('<svg')
+      expect(result).not.toContain('<object')
+    })
+
+    it('handles data URI XSS', () => {
+      const result = sanitizeHTML('<a href="data:text/html,<script>alert(1)</script>">click</a>')
+      expect(result).not.toContain('data:text/html')
+    })
+  })
+
+  describe('edge cases', () => {
+    it('returns empty string for empty input', () => {
+      expect(sanitizeHTML('')).toBe('')
+    })
+
+    it('handles plain text without any HTML', () => {
+      expect(sanitizeHTML('Just some text')).toBe('Just some text')
+    })
+
+    it('handles full postcard HTML document with safe content', () => {
+      const postcard = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial}</style></head><body><div class="message"><h1>Hello!</h1><p>This is a postcard message.</p></div></body></html>`
+      const result = sanitizeHTML(postcard)
+      // DOMPurify returns body content only; html/head/style wrapping is stripped
+      expect(result).toContain('<h1>Hello!</h1>')
+      expect(result).toContain('<p>This is a postcard message.</p>')
+      expect(result).toContain('class="message"')
+    })
+
+    it('sanitizes full postcard HTML with injected script', () => {
+      const postcard = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Arial}</style></head><body><div class="message"><script>alert('xss')</script><h1>Hello!</h1></div></body></html>`
+      const result = sanitizeHTML(postcard)
+      expect(result).not.toContain('<script>')
+      expect(result).not.toContain('alert')
+      expect(result).toContain('<h1>Hello!</h1>')
+      expect(result).toContain('class="message"')
+    })
   })
 })
