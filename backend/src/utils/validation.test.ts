@@ -834,3 +834,135 @@ describe('validateAddress — Return Address (from)', () => {
     expect(result.valid).toBe(false)
   })
 })
+
+// ============================================================================
+// Additional Edge Case Coverage
+// ============================================================================
+
+describe('validateAddress — combined format errors', () => {
+  it('reports multiple format errors when state, ZIP, and country are all invalid', () => {
+    const result = validateAddress({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      addressLine1: '123 Main St',
+      city: 'Springfield',
+      provinceOrState: 'California',    // invalid: not 2-letter
+      postalOrZip: 'ABCDE',             // invalid: not a US ZIP
+      countryCode: 'USA',               // invalid: not US or CA
+    })
+    expect(result.valid).toBe(false)
+    // State and country format errors are always reported
+    expect(result.errors.some(e => e.field === 'to.provinceOrState')).toBe(true)
+    expect(result.errors.some(e => e.field === 'to.countryCode')).toBe(true)
+    // Note: postal code format check is skipped when countryCode is not US or CA
+    // so no postalOrZip error in this specific combination
+    expect(result.errors.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('reports state + ZIP format errors when country is valid US but other fields are bad', () => {
+    const result = validateAddress({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      addressLine1: '123 Main St',
+      city: 'Springfield',
+      provinceOrState: 'California',    // invalid: not 2-letter
+      postalOrZip: 'ABCDE',             // invalid: not a US ZIP
+      countryCode: 'US',                // valid
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors.some(e => e.field === 'to.provinceOrState')).toBe(true)
+    expect(result.errors.some(e => e.field === 'to.postalOrZip')).toBe(true)
+    expect(result.errors.length).toBeGreaterThanOrEqual(2)
+  })
+})
+
+describe('validateAddress — addressLine2 does not cause errors', () => {
+  it('accepts undefined addressLine2', () => {
+    const { addressLine2: _ignored, ...addr } = validUSAddress
+    void _ignored
+    const result = validateAddress(addr)
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts empty string addressLine2', () => {
+    const result = validateAddress({ ...validUSAddress, addressLine2: '' })
+    expect(result.valid).toBe(true)
+  })
+
+  it('accepts long addressLine2 (no length limit enforced)', () => {
+    const result = validateAddress({ ...validUSAddress, addressLine2: 'B'.repeat(500) })
+    expect(result.valid).toBe(true)
+  })
+})
+
+describe('validateMessage — additional edge cases', () => {
+  it('rejects boolean true as message', () => {
+    const result = validateMessage(true as unknown as string)
+    expect(result.valid).toBe(false)
+    expect(result.errors[0].message).toContain('string')
+  })
+
+  it('rejects array as message', () => {
+    const result = validateMessage(['hello'] as unknown as string)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects object as message', () => {
+    const result = validateMessage({ text: 'hello' } as unknown as string)
+    expect(result.valid).toBe(false)
+  })
+
+  it('accepts a very long URL in message', () => {
+    const longUrl = 'https://example.com/' + 'a'.repeat(4000)
+    const result = validateMessage(longUrl)
+    expect(result.valid).toBe(true)
+  })
+})
+
+describe('validateSize — additional edge cases', () => {
+  it('rejects uppercase size string', () => {
+    const result = validateSize('6X4')
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects size with spaces', () => {
+    const result = validateSize('6 x 4')
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects numeric size', () => {
+    const result = validateSize(6 as unknown as string)
+    expect(result.valid).toBe(false)
+  })
+
+  it('includes all valid sizes in error message', () => {
+    const result = validateSize('invalid')
+    expect(result.errors[0].message).toContain('6x4')
+    expect(result.errors[0].message).toContain('9x6')
+    expect(result.errors[0].message).toContain('11x6')
+  })
+})
+
+describe('validateImage — additional edge cases', () => {
+  it('rejects null input', () => {
+    const result = validateImage(null as unknown as string)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects undefined input', () => {
+    const result = validateImage(undefined as unknown as string)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects numeric input', () => {
+    const result = validateImage(12345 as unknown as string)
+    expect(result.valid).toBe(false)
+  })
+
+  it('rejects oversized file with invalid base64 in early-exit path', () => {
+    // Build a string >10MB estimate that also fails base64 decode
+    const hugeInvalid = '!!!' + 'A'.repeat(14_000_000)
+    const result = validateImage(hugeInvalid)
+    expect(result.valid).toBe(false)
+  })
+})

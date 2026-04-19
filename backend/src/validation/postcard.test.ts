@@ -909,3 +909,95 @@ describe('validateAddress — Return Address (from prefix)', () => {
     expect(result.valid).toBe(false)
   })
 })
+
+// ===========================================================================
+// 8. Additional Gap Coverage
+// ===========================================================================
+
+describe('validatePostcardRequest — additional edge cases', () => {
+  it('defaults to 6x4 size when no size is provided', () => {
+    const result = validatePostcardRequest({
+      to: { ...validUSAddress },
+      frontHTML: '<html>test</html>',
+      // size omitted
+    })
+    expect(result.valid).toBe(true)
+  })
+
+  it('rejects when all content fields are whitespace-only', () => {
+    const result = validatePostcardRequest({
+      to: { ...validUSAddress },
+      frontHTML: '   ',
+      backHTML: '\t\n',
+      message: '  ',
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors.some(e => e.field === 'content')).toBe(true)
+  })
+
+  it('collects errors from both address and content validation', () => {
+    const result = validatePostcardRequest({
+      to: { firstName: '' },
+      // no content
+    })
+    expect(result.valid).toBe(false)
+    expect(result.errors.some(e => e.field.startsWith('to.'))).toBe(true)
+    expect(result.errors.some(e => e.field === 'content')).toBe(true)
+  })
+
+  it('passes with valid address and all three content fields', () => {
+    const result = validatePostcardRequest({
+      to: { ...validUSAddress },
+      frontHTML: '<html>front</html>',
+      backHTML: '<html>back</html>',
+      message: 'Hello!',
+    })
+    expect(result.valid).toBe(true)
+  })
+})
+
+describe('validateAndSanitizeMessage — additional edge cases', () => {
+  it('handles null input by returning warning', () => {
+    const { sanitized, warnings } = validateAndSanitizeMessage(null as unknown as string)
+    expect(sanitized).toBe('')
+    expect(warnings.some(w => w.includes('string'))).toBe(true)
+  })
+
+  it('handles undefined input by returning warning', () => {
+    const { sanitized, warnings } = validateAndSanitizeMessage(undefined as unknown as string)
+    expect(sanitized).toBe('')
+    expect(warnings.some(w => w.includes('string'))).toBe(true)
+  })
+
+  it('handles numeric input by returning warning', () => {
+    const { sanitized, warnings } = validateAndSanitizeMessage(42 as unknown as string)
+    expect(sanitized).toBe('')
+    expect(warnings.some(w => w.includes('string'))).toBe(true)
+  })
+
+  it('warns about multiple XSS patterns in the same message', () => {
+    const xssPayload = '<script>alert(1)</script><iframe src="evil.com"></iframe><div onclick="evil()">'
+    const { warnings } = validateAndSanitizeMessage(xssPayload)
+    expect(warnings.some(w => w.includes('script tags'))).toBe(true)
+    expect(warnings.some(w => w.includes('iframe tags'))).toBe(true)
+    expect(warnings.some(w => w.includes('event handler'))).toBe(true)
+  })
+
+  it('returns message unchanged (sanitization happens in route handler)', () => {
+    const xssMessage = '<script>alert("xss")</script>'
+    const { sanitized } = validateAndSanitizeMessage(xssMessage)
+    expect(sanitized).toBe(xssMessage)
+  })
+
+  it('warns about long message with exact character count', () => {
+    const longMsg = 'A'.repeat(600)
+    const { warnings } = validateAndSanitizeMessage(longMsg)
+    expect(warnings.some(w => w.includes('600') && w.includes('500'))).toBe(true)
+  })
+
+  it('does not warn for message at exactly 500 characters', () => {
+    const msg = 'A'.repeat(500)
+    const { warnings } = validateAndSanitizeMessage(msg)
+    expect(warnings.some(w => w.includes('500-character'))).toBe(false)
+  })
+})
