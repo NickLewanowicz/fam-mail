@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { PostGridModeBadge } from './PostGridModeBadge'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -14,7 +15,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-2xl">&#x1F4EE;</span> Fam Mail
           </Link>
         </div>
-        <div className="flex-none gap-2">
+        <div className="flex-none gap-2 items-center">
+          {user && <PostGridModeBadge />}
           <Link
             to="/create"
             className={`btn btn-sm ${location.pathname === '/create' ? 'btn-accent' : 'btn-ghost text-white border-white/30'}`}

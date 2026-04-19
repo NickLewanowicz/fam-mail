@@ -262,4 +262,67 @@ describe('PostGridService', () => {
       expect(service.getTestMode()).toBe(true)
     })
   })
+
+  describe("PostGridService — runtime mode API helpers", () => {
+    it("getStatusPayload returns mock when mockMode is true", () => {
+      const service = new PostGridService({
+        mode: "live",
+        testApiKey: "t",
+        liveApiKey: "l",
+        forceTestMode: false,
+        mockMode: true,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      expect(service.getStatusPayload()).toEqual({ mode: "mock", mockMode: true })
+    })
+
+    it("getStatusPayload returns effective test when forceTestMode", () => {
+      const service = new PostGridService({
+        mode: "live",
+        testApiKey: "t",
+        liveApiKey: "l",
+        forceTestMode: true,
+        mockMode: false,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      expect(service.getStatusPayload()).toEqual({ mode: "test", mockMode: false })
+    })
+
+    it("setRuntimeMode throws in mock mode", () => {
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "t",
+        liveApiKey: "l",
+        forceTestMode: false,
+        mockMode: true,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      expect(() => service.setRuntimeMode("live")).toThrow(/mock mode/i)
+    })
+
+    it("setRuntimeMode swaps active key between test and live", () => {
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "pg_test_x",
+        liveApiKey: "pg_live_y",
+        forceTestMode: false,
+        mockMode: false,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      expect(service.getActiveKey()).toBe("pg_test_x")
+      service.setRuntimeMode("live")
+      expect(service.getActiveKey()).toBe("pg_live_y")
+      expect(service.getStatusPayload()).toEqual({ mode: "live", mockMode: false })
+      service.setRuntimeMode("test")
+      expect(service.getActiveKey()).toBe("pg_test_x")
+    })
+  })
 })

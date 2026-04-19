@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import type { UsePostcardReturn } from '../../hooks/usePostcard'
+import { fetchPostgridStatus, type PostgridApiMode } from '../../utils/postgridApi'
 
 interface Props {
   postcard: UsePostcardReturn
@@ -11,9 +13,40 @@ interface Props {
 
 export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, saving }: Props) {
   const { image, message, address, isComplete } = postcard
+  const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const s = await fetchPostgridStatus()
+        if (!cancelled) setPostgridMode(s.mode)
+      } catch {
+        if (!cancelled) setPostgridMode(null)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <div className="space-y-4">
+      {postgridMode === 'test' && (
+        <div className="alert alert-warning shadow-sm" role="status">
+          <span>This postcard will be sent via PostGrid in TEST mode</span>
+        </div>
+      )}
+      {postgridMode === 'live' && (
+        <div className="alert alert-error shadow-sm" role="alert">
+          <span>WARNING: This postcard will be ACTUALLY PRINTED AND MAILED (LIVE mode)</span>
+        </div>
+      )}
+      {postgridMode === 'mock' && (
+        <div className="alert alert-neutral shadow-sm" role="status">
+          <span>This postcard will run in MOCK mode (nothing is sent to PostGrid)</span>
+        </div>
+      )}
       <div>
         <h2 className="text-xl font-bold">Review Your Postcard</h2>
         <p className="text-base-content/60 text-sm mt-1">Make sure everything looks right before sending</p>

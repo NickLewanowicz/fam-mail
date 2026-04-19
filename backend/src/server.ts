@@ -304,6 +304,41 @@ export async function handleRequest(req: Request): Promise<Response> {
     return withSecurityHeaders(await handlePostcardCreate(req, authResult.user!, db), req)
   }
 
+  if (url.pathname === '/api/postgrid/status' && req.method === 'GET') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
+    }
+    return withSecurityHeaders(jsonResponse(postgrid.getStatusPayload(), 200, req), req)
+  }
+
+  if (url.pathname === '/api/postgrid/mode' && req.method === 'POST') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
+    }
+    let body: unknown
+    try {
+      body = await req.json()
+    } catch {
+      return withSecurityHeaders(jsonResponse({ error: 'Invalid JSON body' }, 400, req), req)
+    }
+    const mode = (body as { mode?: unknown }).mode
+    if (mode !== 'test' && mode !== 'live') {
+      return withSecurityHeaders(
+        jsonResponse({ error: 'mode must be "test" or "live"' }, 400, req),
+        req
+      )
+    }
+    try {
+      postgrid.setRuntimeMode(mode)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to set PostGrid mode'
+      return withSecurityHeaders(jsonResponse({ error: message }, 400, req), req)
+    }
+    return withSecurityHeaders(jsonResponse(postgrid.getStatusPayload(), 200, req), req)
+  }
+
   // Email webhook endpoints — rate limited (#42)
   if (url.pathname === '/api/webhook/email' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(webhookRateLimiter, req)

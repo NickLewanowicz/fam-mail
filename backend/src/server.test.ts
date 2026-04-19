@@ -1,13 +1,15 @@
-import { describe, it, expect, beforeAll } from 'bun:test'
+import { describe, it, expect, beforeAll, afterEach } from 'bun:test'
 import { JWTService } from './services/jwtService'
 import type { User } from './models/user'
 import type { Database } from './database'
+import type { PostGridService } from './services/postgrid'
 
 describe('Backend Server', () => {
     // Import after environment setup
     let handleRequest: (req: Request) => Promise<Response>
     let db: Database
     let jwtService: JWTService
+    let postgrid: PostGridService
 
     beforeAll(async () => {
         // Set up required environment variables BEFORE importing the server module,
@@ -37,6 +39,7 @@ describe('Backend Server', () => {
         const module = await import('./server')
         handleRequest = module.handleRequest
         db = module.db
+        postgrid = module.postgrid
 
         jwtService = new JWTService({
             secret: 'test-secret-key-minimum-32-characters-long',
@@ -292,6 +295,111 @@ describe('Backend Server', () => {
               // If PostGrid accepted it or returned another error, that's also fine.
               expect(res.status).not.toBe(401)
             }
+        })
+    })
+
+    describe('PostGrid mode API', () => {
+        function insertAuthUser(): User {
+            const user: User = {
+                id: crypto.randomUUID(),
+                oidcSub: `postgrid-api-${crypto.randomUUID()}`,
+                oidcIssuer: 'https://accounts.google.com',
+                email: `postgrid-${crypto.randomUUID()}@example.com`,
+                emailVerified: true,
+                firstName: 'API',
+                lastName: 'Tester',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            }
+            db.insertUser(user)
+            return user
+        }
+
+        afterEach(() => {
+            try {
+                postgrid.setRuntimeMode('test')
+            } catch {
+                // ignore (e.g. mock-only instances)
+            }
+        })
+
+        it('GET /api/postgrid/status returns 401 without auth', async () => {
+            const req = new Request('http://localhost:3001/api/postgrid/status')
+            const res = await handleRequest(req)
+            expect(res.status).toBe(401)
+        })
+
+        it('GET /api/postgrid/status returns mode and mockMode when authenticated', async () => {
+            const user = insertAuthUser()
+            const token = await jwtService.generateAccessToken(user)
+            const req = new Request('http://localhost:3001/api/postgrid/status', {
+                headers: { Authorization: `Bearer ${token}` },
+            })
+            const res = await handleRequest(req)
+            const data = (await res.json()) as { mode: string; mockMode: boolean }
+
+            expect(res.status).toBe(200)
+            expect(data.mockMode).toBe(false)
+            expect(data.mode === 'test' || data.mode === 'live').toBe(true)
+        })
+
+        it('POST /api/postgrid/mode returns 401 without auth', async () => {
+            const req = new Request('http://localhost:3001/api/postgrid/mode', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mode: 'live' }),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(401)
+        })
+
+        it('POST /api/postgrid/mode returns 400 for invalid mode', async () => {
+            const user = insertAuthUser()
+            const token = await jwtService.generateAccessToken(user)
+            const req = new Request('http://localhost:3001/api/postgrid/mode', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mode: 'staging' }),
+            })
+            const res = await handleRequest(req)
+            const data = (await res.json()) as { error: string }
+            expect(res.status).toBe(400)
+            expect(data.error).toContain('test')
+        })
+
+        it('POST /api/postgrid/mode switches to live then back to test', async () => {
+            const user = insertAuthUser()
+            const token = await jwtService.generateAccessToken(user)
+
+            const reqLive = new Request('http://localhost:3001/api/postgrid/mode', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mode: 'live' }),
+            })
+            const resLive = await handleRequest(reqLive)
+            const liveData = (await resLive.json()) as { mode: string; mockMode: boolean }
+            expect(resLive.status).toBe(200)
+            expect(liveData.mode).toBe('live')
+            expect(liveData.mockMode).toBe(false)
+
+            const reqTest = new Request('http://localhost:3001/api/postgrid/mode', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mode: 'test' }),
+            })
+            const resTest = await handleRequest(reqTest)
+            const testData = (await resTest.json()) as { mode: string; mockMode: boolean }
+            expect(resTest.status).toBe(200)
+            expect(testData.mode).toBe('test')
         })
     })
 

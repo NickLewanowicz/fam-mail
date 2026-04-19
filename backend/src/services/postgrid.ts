@@ -20,6 +20,7 @@ export class PostGridService {
   private mockMode: boolean
 
   constructor(configOrApiKey?: PostGridConfig | string, testMode = false) {
+    // Test and live keys use the same Print & Mail host; mode selects which key is sent.
     this.baseUrl = 'https://api.postgrid.com/print-mail/v1'
 
     // Support both old and new constructor patterns
@@ -46,9 +47,14 @@ export class PostGridService {
       // New constructor: PostGridService(config)
       this.config = configOrApiKey
       this.mockMode = configOrApiKey.mockMode ?? false
-      this.isTestMode = configOrApiKey.mode === 'test' || configOrApiKey.forceTestMode
-      this.apiKey = this.getActiveKey()
+      this.applyKeyAndTestModeFromConfig()
     }
+  }
+
+  /** Sync active API key and test-mode flag from `config` (after runtime mode changes). */
+  private applyKeyAndTestModeFromConfig(): void {
+    this.isTestMode = this.config.mode === 'test' || this.config.forceTestMode
+    this.apiKey = this.getActiveKey()
   }
 
   getActiveKey(): string {
@@ -64,6 +70,36 @@ export class PostGridService {
       return "test";
     }
     return this.config.mode;
+  }
+
+  isMockMode(): boolean {
+    return this.mockMode
+  }
+
+  /**
+   * Payload for GET /api/postgrid/status — effective mailing mode, or `mock` when POSTGRID_MOCK is on.
+   */
+  getStatusPayload(): { mode: "test" | "live" | "mock"; mockMode: boolean } {
+    if (this.mockMode) {
+      return { mode: "mock", mockMode: true }
+    }
+    return { mode: this.getEffectiveMode(), mockMode: false }
+  }
+
+  /**
+   * Switch `config.mode` at runtime (test vs live API key). No-op on keys when mode changes.
+   * @throws Error when mock mode is enabled (no real keys / local simulation only).
+   */
+  setRuntimeMode(mode: "test" | "live"): void {
+    if (this.mockMode) {
+      throw new Error("Cannot change PostGrid mode while mock mode is enabled")
+    }
+    if (mode !== "test" && mode !== "live") {
+      throw new Error('mode must be "test" or "live"')
+    }
+    this.config.mode = mode
+    this.applyKeyAndTestModeFromConfig()
+    logger.info("PostGrid runtime mode updated", { mode: this.getEffectiveMode(), keyKind: this.isTestMode ? "test" : "live" })
   }
 
   async createPostcard(request: PostGridPostcardRequest): Promise<PostGridPostcardResponse> {

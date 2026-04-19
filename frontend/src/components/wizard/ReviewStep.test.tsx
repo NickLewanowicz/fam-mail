@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+
+vi.mock('../../utils/postgridApi', () => ({
+  fetchPostgridStatus: vi.fn(),
+}))
+
 import { ReviewStep } from './ReviewStep'
+import { fetchPostgridStatus } from '../../utils/postgridApi'
 
 const basePostcard = {
   image: { file: new File([''], 'test.jpg', { type: 'image/jpeg' }), preview: 'data:image/jpeg;base64,abc' },
@@ -30,6 +36,7 @@ describe('ReviewStep', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
   })
 
   it('renders "Review Your Postcard" title', () => {
@@ -206,5 +213,56 @@ describe('ReviewStep', () => {
       />,
     )
     expect(screen.getByText(/Saving\.\.\./i)).toBeInTheDocument()
+  })
+
+  it('shows PostGrid TEST mode banner when status is test', async () => {
+    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByText(/sent via PostGrid in TEST mode/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows LIVE mode warning banner when status is live', async () => {
+    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'live', mockMode: false })
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByText(/ACTUALLY PRINTED AND MAILED/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows MOCK mode banner when status is mock', async () => {
+    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'mock', mockMode: true })
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+      />,
+    )
+    await waitFor(() => {
+      expect(screen.getByText(/MOCK mode/i)).toBeInTheDocument()
+    })
   })
 })

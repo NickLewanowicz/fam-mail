@@ -2,11 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { AuthContextType } from '../../types/auth'
-import { AppShell } from './AppShell'
+
+vi.mock('./PostGridModeBadge', () => ({
+  PostGridModeBadge: () => <div data-testid="postgrid-mode-badge">PG</div>,
+}))
 
 vi.mock('../auth/AuthContext', () => ({
   useAuth: vi.fn(),
 }))
+
+import { AppShell } from './AppShell'
 
 import { useAuth } from '../auth/AuthContext'
 
@@ -26,6 +31,16 @@ const authMock = (): AuthContextType => ({
   isAuthenticated: true,
   isLoading: false,
   token: 'test-token',
+  login: vi.fn(),
+  handleCallbackToken: vi.fn(),
+})
+
+const authGuestMock = (): AuthContextType => ({
+  user: null,
+  logout: vi.fn(),
+  isAuthenticated: false,
+  isLoading: false,
+  token: null,
   login: vi.fn(),
   handleCallbackToken: vi.fn(),
 })
@@ -114,5 +129,29 @@ describe('AppShell', () => {
     )
     const brand = screen.getByText('Fam Mail').closest('a')
     expect(brand).toHaveAttribute('href', '/')
+  })
+
+  it('renders PostGrid mode badge slot when user is signed in', () => {
+    vi.mocked(useAuth).mockReturnValue(authMock())
+    render(
+      <MemoryRouter>
+        <AppShell>
+          <div />
+        </AppShell>
+      </MemoryRouter>,
+    )
+    expect(screen.getByTestId('postgrid-mode-badge')).toBeInTheDocument()
+  })
+
+  it('does not render PostGrid mode badge slot when guest', () => {
+    vi.mocked(useAuth).mockReturnValue(authGuestMock())
+    render(
+      <MemoryRouter>
+        <AppShell>
+          <div />
+        </AppShell>
+      </MemoryRouter>,
+    )
+    expect(screen.queryByTestId('postgrid-mode-badge')).not.toBeInTheDocument()
   })
 })
