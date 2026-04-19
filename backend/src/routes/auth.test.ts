@@ -534,3 +534,231 @@ describe('Auth Routes - OIDC state store TTL expiry', () => {
     // Should not throw
   })
 })
+
+describe('Auth Routes - handleAuthRefresh', () => {
+  it('returns 400 when request body is not JSON', async () => {
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: 'not json',
+      headers: { 'Content-Type': 'text/plain' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+    expect(response.status).toBe(400)
+
+    const data = await response.json()
+    expect(data).toEqual({ error: 'Invalid request body' })
+  })
+
+  it('returns 400 when refreshToken is missing from body', async () => {
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({}),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+
+    expect(response.status).toBe(400)
+    const data = await response.json()
+    expect(data).toEqual({ error: 'Missing refresh token' })
+  })
+
+  it('returns 401 when refresh token is invalid', async () => {
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: 'invalid-token' }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+
+    expect(response.status).toBe(401)
+    const data = await response.json()
+    expect(data).toEqual({ error: 'Invalid or expired refresh token' })
+  })
+
+  it('returns 401 when refresh token is not in any session', async () => {
+    insertTestUser()
+
+    // Generate a valid refresh token but don't store it in a session
+    const refreshToken = await jwtService.generateRefreshToken(testUser)
+
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+
+    expect(response.status).toBe(401)
+    const data = await response.json()
+    expect(data).toEqual({ error: 'Refresh token not found' })
+  })
+
+  it('returns 401 when an access token is passed instead of a refresh token', async () => {
+    insertTestUser()
+
+    const accessToken = await jwtService.generateAccessToken(testUser)
+
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: accessToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+
+    expect(response.status).toBe(401)
+    const data = await response.json()
+    expect(data).toEqual({ error: 'Invalid or expired refresh token' })
+  })
+
+  it('returns new tokens for a valid refresh token', async () => {
+    insertTestUser()
+
+    // Generate tokens and create a session
+    const accessToken = await jwtService.generateAccessToken(testUser)
+    const refreshToken = await jwtService.generateRefreshToken(testUser)
+
+    db.insertSession({
+      id: crypto.randomUUID(),
+      userId: testUser.id,
+      token: accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+
+    expect(response.status).toBe(200)
+    const data = await response.json()
+    expect(data).toHaveProperty('accessToken')
+    expect(data).toHaveProperty('refreshToken')
+    expect(typeof data.accessToken).toBe('string')
+    expect(typeof data.refreshToken).toBe('string')
+
+    // Verify the new access token is valid and contains the correct user
+    const payload = await jwtService.verifyToken(data.accessToken)
+    expect(payload.sub).toBe(testUser.id)
+  })
+
+  it('rotates the refresh token (old refresh token no longer works)', async () => {
+    insertTestUser()
+
+    const accessToken = await jwtService.generateAccessToken(testUser)
+    const refreshToken = await jwtService.generateRefreshToken(testUser)
+
+    db.insertSession({
+      id: crypto.randomUUID(),
+      userId: testUser.id,
+      token: accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
+    // First refresh should succeed
+    const req1 = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response1 = await routes.handleAuthRefresh(req1)
+    expect(response1.status).toBe(200)
+
+    // Second refresh with the same token should fail (token rotation)
+    const req2 = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response2 = await routes.handleAuthRefresh(req2)
+    expect(response2.status).toBe(401)
+    const data2 = await response2.json()
+    expect(data2).toEqual({ error: 'Refresh token not found' })
+  })
+
+  it('new refresh token from rotation works for subsequent refresh', async () => {
+    insertTestUser()
+
+    const accessToken = await jwtService.generateAccessToken(testUser)
+    const refreshToken = await jwtService.generateRefreshToken(testUser)
+
+    db.insertSession({
+      id: crypto.randomUUID(),
+      userId: testUser.id,
+      token: accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
+    // First refresh
+    const req1 = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response1 = await routes.handleAuthRefresh(req1)
+    const data1 = await response1.json()
+    expect(response1.status).toBe(200)
+
+    // Second refresh with the new token should succeed
+    const req2 = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: data1.refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response2 = await routes.handleAuthRefresh(req2)
+    expect(response2.status).toBe(200)
+    const data2 = await response2.json()
+    expect(data2).toHaveProperty('accessToken')
+    expect(data2).toHaveProperty('refreshToken')
+  })
+
+  it('returns 401 when user no longer exists', async () => {
+    // Create a user, generate tokens, then delete the user
+    const ghostUser: User = {
+      id: 'ghost-user-id',
+      oidcSub: 'ghost-sub',
+      oidcIssuer: 'https://accounts.google.com',
+      email: 'ghost@example.com',
+      emailVerified: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    db.insertUser({
+      id: ghostUser.id,
+      oidcSub: ghostUser.oidcSub,
+      oidcIssuer: ghostUser.oidcIssuer,
+      email: ghostUser.email,
+      emailVerified: true,
+    })
+
+    const accessToken = await jwtService.generateAccessToken(ghostUser)
+    const refreshToken = await jwtService.generateRefreshToken(ghostUser)
+
+    db.insertSession({
+      id: crypto.randomUUID(),
+      userId: ghostUser.id,
+      token: accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+
+    // Delete the user
+    const stmt = db['db'].prepare('DELETE FROM users WHERE id = ?')
+    stmt.run(ghostUser.id)
+
+    const req = new Request('http://localhost/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    const response = await routes.handleAuthRefresh(req)
+
+    expect(response.status).toBe(401)
+    const data = await response.json()
+    expect(data).toEqual({ error: 'User not found' })
+  })
+})

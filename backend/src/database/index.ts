@@ -488,6 +488,53 @@ export class Database {
     }
   }
 
+  /**
+   * Retrieves a session by its refresh token.
+   * @param refreshToken - Refresh token to look up
+   * @returns Session data if found, undefined otherwise
+   */
+  getSessionByRefreshToken(refreshToken: string): { id: string; userId: string; token: string; refreshToken: string | null; expiresAt: string } | undefined {
+    const stmt = this.db.prepare("SELECT * FROM sessions WHERE refresh_token = ?");
+    const row = stmt.get(refreshToken) as SessionRow | undefined;
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      token: row.token,
+      refreshToken: row.refresh_token,
+      expiresAt: row.expires_at,
+    };
+  }
+
+  /**
+   * Deletes all expired sessions (where expires_at < now).
+   * Runs as a cleanup to prevent database bloat from unused refresh tokens.
+   * @returns Number of deleted sessions
+   */
+  deleteExpiredSessions(): number {
+    try {
+      const stmt = this.db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')");
+      const result = stmt.run();
+      return result.changes;
+    } catch (error) {
+      throw new DatabaseError("Failed to delete expired sessions", error);
+    }
+  }
+
+  /**
+   * Deletes a session by its ID.
+   * @param id - Session ID
+   * @throws {DatabaseError} If deletion fails
+   */
+  deleteSessionById(id: string): void {
+    try {
+      const stmt = this.db.prepare("DELETE FROM sessions WHERE id = ?");
+      stmt.run(id);
+    } catch (error) {
+      throw new DatabaseError("Failed to delete session by id", error);
+    }
+  }
+
   // ============================================================================
   // Draft Methods
   // ============================================================================

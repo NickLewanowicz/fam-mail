@@ -180,3 +180,124 @@ describe("Database", () => {
     expect(card?.errorMessage).toBe("Some warning");
   });
 });
+
+describe("Database - Session methods", () => {
+  let db: Database;
+
+  beforeEach(() => {
+    const testDb = join(tmpdir(), `fammail-session-test-${Date.now()}.db`);
+    db = new Database(testDb);
+  });
+
+  it("should insert and find session by refresh token", () => {
+    // Insert a user first (foreign key constraint)
+    db.insertUser({
+      id: "user-1",
+      oidcSub: "sub-1",
+      oidcIssuer: "https://example.com",
+      email: "test@example.com",
+    });
+
+    db.insertSession({
+      id: "session-1",
+      userId: "user-1",
+      token: "access-token-1",
+      refreshToken: "refresh-token-1",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    const session = db.getSessionByRefreshToken("refresh-token-1");
+    expect(session).toBeDefined();
+    expect(session!.userId).toBe("user-1");
+    expect(session!.token).toBe("access-token-1");
+    expect(session!.refreshToken).toBe("refresh-token-1");
+  });
+
+  it("should return undefined for non-existent refresh token", () => {
+    const session = db.getSessionByRefreshToken("non-existent");
+    expect(session).toBeUndefined();
+  });
+
+  it("should delete session by id", () => {
+    db.insertUser({
+      id: "user-2",
+      oidcSub: "sub-2",
+      oidcIssuer: "https://example.com",
+      email: "user2@example.com",
+    });
+
+    db.insertSession({
+      id: "session-2",
+      userId: "user-2",
+      token: "access-token-2",
+      refreshToken: "refresh-token-2",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    // Verify session exists
+    const session = db.getSessionByRefreshToken("refresh-token-2");
+    expect(session).toBeDefined();
+
+    // Delete session
+    db.deleteSessionById("session-2");
+
+    // Verify session is gone
+    const deletedSession = db.getSessionByRefreshToken("refresh-token-2");
+    expect(deletedSession).toBeUndefined();
+  });
+
+  it("should delete expired sessions", () => {
+    db.insertUser({
+      id: "user-3",
+      oidcSub: "sub-3",
+      oidcIssuer: "https://example.com",
+      email: "user3@example.com",
+    });
+
+    // Insert an already-expired session (expires_at far in the past)
+    db.insertSession({
+      id: "session-expired",
+      userId: "user-3",
+      token: "expired-access-token",
+      refreshToken: "expired-refresh-token",
+      expiresAt: "2000-01-01T00:00:00.000Z",
+    });
+
+    // Insert a valid session (far in the future)
+    db.insertSession({
+      id: "session-valid",
+      userId: "user-3",
+      token: "valid-access-token",
+      refreshToken: "valid-refresh-token",
+      expiresAt: "2099-12-31T23:59:59.000Z",
+    });
+
+    const deletedCount = db.deleteExpiredSessions();
+    expect(deletedCount).toBe(1);
+
+    // Expired session should be gone
+    expect(db.getSessionByRefreshToken("expired-refresh-token")).toBeUndefined();
+    // Valid session should remain
+    expect(db.getSessionByRefreshToken("valid-refresh-token")).toBeDefined();
+  });
+
+  it("deleteExpiredSessions returns 0 when no expired sessions", () => {
+    db.insertUser({
+      id: "user-4",
+      oidcSub: "sub-4",
+      oidcIssuer: "https://example.com",
+      email: "user4@example.com",
+    });
+
+    db.insertSession({
+      id: "session-future",
+      userId: "user-4",
+      token: "future-access-token",
+      refreshToken: "future-refresh-token",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+
+    const deletedCount = db.deleteExpiredSessions();
+    expect(deletedCount).toBe(0);
+  });
+});

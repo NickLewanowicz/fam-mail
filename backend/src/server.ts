@@ -148,6 +148,12 @@ export async function handleRequest(req: Request): Promise<Response> {
     return authRoutes.handleLogout(req)
   }
 
+  if (url.pathname === '/api/auth/refresh' && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(authRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+    return authRoutes.handleAuthRefresh(req)
+  }
+
   // Drafts endpoints (all require authentication)
   // Write operations are rate limited (#42)
   if (url.pathname === '/api/drafts' && req.method === 'GET') {

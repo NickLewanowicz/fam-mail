@@ -137,10 +137,80 @@ export function setupAuthRoutes(
     return jsonResponse({ message: 'Logged out successfully' })
   }
 
+  // Refresh access token using refresh token
+  async function handleAuthRefresh(req: Request): Promise<Response> {
+    try {
+      const body = await req.json() as { refreshToken?: string }
+      const { refreshToken } = body
+
+      if (!refreshToken) {
+        return jsonResponse({ error: 'Missing refresh token' }, 400)
+      }
+
+      // Verify the refresh token is valid and is actually a refresh token
+      let payload: { sub?: string }
+      try {
+        payload = await jwtService.verifyRefreshToken(refreshToken)
+      } catch {
+        return jsonResponse({ error: 'Invalid or expired refresh token' }, 401)
+      }
+
+      const userId = payload.sub as string
+      if (!userId) {
+        return jsonResponse({ error: 'Invalid refresh token' }, 401)
+      }
+
+      // Look up the session by refresh token to ensure it exists
+      const session = db.getSessionByRefreshToken(refreshToken)
+      if (!session) {
+        return jsonResponse({ error: 'Refresh token not found' }, 401)
+      }
+
+      // Verify the token belongs to the same user
+      if (session.userId !== userId) {
+        return jsonResponse({ error: 'Token mismatch' }, 401)
+      }
+
+      // Look up the user
+      const user = db.getUserById(userId)
+      if (!user) {
+        return jsonResponse({ error: 'User not found' }, 401)
+      }
+
+      // Delete the old session (refresh token rotation)
+      db.deleteSessionById(session.id)
+
+      // Generate new token pair
+      const newAccessToken = await jwtService.generateAccessToken(user)
+      const newRefreshToken = await jwtService.generateRefreshToken(user)
+
+      // Create new session
+      db.insertSession({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        token: newAccessToken,
+        refreshToken: newRefreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+
+      // Clean up expired sessions opportunistically
+      db.deleteExpiredSessions()
+
+      return jsonResponse({
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      })
+    } catch (error) {
+      console.error('Token refresh error:', error)
+      return jsonResponse({ error: 'Invalid request body' }, 400)
+    }
+  }
+
   return {
     handleAuthLogin,
     handleAuthCallback,
     handleGetMe: authMiddleware.requireAuth(handleGetMe),
     handleLogout: authMiddleware.requireAuth(handleLogout),
+    handleAuthRefresh,
   }
 }

@@ -183,4 +183,69 @@ describe('JWTService', () => {
       expect(refreshPayload.exp!).toBeGreaterThan(accessPayload.exp!)
     })
   })
+
+  describe('verifyRefreshToken', () => {
+    it('returns the payload for a valid refresh token', async () => {
+      const token = await jwtService.generateRefreshToken(mockUser)
+      const payload = await jwtService.verifyRefreshToken(token)
+      expect(payload.sub).toBe(mockUser.id)
+      expect(payload.typ).toBe('refresh')
+    })
+
+    it('rejects an access token passed as a refresh token', async () => {
+      const accessToken = await jwtService.generateAccessToken(mockUser)
+      try {
+        await jwtService.verifyRefreshToken(accessToken)
+        expect(true).toBe(false) // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined()
+        expect((error as Error).message).toBe('Not a refresh token')
+      }
+    })
+
+    it('rejects an expired refresh token', async () => {
+      const expiredConfig: JWTConfig = {
+        secret: 'test-secret-key-for-testing-minimum-32-chars',
+        expiresIn: '1h',
+        refreshExpiresIn: '1s'
+      }
+      const expiredService = new JWTService(expiredConfig)
+      const token = await expiredService.generateRefreshToken(mockUser)
+
+      await new Promise(resolve => setTimeout(resolve, 1100))
+
+      try {
+        await jwtService.verifyRefreshToken(token)
+        expect(true).toBe(false) // Should not reach here
+      } catch (error) {
+        expect(error).toBeDefined()
+      }
+    })
+
+    it('rejects a malformed token', async () => {
+      try {
+        await jwtService.verifyRefreshToken('not.a.valid.jwt')
+        expect(true).toBe(false)
+      } catch (error) {
+        expect(error).toBeDefined()
+      }
+    })
+
+    it('rejects a token signed with the wrong secret', async () => {
+      const wrongConfig: JWTConfig = {
+        secret: 'different-secret-key-for-testing-minimum-32-chars',
+        expiresIn: '1h',
+        refreshExpiresIn: '7d'
+      }
+      const wrongService = new JWTService(wrongConfig)
+      const token = await wrongService.generateRefreshToken(mockUser)
+
+      try {
+        await jwtService.verifyRefreshToken(token)
+        expect(true).toBe(false)
+      } catch (error) {
+        expect(error).toBeDefined()
+      }
+    })
+  })
 })
