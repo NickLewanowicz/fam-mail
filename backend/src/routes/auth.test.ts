@@ -472,24 +472,24 @@ describe('Auth Routes - OIDC state store TTL expiry', () => {
     const loginData = await loginResponse.json()
     const state = loginData.state
 
-    // Simulate expiry by monkey-patching Date.now for the evictExpired check
+    // Verify the state is currently valid
+    expect(_stateStoreSize()).toBeGreaterThanOrEqual(1)
+
+    // Monkey-patch Date.now so evictExpired thinks entries are >10 min old
     const realNow = Date.now
-    const tenMinutesAgo = Date.now() - 11 * 60 * 1000 // 11 min ago (> 10 min TTL)
-    Date.now = () => tenMinutesAgo
+    const fakeNow = realNow() + 11 * 60 * 1000 // 11 min in the future
+    Date.now = () => fakeNow
 
-    // Calling login again should trigger eviction and create a new (expired) entry
-    const loginReq2 = createRequest('http://localhost/auth/login')
-    await routes.handleAuthLogin(loginReq2)
-
-    // Restore Date.now so the callback sees the expired entries
-    Date.now = realNow
-
-    // The original state should now be expired; callback should reject it
+    // Trigger eviction via a callback (which calls evictExpired internally)
     const callbackReq = createRequest(
       `http://localhost/auth/callback?code=auth-code&state=${state}`
     )
     const response = await routes.handleAuthCallback(callbackReq)
 
+    // Restore Date.now before assertions
+    Date.now = realNow
+
+    // The state should have been evicted as expired
     expect(response.status).toBe(400)
     const data = await response.json()
     expect(data).toEqual({ error: 'Invalid or expired state' })
