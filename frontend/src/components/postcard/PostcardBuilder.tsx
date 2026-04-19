@@ -32,15 +32,12 @@ export function PostcardBuilder({
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const convertMarkdown = async () => {
-      if (message) {
-        const html = await marked(message)
-        setMessageHTML(html)
-      } else {
-        setMessageHTML('')
-      }
+    if (message) {
+      const html = marked.parse(message) as string
+      setMessageHTML(html)
+    } else {
+      setMessageHTML('')
     }
-    convertMarkdown()
   }, [message])
 
   const validateFile = (file: File): string | null => {

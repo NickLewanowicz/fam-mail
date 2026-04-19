@@ -21,7 +21,7 @@ vi.mock('@uiw/react-md-editor', () => ({
 }))
 
 vi.mock('marked', () => ({
-  marked: vi.fn((text) => Promise.resolve(`<p>${text}</p>`))
+  marked: { parse: vi.fn((text: string) => `<p>${text}</p>`) }
 }))
 
 vi.mock('../../utils/postcardTemplate', () => ({
@@ -81,16 +81,20 @@ describe('PostcardBuilder', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    // Reset FileReader mock
-    global.FileReader = class MockFileReader {
+    // Reset FileReader mock - defer onload to next microtask so React Testing Library
+    // can wrap the state update in act() via waitFor
+    const MockFileReaderClass = class MockFileReader {
       onload: ((event: { target: { result: string } }) => void) | null = null
       onerror: ((event: unknown) => void) | null = null
-      readAsDataURL = vi.fn(() => {
-        if (this.onload) {
-          this.onload({ target: { result: 'data:image/jpeg;base64,test' } })
-        }
-      })
-    } as typeof FileReader
+      readAsDataURL() {
+        // Capture the onload handler before scheduling microtask
+        const handler = this.onload
+        queueMicrotask(() => {
+          handler?.({ target: { result: 'data:image/jpeg;base64,test' } })
+        })
+      }
+    }
+    global.FileReader = MockFileReaderClass as unknown as typeof FileReader
   })
 
   describe('Component Rendering', () => {
@@ -506,14 +510,16 @@ describe('PostcardBuilder', () => {
 
   describe('Error Handling', () => {
     it('should handle FileReader errors', async () => {
-      global.FileReader = class MockFileReaderError {
+      const MockFileReaderError = class MockFileReaderError {
         onerror: ((event: unknown) => void) | null = null
-        readAsDataURL = vi.fn(() => {
-          if (this.onerror) {
-            this.onerror({})
-          }
-        })
-      } as typeof FileReader
+        readAsDataURL() {
+          const handler = this.onerror
+          queueMicrotask(() => {
+            handler?.({})
+          })
+        }
+      }
+      global.FileReader = MockFileReaderError as unknown as typeof FileReader
 
       render(<PostcardBuilder {...defaultProps} />)
 
