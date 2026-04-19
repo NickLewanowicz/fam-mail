@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { mockBackendHealth, gotoApp } from './helpers'
+import { setupStandardMocks, gotoApp } from './helpers'
 
 test.describe('Message Editor', () => {
   test.beforeEach(async ({ page }) => {
-    await mockBackendHealth(page)
+    await setupStandardMocks(page)
   })
 
   test('message editor section is visible', async ({ page }) => {

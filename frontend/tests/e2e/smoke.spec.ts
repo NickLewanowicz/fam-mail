@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { mockBackendHealth, gotoApp } from './helpers'
+import { setupStandardMocks, gotoApp } from './helpers'
 
 test.describe('Smoke Tests', () => {
   test.beforeEach(async ({ page }) => {
-    await mockBackendHealth(page)
+    await setupStandardMocks(page)
   })
 
   test('homepage loads with correct title', async ({ page }) => {

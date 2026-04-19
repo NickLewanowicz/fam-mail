@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test'
-import { mockBackendHealth, gotoApp } from './helpers'
+import { setupStandardMocks, gotoApp } from './helpers'
 
 test.describe('Screenshot Regression Tests', () => {
-  // Only run screenshot tests on desktop to avoid flakiness
+  // Only run screenshot tests on desktop chromium to avoid flakiness
   test.skip(({ browserName }) => browserName !== 'chromium', 'Screenshot tests only on Chromium')
   test.skip(({ isMobile }) => isMobile, 'Screenshot tests only on desktop')
 
   test.beforeEach(async ({ page }) => {
-    await mockBackendHealth(page)
+    await setupStandardMocks(page)
   })
 
   test('homepage empty state', async ({ page }) => {
@@ -58,7 +58,8 @@ test.describe('Screenshot Regression Tests', () => {
     await gotoApp(page)
     await page.locator('h2:has-text("Postcard Image")').scrollIntoViewIfNeeded()
 
-    const imageSection = page.locator('text=Upload Image').locator('..').locator('..')
+    // Find the card that contains the image upload section
+    const imageSection = page.locator('h2:has-text("Postcard Image")').locator('..').locator('..')
     await expect(imageSection).toBeVisible()
 
     await expect(imageSection).toHaveScreenshot('image-upload-empty.png', {
@@ -72,9 +73,12 @@ test.describe('Screenshot Regression Tests', () => {
 
     const fileInput = page.locator('#postcard-front-image')
     await fileInput.setInputFiles('tests/fixtures/test-image.png')
-    await expect(page.locator('.alert-success')).toContainText('test-image.png')
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).toBeVisible()
 
-    const imageSection = page.locator('text=Upload Image').locator('..').locator('..')
+    // Find the upload section card
+    const imageSection = page.locator('h3:has-text("Upload Image")').locator('..')
+    await expect(imageSection).toBeVisible()
+
     await expect(imageSection).toHaveScreenshot('image-uploaded.png', {
       animations: 'disabled',
       maxDiffPixelRatio: 0.05,

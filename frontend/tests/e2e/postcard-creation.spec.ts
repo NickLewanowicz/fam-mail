@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import {
-  mockBackendHealth,
+  setupStandardMocks,
   mockPostcardSubmit,
   gotoApp,
   fillValidAddress,
@@ -10,7 +10,7 @@ import {
 
 test.describe('Postcard Creation Happy Path', () => {
   test.beforeEach(async ({ page }) => {
-    await mockBackendHealth(page)
+    await setupStandardMocks(page)
     await mockPostcardSubmit(page)
   })
 
@@ -29,7 +29,7 @@ test.describe('Postcard Creation Happy Path', () => {
     // Step 3: Upload an image
     await uploadTestImage(page)
     // Wait for image to be processed
-    await expect(page.locator('.alert-success')).toContainText('test-image.png')
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).toBeVisible()
 
     // All steps complete - "Ready to Send" card should appear
     await expect(page.getByText('Ready to Send!')).toBeVisible()
@@ -132,5 +132,32 @@ test.describe('Postcard Creation Happy Path', () => {
 
     // Then should complete
     await expect(page.locator('.badge-success').first()).toContainText('Postcard Sent Successfully')
+  })
+
+  test('submission error shows error alert', async ({ page }) => {
+    await page.route('**/api/postcards', async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: 'Address validation failed',
+          }),
+        })
+      } else {
+        await route.continue()
+      }
+    })
+
+    await gotoApp(page)
+    await fillValidAddress(page)
+    await writeMessage(page, 'Test')
+    await uploadTestImage(page)
+    await expect(page.getByText('Ready to Send!')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Send Postcard' }).click()
+
+    // Should show error message
+    await expect(page.locator('.alert-error').filter({ hasText: 'Address validation failed' })).toBeVisible()
   })
 })

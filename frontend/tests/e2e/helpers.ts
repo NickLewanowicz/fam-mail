@@ -17,6 +17,50 @@ export async function mockBackendHealth(page: Page) {
 }
 
 /**
+ * Mock auth endpoints so the app thinks the user is authenticated.
+ * Sets localStorage token and mocks /api/auth/me to return a valid user.
+ */
+export async function mockAuthenticated(page: Page) {
+  // Mock the /api/auth/me endpoint to return a valid user
+  await page.route('**/api/auth/me', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: 'test-user-id',
+          oidcSub: 'test-oidc-sub',
+          oidcIssuer: 'https://accounts.google.com',
+          email: 'test@fam-mail.test',
+          emailVerified: true,
+          firstName: 'Test',
+          lastName: 'User',
+          avatarUrl: undefined,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    })
+  })
+
+  // Mock the /api/auth/login endpoint (shouldn't be called but just in case)
+  await page.route('**/api/auth/login', async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        authUrl: '/auth/callback?code=test-code',
+      }),
+    })
+  })
+
+  // Set a fake JWT token in localStorage so ProtectedRoute lets us through
+  await page.addInitScript(() => {
+    localStorage.setItem('fam_mail_token', 'test-jwt-token-for-e2e')
+  })
+}
+
+/**
  * Mock the postcard submission endpoint with a successful response
  */
 export async function mockPostcardSubmit(page: Page) {
@@ -132,7 +176,8 @@ export async function writeMessage(page: Page, message: string) {
 }
 
 /**
- * Navigate to the app and wait for it to be ready
+ * Navigate to the app and wait for it to be ready.
+ * Assumes auth mocks and health mocks are already set up.
  */
 export async function gotoApp(page: Page) {
   await page.goto('/')
@@ -140,4 +185,12 @@ export async function gotoApp(page: Page) {
   await page.waitForLoadState('networkidle')
   // Wait for the main content area to be visible
   await page.locator('h2:has-text("Create Your Postcard")').waitFor({ state: 'visible', timeout: 10000 })
+}
+
+/**
+ * Set up all standard mocks for a typical test: auth + health
+ */
+export async function setupStandardMocks(page: Page) {
+  await mockAuthenticated(page)
+  await mockBackendHealth(page)
 }

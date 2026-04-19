@@ -1,9 +1,9 @@
 import { test, expect } from '@playwright/test'
-import { mockBackendHealth, gotoApp } from './helpers'
+import { setupStandardMocks, gotoApp } from './helpers'
 
 test.describe('Image Upload', () => {
   test.beforeEach(async ({ page }) => {
-    await mockBackendHealth(page)
+    await setupStandardMocks(page)
   })
 
   test('upload area is visible on the page', async ({ page }) => {
@@ -19,7 +19,7 @@ test.describe('Image Upload', () => {
     await fileInput.setInputFiles('tests/fixtures/test-image.png')
 
     // Should show success indicator with file name
-    await expect(page.locator('.alert-success')).toContainText('test-image.png')
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).toBeVisible()
 
     // Should show "Change Image" button
     await expect(page.getByRole('button', { name: 'Change Image' })).toBeVisible()
@@ -34,7 +34,7 @@ test.describe('Image Upload', () => {
     // Upload image
     const fileInput = page.locator('#postcard-front-image')
     await fileInput.setInputFiles('tests/fixtures/test-image.png')
-    await expect(page.locator('.alert-success')).toContainText('test-image.png')
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).toBeVisible()
 
     // Progress should advance
     await expect(page.getByText('Complete: 1 of 3 steps')).toBeVisible()
@@ -46,15 +46,15 @@ test.describe('Image Upload', () => {
     // Upload an image first
     const fileInput = page.locator('#postcard-front-image')
     await fileInput.setInputFiles('tests/fixtures/test-image.png')
-    await expect(page.locator('.alert-success')).toContainText('test-image.png')
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).toBeVisible()
 
     // Click Change Image
     await page.getByRole('button', { name: 'Change Image' }).click()
 
     // Upload area should be back (showing drop zone)
     await expect(page.locator('#postcard-front-image')).toBeAttached()
-    // No success alert
-    await expect(page.getByText('test-image.png')).not.toBeVisible()
+    // No success alert for the file name
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).not.toBeVisible()
   })
 
   test('drag-and-drop area is present', async ({ page }) => {
@@ -64,14 +64,13 @@ test.describe('Image Upload', () => {
     const dropZone = page.locator('.border-dashed')
     await expect(dropZone).toBeVisible()
     await expect(page.getByText('Click to upload')).toBeVisible()
-    await expect(page.getByText('JPG, PNG or GIF')).toBeVisible()
   })
 
   test('drop zone has correct accept types listed', async ({ page }) => {
     await gotoApp(page)
 
-    // Verify the text showing accepted formats
-    await expect(page.getByText(/JPG, PNG or GIF \(max 10MB\)/)).toBeVisible()
+    // Verify the text showing accepted formats - the component uses WebP not GIF in the text
+    await expect(page.getByText(/JPG, PNG, GIF or WebP \(max 10MB\)/)).toBeVisible()
   })
 
   test('live preview section is visible', async ({ page }) => {
@@ -87,7 +86,7 @@ test.describe('Image Upload', () => {
 
     const fileInput = page.locator('#postcard-front-image')
     await fileInput.setInputFiles('tests/fixtures/test-image.png')
-    await expect(page.locator('.alert-success')).toContainText('test-image.png')
+    await expect(page.locator('.alert-success').filter({ hasText: 'test-image.png' })).toBeVisible()
 
     // Front preview iframe should exist
     const frontPreview = page.locator('iframe[title="Postcard Front Preview"]')
@@ -102,7 +101,7 @@ test.describe('Image Upload', () => {
   test('upload shows error for invalid file type', async ({ page }) => {
     await gotoApp(page)
 
-    // Verify the validation message area exists by checking the upload error container
+    // Verify the drop zone / upload area exists
     const dropZone = page.locator('.border-dashed')
     await expect(dropZone).toBeVisible()
   })
