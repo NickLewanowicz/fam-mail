@@ -22,7 +22,7 @@
 ### Content Issues
 
 - **Port wrong everywhere**: Docs say port 3000/3001, but 1.0.0 uses port **8484**
-- **Env vars outdated**: References to `TEST_MODE`, `POSTGRID_TEST_KEY` vs new config schema
+- **Env vars outdated**: References to `TEST_MODE`, `POSTGRID_TEST_KEY`/`POSTGRID_PROD_KEY` vs new config schema (now fixed to `POSTGRID_TEST_API_KEY`/`POSTGRID_LIVE_API_KEY`)
 - **Missing 1.0.0 features**: No mention of IMAP polling, LLM parsing, email notifications
 - **Project structure docs** don't reflect new services (imap.ts, llm.ts, notifications.ts, database/)
 

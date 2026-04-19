@@ -143,13 +143,20 @@ export function getPostgridService(): PostGridService | null {
 // Auto-initialize from environment variables (used when running outside of server.ts)
 // Uses canonical names matching config/index.ts: POSTGRID_TEST_API_KEY / POSTGRID_LIVE_API_KEY
 try {
-  const mode = (process.env.POSTGRID_MODE || 'test') as 'test' | 'live'
-  const apiKey = mode === 'test'
-    ? process.env.POSTGRID_TEST_API_KEY
-    : process.env.POSTGRID_LIVE_API_KEY
+  const testApiKey = process.env.POSTGRID_TEST_API_KEY
+  const liveApiKey = process.env.POSTGRID_LIVE_API_KEY
 
-  if (apiKey) {
-    _postgridService = new PostGridService(apiKey, mode === 'test')
+  if (testApiKey || liveApiKey) {
+    const mode = (process.env.POSTGRID_MODE || 'test') as 'test' | 'live'
+    _postgridService = new PostGridService({
+      mode,
+      testApiKey: testApiKey || '',
+      liveApiKey: liveApiKey || '',
+      forceTestMode: (process.env.POSTGRID_FORCE_TEST_MODE || 'false') === 'true',
+      webhookSecret: process.env.POSTGRID_WEBHOOK_SECRET || '',
+      size: (process.env.POSTCARD_SIZE as '4x6' | '6x9') || '4x6',
+      senderId: process.env.POSTCARD_SENDER_ID || '',
+    })
   }
 } catch {
   // Service will be null if no API key is provided (e.g., during tests)

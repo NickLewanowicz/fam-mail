@@ -1,5 +1,5 @@
-import { describe, it, expect, mock } from 'bun:test'
-import { PostGridService } from './postgrid'
+import { describe, it, expect, mock, afterEach } from 'bun:test'
+import { PostGridService, setPostgridService, getPostgridService } from './postgrid'
 
 describe('PostGridService', () => {
   it('should set test mode when flag is true', () => {
@@ -105,6 +105,101 @@ describe('PostGridService', () => {
       })
 
       expect(service.getActiveKey()).toBe("live_key")
+    })
+  })
+
+  // ============================================================================
+  // PostGrid Initialization — Env Var Naming (#17)
+  // ============================================================================
+
+  describe("PostGridService - Config-based initialization (#17)", () => {
+    it("should select test key in test mode", () => {
+      const service = new PostGridService({
+        testApiKey: "pg_test_abc",
+        liveApiKey: "pg_live_xyz",
+        mode: "test",
+        forceTestMode: false,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      expect(service.getActiveKey()).toBe("pg_test_abc")
+      expect(service.getTestMode()).toBe(true)
+    })
+
+    it("should select live key in live mode", () => {
+      const service = new PostGridService({
+        testApiKey: "pg_test_abc",
+        liveApiKey: "pg_live_xyz",
+        mode: "live",
+        forceTestMode: false,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      expect(service.getActiveKey()).toBe("pg_live_xyz")
+      expect(service.getTestMode()).toBe(false)
+    })
+
+    it("should force test mode even when mode is live", () => {
+      const service = new PostGridService({
+        testApiKey: "pg_test_abc",
+        liveApiKey: "pg_live_xyz",
+        mode: "live",
+        forceTestMode: true,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      expect(service.getActiveKey()).toBe("pg_test_abc")
+      expect(service.getTestMode()).toBe(true)
+    })
+  })
+
+  describe("PostGridService - Singleton registration (#17)", () => {
+    afterEach(() => {
+      // Clean up singleton after each test
+      setPostgridService(null as never)
+    })
+
+    it("should register and retrieve a PostGridService instance", () => {
+      const service = new PostGridService({
+        testApiKey: "pg_test_abc",
+        liveApiKey: "pg_live_xyz",
+        mode: "test",
+        forceTestMode: false,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      setPostgridService(service)
+      expect(getPostgridService()).toBe(service)
+    })
+
+    it("should return null when no service is registered", () => {
+      setPostgridService(null as never)
+      expect(getPostgridService()).toBeNull()
+    })
+
+    it("should return registered service with correct active key", () => {
+      const service = new PostGridService({
+        testApiKey: "pg_test_registered",
+        liveApiKey: "pg_live_registered",
+        mode: "test",
+        forceTestMode: false,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      setPostgridService(service)
+      const retrieved = getPostgridService()
+      expect(retrieved).not.toBeNull()
+      expect(retrieved!.getActiveKey()).toBe("pg_test_registered")
     })
   })
 })

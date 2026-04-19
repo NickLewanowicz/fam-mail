@@ -158,7 +158,7 @@ The core functionality is working correctly, but PostGrid API keys need to be co
 - **Action:** Attempted to send postcard without PostGrid configuration
 - **Expected:** User-friendly error message
 - **Actual:** 
-  - Error displayed in UI: "PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable."
+  - Error displayed in UI: "PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable."
   - No application crash
   - User can retry
 - **Screenshot:** `qa-screenshots/F-errors/F4-postgrid-error.png`
