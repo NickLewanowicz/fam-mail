@@ -5,8 +5,62 @@ import { Database } from '../database'
 import type { User } from '../models/user'
 import { jsonResponse } from '../utils/response'
 
-// In-memory state store (use Redis in production)
-const oidcStateStore = new Map<string, string>()
+/** TTL-based state store for OIDC PKCE code verifiers.
+ *  Entries expire after STATE_TTL_MS (10 min). Cleanup runs lazily on access
+ *  and proactively via a periodic timer (every CLEANUP_INTERVAL_MS). */
+const STATE_TTL_MS = 10 * 60 * 1000 // 10 minutes
+const CLEANUP_INTERVAL_MS = 60 * 1000 // 1 minute
+
+interface StateEntry {
+  codeVerifier: string
+  createdAt: number
+}
+
+const oidcStateStore = new Map<string, StateEntry>()
+
+/** Remove entries older than STATE_TTL_MS. */
+function evictExpired(): void {
+  const now = Date.now()
+  for (const [key, entry] of oidcStateStore) {
+    if (now - entry.createdAt > STATE_TTL_MS) {
+      oidcStateStore.delete(key)
+    }
+  }
+}
+
+/** Proactive cleanup timer — ensures stale entries are evicted even when no requests arrive. */
+let cleanupTimer: ReturnType<typeof setInterval> | null = null
+
+function startCleanupTimer(): void {
+  if (cleanupTimer === null) {
+    cleanupTimer = setInterval(evictExpired, CLEANUP_INTERVAL_MS)
+    // Allow the process to exit even if the timer is still running
+    if (cleanupTimer && typeof cleanupTimer === 'object' && 'unref' in cleanupTimer) {
+      cleanupTimer.unref()
+    }
+  }
+}
+
+/** Stop the cleanup timer. Useful for clean shutdown and testing. */
+export function stopCleanupTimer(): void {
+  if (cleanupTimer !== null) {
+    clearInterval(cleanupTimer)
+    cleanupTimer = null
+  }
+}
+
+// Auto-start the cleanup timer when this module is imported
+startCleanupTimer()
+
+/** Exposed for testing only — not part of the public API. */
+export function _clearStateStore(): void {
+  oidcStateStore.clear()
+}
+
+/** Exposed for testing only — returns the number of entries in the store. */
+export function _stateStoreSize(): number {
+  return oidcStateStore.size
+}
 
 export function setupAuthRoutes(
   oidcService: OIDCService,
@@ -19,7 +73,8 @@ export function setupAuthRoutes(
     const state = crypto.randomUUID()
     const { authUrl, codeVerifier } = await oidcService.generateAuthUrl(state)
 
-    oidcStateStore.set(state, codeVerifier)
+    oidcStateStore.set(state, { codeVerifier, createdAt: Date.now() })
+    evictExpired()
 
     return jsonResponse({ authUrl, state })
   }
@@ -34,14 +89,15 @@ export function setupAuthRoutes(
       return jsonResponse({ error: 'Missing code or state' }, 400)
     }
 
-    const codeVerifier = oidcStateStore.get(state)
+    evictExpired()
+    const entry = oidcStateStore.get(state)
 
-    if (!codeVerifier) {
+    if (!entry) {
       return jsonResponse({ error: 'Invalid or expired state' }, 400)
     }
 
     try {
-      const { user } = await oidcService.handleCallback(code, codeVerifier)
+      const { user } = await oidcService.handleCallback(code, entry.codeVerifier)
 
       const accessToken = await jwtService.generateAccessToken(user)
       const refreshToken = await jwtService.generateRefreshToken(user)

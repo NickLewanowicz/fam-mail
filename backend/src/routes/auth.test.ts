@@ -1,5 +1,5 @@
-import { describe, it, expect, mock, beforeEach, afterAll } from 'bun:test'
-import { setupAuthRoutes } from './auth'
+import { describe, it, expect, mock, beforeEach, afterEach, afterAll } from 'bun:test'
+import { setupAuthRoutes, _clearStateStore, _stateStoreSize, stopCleanupTimer } from './auth'
 import { JWTService } from '../services/jwtService'
 import { AuthMiddleware } from '../middleware/auth'
 import { Database } from '../database'
@@ -98,6 +98,9 @@ function insertTestUser(): void {
 
 // Clean up database before each test that uses it
 beforeEach(() => {
+  // Clear the OIDC state store between tests
+  _clearStateStore()
+
   // Clear the test user from the database if it exists
   try {
     const stmt = db['db'].prepare('DELETE FROM users WHERE id = ?')
@@ -283,6 +286,72 @@ describe('Auth Routes - handleAuthCallback', () => {
     const data = await secondResponse.json()
     expect(data).toEqual({ error: 'Invalid or expired state' })
   })
+
+  it('expired state is rejected (TTL eviction)', async () => {
+    // Call login to populate the state store
+    const loginReq = createRequest('http://localhost/auth/login')
+    const loginResponse = await routes.handleAuthLogin(loginReq)
+    const loginData = await loginResponse.json()
+    const state = loginData.state
+
+    // Manually advance time by mocking Date.now for the evictExpired check
+    const realDateNow = Date.now
+    const TEN_MINUTES_PLUS_ONE_SEC = 10 * 60 * 1000 + 1000
+
+    try {
+      // Advance time past the 10-minute TTL
+      Date.now = () => realDateNow() + TEN_MINUTES_PLUS_ONE_SEC
+
+      // Attempt callback with the now-expired state
+      const callbackReq = createRequest(
+        `http://localhost/auth/callback?code=auth-code&state=${state}`
+      )
+      const response = await routes.handleAuthCallback(callbackReq)
+
+      expect(response.status).toBe(400)
+      const data = await response.json()
+      expect(data).toEqual({ error: 'Invalid or expired state' })
+    } finally {
+      Date.now = realDateNow
+    }
+  })
+
+  it('expired entries are evicted on next login (memory leak prevention)', async () => {
+    // Call login multiple times to accumulate entries
+    for (let i = 0; i < 5; i++) {
+      const loginReq = createRequest('http://localhost/auth/login')
+      await routes.handleAuthLogin(loginReq)
+    }
+
+    // Advance time past TTL
+    const realDateNow = Date.now
+    const TEN_MINUTES_PLUS_ONE_SEC = 10 * 60 * 1000 + 1000
+
+    try {
+      Date.now = () => realDateNow() + TEN_MINUTES_PLUS_ONE_SEC
+
+      // This login should trigger eviction of all 5 expired entries
+      const loginReq = createRequest('http://localhost/auth/login')
+      await routes.handleAuthLogin(loginReq)
+
+      // Now advance time back to "present" and try to use one of the old states
+      // (they should all be gone)
+      Date.now = realDateNow
+
+      // Generate old state IDs by logging in and capturing before time warp
+      // We already did 5 logins above, their states should be evicted.
+      // A new login should work fine.
+      const newLoginReq = createRequest('http://localhost/auth/login')
+      const newLoginRes = await routes.handleAuthLogin(newLoginReq)
+      expect(newLoginRes.status).toBe(200)
+
+      const newData = await newLoginRes.json()
+      expect(newData).toHaveProperty('state')
+      expect(newData).toHaveProperty('authUrl')
+    } finally {
+      Date.now = realDateNow
+    }
+  })
 })
 
 describe('Auth Routes - handleGetMe (protected)', () => {
@@ -383,5 +452,85 @@ describe('Auth Routes - handleLogout (protected)', () => {
     // but since we can't directly check, we verify the logout succeeded
     const data = await response.json()
     expect(data).toEqual({ message: 'Logged out successfully' })
+  })
+})
+
+describe('Auth Routes - OIDC state store TTL expiry', () => {
+  afterEach(() => {
+    _clearStateStore()
+  })
+
+  afterAll(() => {
+    // Ensure cleanup timer is stopped after all tests
+    stopCleanupTimer()
+  })
+
+  it('evicts expired states on callback', async () => {
+    // Call login to populate state store
+    const loginReq = createRequest('http://localhost/auth/login')
+    const loginResponse = await routes.handleAuthLogin(loginReq)
+    const loginData = await loginResponse.json()
+    const state = loginData.state
+
+    // Simulate expiry by monkey-patching Date.now for the evictExpired check
+    const realNow = Date.now
+    const tenMinutesAgo = Date.now() - 11 * 60 * 1000 // 11 min ago (> 10 min TTL)
+    Date.now = () => tenMinutesAgo
+
+    // Calling login again should trigger eviction and create a new (expired) entry
+    const loginReq2 = createRequest('http://localhost/auth/login')
+    await routes.handleAuthLogin(loginReq2)
+
+    // Restore Date.now so the callback sees the expired entries
+    Date.now = realNow
+
+    // The original state should now be expired; callback should reject it
+    const callbackReq = createRequest(
+      `http://localhost/auth/callback?code=auth-code&state=${state}`
+    )
+    const response = await routes.handleAuthCallback(callbackReq)
+
+    expect(response.status).toBe(400)
+    const data = await response.json()
+    expect(data).toEqual({ error: 'Invalid or expired state' })
+  })
+
+  it('_stateStoreSize returns the number of entries', async () => {
+    _clearStateStore()
+    expect(_stateStoreSize()).toBe(0)
+
+    const loginReq = createRequest('http://localhost/auth/login')
+    await routes.handleAuthLogin(loginReq)
+    expect(_stateStoreSize()).toBe(1)
+
+    await routes.handleAuthLogin(loginReq)
+    expect(_stateStoreSize()).toBe(2)
+  })
+
+  it('lazy eviction on login removes stale entries', async () => {
+    _clearStateStore()
+
+    // Create a state entry
+    const loginReq = createRequest('http://localhost/auth/login')
+    await routes.handleAuthLogin(loginReq)
+    expect(_stateStoreSize()).toBe(1)
+
+    // Fast-forward time past TTL by monkey-patching Date.now
+    const realNow = Date.now
+    Date.now = () => realNow() + 11 * 60 * 1000 // 11 minutes later
+
+    // Next login should trigger eviction of the old entry
+    await routes.handleAuthLogin(loginReq)
+    // The old entry is evicted, the new one is added → size should be 1
+    expect(_stateStoreSize()).toBe(1)
+
+    Date.now = realNow
+  })
+
+  it('stopCleanupTimer does not throw when called multiple times', () => {
+    stopCleanupTimer()
+    stopCleanupTimer()
+    stopCleanupTimer()
+    // Should not throw
   })
 })

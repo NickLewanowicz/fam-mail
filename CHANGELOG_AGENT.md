@@ -4,6 +4,26 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 10:38] Progress on #55: [P2/Bug] OIDC state store is in-memory Map with no expiry — memory leak
+
+Attempt 1. 5 tools, 0 commits. QA: GREEN.
+
+---
+
+## [2026-04-19 10:36] Closed #56: [P2/Enhancement] Health endpoint leaks service configuration to unauthenticated users
+
+IMPLEMENTATION_COMPLETE
+
+**Summary**: Fixed issue #56 by reducing the unauthenticated `/api/health` endpoint response from `{ status, version, timestamp }` to just `{ status: "ok" }`. This prevents information disclosure where attackers could determine the application version and server time. Updated the test to verify the response contains exactly one key (`status: "ok"`).
+
+**Issues closed:** #56
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
 ## [2026-04-19 10:33] Closed #58: [P2/Enhancement] Webhook btoa() stack overflow on large attachments
 
 Commit succeeded. Only the 3 relevant test files were included — the unrelated files (`CHANGELOG_AGENT.md`, orchestrator scripts, logs) were left unstaged.
