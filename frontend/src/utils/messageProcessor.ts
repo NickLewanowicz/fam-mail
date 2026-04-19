@@ -87,7 +87,6 @@ function processLists(text: string): string {
   const result: string[] = []
   let inUnorderedList = false
   let inOrderedList = false
-  let orderedCounter = 1
 
   for (const line of lines) {
     const trimmedLine = line.trim()
@@ -101,7 +100,6 @@ function processLists(text: string): string {
       if (inOrderedList) {
         result.push('</ol>')
         inOrderedList = false
-        orderedCounter = 1
       }
       result.push(`<li>${trimmedLine.replace(/^[-*+]\s/, '')}</li>`)
       continue
@@ -119,7 +117,6 @@ function processLists(text: string): string {
         inUnorderedList = false
       }
       result.push(`<li>${trimmedLine.replace(/^\d+\.\s/, '')}</li>`)
-      orderedCounter++
       continue
     }
 
@@ -131,7 +128,6 @@ function processLists(text: string): string {
     if (inOrderedList) {
       result.push('</ol>')
       inOrderedList = false
-      orderedCounter = 1
     }
 
     result.push(line)

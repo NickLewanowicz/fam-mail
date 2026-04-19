@@ -1,6 +1,6 @@
 import { ImapFlow } from "imapflow";
 import { Database } from "../database";
-import { LLMService } from "./llm";
+import { LLMService, type LLMConfig } from "./llm";
 import { PostGridService } from "./postgrid";
 import type { PostGridPostcardRequest } from "../types/postgrid";
 
@@ -49,7 +49,7 @@ export class IMAPService {
   constructor(
     private config: IMAPConfig,
     private db: Database,
-    llmConfig: Parameters<typeof LLMService.prototype>[0],
+    llmConfig: LLMConfig,
     postgridService: PostGridService
   ) {
     this.llm = new LLMService(llmConfig);
@@ -68,9 +68,11 @@ export class IMAPService {
     this.client = new ImapFlow({
       host: this.config.host,
       port: this.config.port,
-      user: this.config.user,
-      password: this.config.password,
-      tls: this.config.tls,
+      auth: {
+        user: this.config.user,
+        pass: this.config.password,
+      },
+      secure: this.config.tls,
       logger: false,
     });
 
@@ -107,7 +109,7 @@ export class IMAPService {
 
     for await (const msg of this.client.fetch(
       since.getTime() > 0 ? { since } : "1:*",
-      { envelope: true, bodySection: true, source: true }
+      { envelope: true, bodyParts: [''], source: true }
     )) {
       await this.processMessage(msg as any);
     }

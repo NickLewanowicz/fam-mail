@@ -37,12 +37,12 @@ describe("IMAP Service", () => {
       postgrid
     );
 
-    expect(imap.hasImageAttachment([
-      { filename: "photo.jpg", contentType: "image/jpeg" },
+      expect(imap.hasImageAttachment([
+      { filename: "photo.jpg", contentType: "image/jpeg", size: 1024 },
     ])).toBe(true);
 
     expect(imap.hasImageAttachment([
-      { filename: "doc.pdf", contentType: "application/pdf" },
+      { filename: "doc.pdf", contentType: "application/pdf", size: 2048 },
     ])).toBe(false);
 
     expect(imap.hasImageAttachment([])).toBe(false);

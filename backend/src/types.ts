@@ -11,7 +11,7 @@ export interface Address {
 
 export interface PostcardRequest {
   to: Address;
-  from: Address;
+  from?: Address;
   frontImageUrl?: string;
   message: string;
 }
@@ -21,4 +21,13 @@ export interface PostGridPostcardResponse {
   status: string;
   createdAt: string;
   expectedDeliveryDate?: string;
+}
+
+export interface PostGridError {
+  status: number;
+  message: string;
+  error?: {
+    type: string;
+    message: string;
+  };
 }

@@ -1,5 +1,6 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
 import { PostcardBack } from './PostcardBack';
 import type { Address } from '../../types/address';
 
@@ -14,63 +15,79 @@ const mockAddress: Address = {
 };
 
 // Mock the editor components
-jest.mock('./MessageEditor', () => {
-  return function MockMessageEditor({
-    message,
-    onChange,
-    isEditing,
-    onEditingChange
-  }: any) {
-    return (
-      <div
-        data-testid="message-editor"
-        data-editing={isEditing}
-        onClick={() => onEditingChange?.(!isEditing)}
-      >
-        Message: {message || '[empty]'}
-      </div>
-    );
+vi.mock('./MessageEditor', () => {
+  return {
+    MessageEditor: function MockMessageEditor({
+      message,
+      isEditing,
+      onEditingChange
+    }: {
+      message?: string;
+      _onChange?: (msg: string) => void;
+      isEditing?: boolean;
+      onEditingChange?: (editing: boolean) => void;
+    }) {
+      return (
+        <div
+          data-testid="message-editor"
+          data-editing={isEditing}
+          onClick={() => onEditingChange?.(!isEditing)}
+        >
+          Message: {message || '[empty]'}
+        </div>
+      );
+    }
   };
 });
 
-jest.mock('./AddressEditor', () => {
-  return function MockAddressEditor({
-    address,
-    onChange,
-    isEditing,
-    onEditingChange,
-    includeReturnAddress,
-    returnAddress,
-    onReturnAddressChange
-  }: any) {
-    return (
-      <div
-        data-testid="address-editor"
-        data-editing={isEditing}
-        data-include-return={includeReturnAddress}
-        onClick={() => onEditingChange?.(!isEditing)}
-      >
-        Address: {address?.addressLine1 || '[no address]'}
-        {includeReturnAddress && (
-          <div data-testid="return-address">
-            Return: {returnAddress?.addressLine1 || '[no return address]'}
-          </div>
-        )}
-      </div>
-    );
+vi.mock('./AddressEditor', () => {
+  return {
+    AddressEditor: function MockAddressEditor({
+      address,
+      isEditing,
+      onEditingChange,
+      includeReturnAddress,
+      returnAddress,
+    }: {
+      address?: Address | null;
+      _onChange?: (addr: Address | null) => void;
+      isEditing?: boolean;
+      onEditingChange?: (editing: boolean) => void;
+      includeReturnAddress?: boolean;
+      returnAddress?: Address | null;
+      _onReturnAddressChange?: (addr: Address) => void;
+    }) {
+      return (
+        <div
+          data-testid="address-editor"
+          data-editing={isEditing}
+          data-include-return={includeReturnAddress}
+          onClick={() => onEditingChange?.(!isEditing)}
+        >
+          Address: {address?.addressLine1 || '[no address]'}
+          {includeReturnAddress && (
+            <div data-testid="return-address">
+              Return: {returnAddress?.addressLine1 || '[no return address]'}
+            </div>
+          )}
+        </div>
+      );
+    }
   };
 });
 
 describe('PostcardBack', () => {
   const defaultProps = {
     message: '',
-    address: null,
-    onMessageChange: jest.fn(),
-    onAddressChange: jest.fn(),
+    recipientAddress: null,
+    senderAddress: null,
+    onMessageChange: vi.fn(),
+    onRecipientAddressChange: vi.fn(),
+    onSenderAddressChange: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders with 60/40 split layout', () => {
@@ -99,7 +116,7 @@ describe('PostcardBack', () => {
       <PostcardBack
         {...defaultProps}
         message="Hello world"
-        address={mockAddress}
+        recipientAddress={mockAddress}
       />
     );
 
@@ -109,7 +126,7 @@ describe('PostcardBack', () => {
 
   it('handles message editing', async () => {
     const user = userEvent.setup();
-    const mockOnMessageChange = jest.fn();
+    const mockOnMessageChange = vi.fn();
 
     render(<PostcardBack {...defaultProps} onMessageChange={mockOnMessageChange} />);
 
@@ -121,9 +138,9 @@ describe('PostcardBack', () => {
 
   it('handles address editing', async () => {
     const user = userEvent.setup();
-    const mockOnAddressChange = jest.fn();
+    const mockOnRecipientAddressChange = vi.fn();
 
-    render(<PostcardBack {...defaultProps} onAddressChange={mockOnAddressChange} />);
+    render(<PostcardBack {...defaultProps} onRecipientAddressChange={mockOnRecipientAddressChange} />);
 
     const addressEditor = screen.getByTestId('address-editor');
     await user.click(addressEditor);
@@ -154,7 +171,7 @@ describe('PostcardBack', () => {
   });
 
   it('handles return address when enabled', () => {
-    const mockReturnAddress: Address = {
+    const mockSenderAddress: Address = {
       ...mockAddress,
       firstName: 'Jane',
       lastName: 'Smith',
@@ -164,8 +181,7 @@ describe('PostcardBack', () => {
       <PostcardBack
         {...defaultProps}
         includeReturnAddress={true}
-        returnAddress={mockReturnAddress}
-        onReturnAddressChange={jest.fn()}
+        senderAddress={mockSenderAddress}
       />
     );
 
@@ -252,19 +268,20 @@ describe('PostcardBack', () => {
 
     // Should have responsive text
     expect(complianceText).toBeInTheDocument();
-    expect(complianceText).toHaveClass('text-xs', 'text-gray-400');
+    // Parent div has the styling classes
+    expect(complianceText.closest('div')).toHaveClass('text-xs', 'text-gray-400');
   });
 
   it('provides proper event handling to editors', async () => {
     const user = userEvent.setup();
-    const mockOnMessageChange = jest.fn();
-    const mockOnAddressChange = jest.fn();
+    const mockOnMessageChange = vi.fn();
+    const mockOnRecipientAddressChange = vi.fn();
 
     render(
       <PostcardBack
         {...defaultProps}
         onMessageChange={mockOnMessageChange}
-        onAddressChange={mockOnAddressChange}
+        onRecipientAddressChange={mockOnRecipientAddressChange}
       />
     );
 
@@ -282,13 +299,13 @@ describe('PostcardBack', () => {
   });
 
   it('handles return address changes', () => {
-    const mockOnReturnAddressChange = jest.fn();
+    const mockOnSenderAddressChange = vi.fn();
 
     render(
       <PostcardBack
         {...defaultProps}
         includeReturnAddress={true}
-        onReturnAddressChange={mockOnReturnAddressChange}
+        onSenderAddressChange={mockOnSenderAddressChange}
       />
     );
 

@@ -2,12 +2,19 @@ import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 import { postgridService } from '../services/postgrid'
 import type { PostGridPostcardRequest } from '../types/postgrid'
+import { getConfig } from '../config'
+import type { User } from '../models/user'
+import type { Database } from '../database'
+import { validateAddress, validateMessage, validateSize } from '../utils/validation'
 
-// Security headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+function getCorsHeaders(): Record<string, string> {
+  const allowed = getConfig().server.allowedOrigins
+  return {
+    'Access-Control-Allow-Origin': allowed[0] || '',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Vary': 'Origin',
+  }
 }
 
 const securityHeaders = {
@@ -32,14 +39,14 @@ function createJsonResponse(data: any, status: number = 200): Response {
       status,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders,
+        ...getCorsHeaders(),
       },
     }
   )
   return addSecurityHeaders(response)
 }
 
-export async function handlePostcardCreate(req: Request): Promise<Response> {
+export async function handlePostcardCreate(req: Request, user: User, db: Database): Promise<Response> {
   try {
     const body = await req.json() as {
       to: {
@@ -59,12 +66,36 @@ export async function handlePostcardCreate(req: Request): Promise<Response> {
     }
     const { to, frontHTML, backHTML, message, size = '6x4' } = body
 
-    if (!to || !to.firstName || !to.lastName || !to.addressLine1 || !to.city || !to.provinceOrState || !to.postalOrZip || !to.countryCode) {
+    // Collect all validation errors and return them together
+    const allErrors: Array<{ field: string; message: string }> = []
+
+    if (!to) {
       return createJsonResponse({ error: 'Missing required address fields' }, 400)
     }
 
+    const addressResult = validateAddress(to, 'to')
+    if (!addressResult.valid) {
+      allErrors.push(...addressResult.errors)
+    }
+
     if (!frontHTML && !backHTML && !message) {
-      return createJsonResponse({ error: 'At least one of frontHTML, backHTML, or message is required' }, 400)
+      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, or message is required' })
+    }
+
+    if (message) {
+      const messageResult = validateMessage(message)
+      if (!messageResult.valid) {
+        allErrors.push(...messageResult.errors)
+      }
+    }
+
+    const sizeResult = validateSize(size)
+    if (!sizeResult.valid) {
+      allErrors.push(...sizeResult.errors)
+    }
+
+    if (allErrors.length > 0) {
+      return createJsonResponse({ error: 'Validation failed', errors: allErrors }, 400)
     }
 
     if (!postgridService) {
@@ -133,6 +164,21 @@ export async function handlePostcardCreate(req: Request): Promise<Response> {
     }
 
     const result = await postgridService.createPostcard(postcardRequest)
+
+    // Record postcard creation in database, associated with authenticated user
+    const postcardId = crypto.randomUUID()
+    db.insertPostcard({
+      id: postcardId,
+      emailMessageId: `web-${postcardId}`,
+      senderEmail: user.email,
+      recipientName: `${to.firstName} ${to.lastName}`,
+      recipientAddress: `${to.addressLine1}, ${to.city}, ${to.provinceOrState} ${to.postalOrZip}`,
+      postgridPostcardId: result.id,
+      postgridMode: postgridService.getTestMode() ? 'test' : 'live',
+      forcedTestMode: false,
+      status: 'sent',
+      user_id: user.id,
+    })
 
     return createJsonResponse({
       success: true,

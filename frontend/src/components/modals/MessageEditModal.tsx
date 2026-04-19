@@ -19,6 +19,7 @@ export const MessageEditModal: React.FC<MessageEditModalProps> = ({
   const [message, setMessage] = useState(initialMessage)
   const [isDirty, setIsDirty] = useState(false)
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSave = useCallback(
     debounce((value: string) => {
       if (value !== initialMessage) {

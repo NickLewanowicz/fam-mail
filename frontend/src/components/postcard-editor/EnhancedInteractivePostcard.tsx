@@ -3,10 +3,11 @@ import { PostcardFront } from './PostcardFront'
 import { PostcardBack } from './PostcardBack'
 import { usePostcardState } from '../../hooks/usePostcardState'
 import type { Address } from '../../types/address'
+import type { PostcardState } from '../../hooks/usePostcardState'
 import './EnhancedInteractivePostcard.css'
 
 interface EnhancedInteractivePostcardProps {
-  onStateChange?: (state: any) => void
+  onStateChange?: (state: PostcardState) => void
   onSubmit?: (data: {
     image: File | null
     message: string
@@ -43,7 +44,6 @@ export function EnhancedInteractivePostcard({
     flip,
     setIsUploading,
     setError,
-    clearErrors,
     validate,
     clearDraft,
     exportState,
@@ -73,11 +73,7 @@ export function EnhancedInteractivePostcard({
     const startX = 'touches' in e ? e.touches[0].clientX : e.clientX
     const startTime = Date.now()
 
-    const handleDragMove = (moveEvent: MouseEvent | TouchEvent) => {
-      const currentX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX
-      const deltaX = currentX - startX
-      const deltaTime = Date.now() - startTime
-
+    const handleDragMove = (_moveEvent: MouseEvent | TouchEvent) => {
       // No-op during drag - just tracking
     }
 
@@ -179,13 +175,14 @@ export function EnhancedInteractivePostcard({
 
   // Focus management
   useEffect(() => {
+    const container = containerRef.current
     const handleFocusTrap = (e: KeyboardEvent) => {
-      if (e.key === 'Tab' && containerRef.current) {
+      if (e.key === 'Tab' && container) {
         // Get focusable elements with type safety
         const focusableElementSelectors = [
           'button', '[href]', 'input', 'select', 'textarea', '[tabindex]:not([tabindex="-1"])'
         ]
-        const nodeList = containerRef.current.querySelectorAll(focusableElementSelectors.join(', '))
+        const nodeList = container.querySelectorAll(focusableElementSelectors.join(', '))
         const focusableElements: HTMLElement[] = Array.from(nodeList).filter(
           node => node instanceof HTMLElement
         )
@@ -203,12 +200,12 @@ export function EnhancedInteractivePostcard({
       }
     }
 
-    if (containerRef.current) {
-      containerRef.current.addEventListener('keydown', handleFocusTrap)
+    if (container) {
+      container.addEventListener('keydown', handleFocusTrap)
     }
 
     return () => {
-      containerRef.current?.removeEventListener('keydown', handleFocusTrap)
+      container?.removeEventListener('keydown', handleFocusTrap)
     }
   }, [])
 

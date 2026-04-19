@@ -3,16 +3,16 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PostcardBuilder } from './PostcardBuilder'
 import type { Address } from '../../types/address'
-import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from '../../utils/postcardTemplate'
+import { generatePreviewHTML } from '../../utils/postcardTemplate'
 
 // Mock dependencies
 vi.mock('@uiw/react-md-editor', () => ({
-  default: ({ value, onChange, height }: any) => (
+  default: ({ value, onChange, height }: { value?: string; onChange?: (val: string) => void; height?: number }) => (
     <div data-testid="md-editor" data-height={height}>
       <textarea
         data-testid="md-textarea"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange?.(e.target.value)}
         rows={10}
       />
       <div data-testid="md-preview">Markdown Preview</div>
@@ -25,7 +25,7 @@ vi.mock('marked', () => ({
 }))
 
 vi.mock('../../utils/postcardTemplate', () => ({
-  generatePreviewHTML: vi.fn((image, side, showZones, message) =>
+  generatePreviewHTML: vi.fn((_image: unknown, side: string, _showZones: boolean, _message?: string) =>
     `<html><body>${side} preview</body></html>`
   ),
   POSTCARD_6X4_DIMENSIONS: {
@@ -37,7 +37,7 @@ vi.mock('../../utils/postcardTemplate', () => ({
 }))
 
 vi.mock('../address/AddressForm', () => ({
-  AddressForm: ({ onSubmit, initialAddress }: any) => (
+  AddressForm: ({ onSubmit, initialAddress }: { onSubmit: (addr: Partial<Address>) => void; initialAddress?: Partial<Address> }) => (
     <div data-testid="address-form">
       <h2>Recipient Address</h2>
       <input
@@ -83,14 +83,14 @@ describe('PostcardBuilder', () => {
     vi.clearAllMocks()
     // Reset FileReader mock
     global.FileReader = class MockFileReader {
-      onload: ((event: any) => {}) | null = null
-      onerror: ((event: any) => {}) | null = null
+      onload: ((event: { target: { result: string } }) => void) | null = null
+      onerror: ((event: unknown) => void) | null = null
       readAsDataURL = vi.fn(() => {
         if (this.onload) {
           this.onload({ target: { result: 'data:image/jpeg;base64,test' } })
         }
       })
-    } as any
+    } as typeof FileReader
   })
 
   describe('Component Rendering', () => {
@@ -409,7 +409,6 @@ describe('PostcardBuilder', () => {
     })
 
     it('should clear upload error when new file is selected', async () => {
-      const user = userEvent.setup()
       render(<PostcardBuilder {...defaultProps} />)
 
       // First trigger an error
@@ -508,13 +507,13 @@ describe('PostcardBuilder', () => {
   describe('Error Handling', () => {
     it('should handle FileReader errors', async () => {
       global.FileReader = class MockFileReaderError {
-        onerror: ((event: any) => {}) | null = null
+        onerror: ((event: unknown) => void) | null = null
         readAsDataURL = vi.fn(() => {
           if (this.onerror) {
-            this.onerror({} as any)
+            this.onerror({})
           }
         })
-      } as any
+      } as typeof FileReader
 
       render(<PostcardBuilder {...defaultProps} />)
 

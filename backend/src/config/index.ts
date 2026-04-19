@@ -11,6 +11,18 @@ export interface Config {
     size: "4x6" | "6x9";
     senderId: string;
   };
+  oidc: {
+    issuerUrl: string;
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    scopes: string;
+  };
+  jwt: {
+    secret: string;
+    expiresIn: string;
+    refreshExpiresIn: string;
+  };
   imap: {
     host: string;
     port: number;
@@ -38,6 +50,7 @@ export interface Config {
     port: number;
     nodeEnv: string;
     logLevel: "debug" | "info" | "warn" | "error";
+    allowedOrigins: string[];
   };
 }
 
@@ -113,6 +126,18 @@ export function getConfig(): Config {
       size: getEnvEnum("POSTCARD_SIZE", "4x6", ["4x6", "6x9"] as const),
       senderId: getEnv("POSTCARD_SENDER_ID", ""),
     },
+    oidc: {
+      issuerUrl: getEnvRequired("OIDC_ISSUER_URL"),
+      clientId: getEnvRequired("OIDC_CLIENT_ID"),
+      clientSecret: getEnvRequired("OIDC_CLIENT_SECRET"),
+      redirectUri: getEnvRequired("OIDC_REDIRECT_URI"),
+      scopes: getEnv("OIDC_SCOPES", "openid profile email"),
+    },
+    jwt: {
+      secret: getEnvRequired("JWT_SECRET"),
+      expiresIn: getEnv("JWT_EXPIRES_IN", "7d"),
+      refreshExpiresIn: getEnv("JWT_REFRESH_EXPIRES_IN", "30d"),
+    },
     imap: {
       host: getEnvRequired("IMAP_HOST"),
       port: getEnvInt("IMAP_PORT", 993),
@@ -140,6 +165,7 @@ export function getConfig(): Config {
       port: getEnvInt("PORT", 8484),
       nodeEnv: getEnv("NODE_ENV", "development"),
       logLevel: getEnvEnum("LOG_LEVEL", "info", ["debug", "info", "warn", "error"] as const),
+      allowedOrigins: getEnv("ALLOWED_ORIGINS", "http://localhost:5173").split(",").map((s: string) => s.trim()),
     },
   };
 }

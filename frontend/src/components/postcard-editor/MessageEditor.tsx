@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import MDEditor from '@uiw/react-md-editor';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { MESSAGE_CONSTRAINTS } from '../../utils/postal';
 
 interface MessageEditorProps {
@@ -15,7 +16,7 @@ interface MessageEditorProps {
 export function MessageEditor({
   message,
   onChange,
-  isEditing: externalIsEditing = false,
+  isEditing: externalIsEditing,
   onEditingChange,
   placeholder = "Click to add your message...",
   autoSave = true,
@@ -30,11 +31,8 @@ export function MessageEditor({
   const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
 
   const setIsEditing = useCallback((newState: boolean) => {
-    if (onEditingChange) {
-      onEditingChange(newState);
-    } else {
-      setInternalIsEditing(newState);
-    }
+    setInternalIsEditing(newState);
+    onEditingChange?.(newState);
   }, [onEditingChange]);
 
   // Calculate word and character counts
@@ -186,7 +184,7 @@ export function MessageEditor({
               {/* Render markdown content as plain text with basic formatting */}
               <div
                 dangerouslySetInnerHTML={{
-                  __html: marked.parse(message) as string
+                  __html: DOMPurify.sanitize(marked.parse(message) as string)
                 }}
               />
             </div>

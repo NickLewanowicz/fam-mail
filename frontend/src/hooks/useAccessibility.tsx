@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 export function useScreenReaderAnnouncer() {
   const [announcement, setAnnouncement] = useState('')
 
-  const announce = useCallback((message: string, priority: 'polite' | 'assertive' = 'polite') => {
+  const announce = useCallback((message: string, _priority: 'polite' | 'assertive' = 'polite') => {
     setAnnouncement(message)
     // Clear announcement after it's been read
     setTimeout(() => setAnnouncement(''), 1000)
@@ -218,7 +218,7 @@ export function useTouchDetection() {
       setIsTouch(
         'ontouchstart' in window ||
         navigator.maxTouchPoints > 0 ||
-        (navigator as any).msMaxTouchPoints > 0
+        (navigator as unknown as { msMaxTouchPoints: number }).msMaxTouchPoints > 0
       )
     }
 

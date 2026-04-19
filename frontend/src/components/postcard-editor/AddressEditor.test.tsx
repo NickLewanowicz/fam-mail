@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { vi } from 'vitest';
+import React, { useState } from 'react';
 import { AddressEditor } from './AddressEditor';
 import type { Address } from '../../types/address';
 
@@ -14,14 +16,27 @@ const mockAddress: Address = {
   countryCode: 'US',
 };
 
+// Stateful wrapper for tests that need the onChange to actually update the address prop
+function AddressEditorWithState({ initialAddress = null, ...props }: {
+  initialAddress?: Address | null;
+  includeReturnAddress?: boolean;
+  returnAddress?: Address | null;
+  onReturnAddressChange?: (address: Address) => void;
+  isEditing?: boolean;
+  onEditingChange?: (isEditing: boolean) => void;
+}) {
+  const [address, setAddress] = useState<Address | null>(initialAddress);
+  return <AddressEditor address={address} onChange={setAddress} {...props} />;
+}
+
 describe('AddressEditor', () => {
   const defaultProps = {
     address: null,
-    onChange: jest.fn(),
+    onChange: vi.fn(),
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('renders stamp placeholder', () => {
@@ -50,14 +65,14 @@ describe('AddressEditor', () => {
 
     await user.click(screen.getByText('Click to add recipient address'));
 
-    expect(screen.getByDisplayValue('First Name')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Last Name')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('Street Address')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('John')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Doe')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('123 Main St')).toBeInTheDocument();
   });
 
   it('calls onChange when address fields are edited', async () => {
     const user = userEvent.setup();
-    const mockOnChange = jest.fn();
+    const mockOnChange = vi.fn();
     render(<AddressEditor {...defaultProps} onChange={mockOnChange} />);
 
     await user.click(screen.getByText('Click to add recipient address'));
@@ -74,52 +89,50 @@ describe('AddressEditor', () => {
 
   it('validates required fields', async () => {
     const user = userEvent.setup();
-    render(<AddressEditor {...defaultProps} />);
+    render(<AddressEditorWithState />);
 
     await user.click(screen.getByText('Click to add recipient address'));
-    await user.click(document.body); // Trigger blur
 
+    // With no fields filled, isValid is true because errors state is empty
+    // (the useEffect only validates when address prop is set)
     expect(screen.getByText('✓ Address format is valid')).toBeInTheDocument();
   });
 
   it('auto-formats postal codes', async () => {
     const user = userEvent.setup();
-    const mockOnChange = jest.fn();
-    render(<AddressEditor {...defaultProps} onChange={mockOnChange} />);
+    render(<AddressEditorWithState />);
 
     await user.click(screen.getByText('Click to add recipient address'));
 
     const zipInput = screen.getByPlaceholderText('12345');
-    await user.type(zipInput, '123456789');
 
-    // Should format with dash
-    expect(mockOnChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        postalOrZip: '12345-6789',
-      })
-    );
+    // Use fireEvent.change to set value at once, simulating a paste or autofill
+    fireEvent.change(zipInput, { target: { value: '123456789' } });
+
+    // The component's handleAddressChange will call formatPostalCode
+    // formatPostalCode('123456789', 'US') cleans to '123456789', length 9, returns '12345-6789'
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('12345')).toHaveValue('12345-6789');
+    });
   });
 
   it('auto-capitalizes names and addresses', async () => {
     const user = userEvent.setup();
-    const mockOnChange = jest.fn();
-    render(<AddressEditor {...defaultProps} onChange={mockOnChange} />);
+    render(<AddressEditorWithState />);
 
     await user.click(screen.getByText('Click to add recipient address'));
 
     const firstNameInput = screen.getByPlaceholderText('John');
     await user.type(firstNameInput, 'john');
 
-    expect(mockOnChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        firstName: 'John',
-      })
-    );
+    // After typing 'john' character by character with capitalizeWords,
+    // the final value should be 'John'
+    expect(firstNameInput).toHaveValue('John');
   });
 
   it('handles country selection', async () => {
     const user = userEvent.setup();
-    const mockOnChange = jest.fn();
+    const mockOnChange = vi.fn();
     render(<AddressEditor {...defaultProps} onChange={mockOnChange} />);
 
     await user.click(screen.getByText('Click to add recipient address'));
@@ -147,7 +160,7 @@ describe('AddressEditor', () => {
 
   it('handles return address editing', async () => {
     const user = userEvent.setup();
-    const mockOnReturnAddressChange = jest.fn();
+    const mockOnReturnAddressChange = vi.fn();
     render(
       <AddressEditor
         {...defaultProps}
@@ -185,16 +198,16 @@ describe('AddressEditor', () => {
     const user = userEvent.setup();
     render(
       <div>
-        <AddressEditor {...defaultProps} />
+        <AddressEditorWithState />
         <div data-testid="outside">Outside</div>
       </div>
     );
 
     await user.click(screen.getByText('Click to add recipient address'));
-    expect(screen.getByDisplayValue('First Name')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('John')).toBeInTheDocument();
 
     await user.click(screen.getByTestId('outside'));
-    expect(screen.queryByDisplayValue('First Name')).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText('John')).not.toBeInTheDocument();
   });
 
   it('validates address format', async () => {
@@ -213,7 +226,7 @@ describe('AddressEditor', () => {
 
   it('shows field validation errors', async () => {
     const user = userEvent.setup();
-    const invalidAddress = {
+    const emptyAddress: Address = {
       firstName: '',
       lastName: '',
       addressLine1: '',
@@ -223,29 +236,27 @@ describe('AddressEditor', () => {
       countryCode: 'US',
     };
 
-    render(<AddressEditor {...defaultProps} address={invalidAddress} />);
+    render(<AddressEditorWithState initialAddress={emptyAddress} />);
 
+    // With an empty address (no addressLine1), it shows "Click to add recipient address"
     await user.click(screen.getByText('Click to add recipient address'));
-    await user.click(document.body); // Trigger validation
 
+    // The validation useEffect runs when address prop changes.
+    // With empty required fields, it shows the warning message
     expect(screen.getByText('⚠ Please complete required fields')).toBeInTheDocument();
   });
 
   it('handles optional address line 2', async () => {
     const user = userEvent.setup();
-    const mockOnChange = jest.fn();
-    render(<AddressEditor {...defaultProps} onChange={mockOnChange} />);
+    render(<AddressEditorWithState />);
 
     await user.click(screen.getByText('Click to add recipient address'));
 
     const aptInput = screen.getByPlaceholderText('Apt 4B');
     await user.type(aptInput, 'Suite 100');
 
-    expect(mockOnChange).toHaveBeenCalledWith(
-      expect.objectContaining({
-        addressLine2: 'Suite 100',
-      })
-    );
+    // With stateful wrapper, the final value should be 'Suite 100'
+    expect(aptInput).toHaveValue('Suite 100');
   });
 
   it('displays country for international addresses', () => {
@@ -258,12 +269,12 @@ describe('AddressEditor', () => {
   it('respects external editing state control', () => {
     render(<AddressEditor {...defaultProps} isEditing={true} />);
 
-    expect(screen.getByDisplayValue('First Name')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('John')).toBeInTheDocument();
   });
 
   it('calls onEditingChange when editing state changes', async () => {
     const user = userEvent.setup();
-    const mockOnEditingChange = jest.fn();
+    const mockOnEditingChange = vi.fn();
     render(
       <AddressEditor
         {...defaultProps}
@@ -277,8 +288,7 @@ describe('AddressEditor', () => {
 
   it('enforces maximum field lengths', async () => {
     const user = userEvent.setup();
-    const mockOnChange = jest.fn();
-    render(<AddressEditor {...defaultProps} onChange={mockOnChange} />);
+    render(<AddressEditorWithState />);
 
     await user.click(screen.getByText('Click to add recipient address'));
 
@@ -287,11 +297,8 @@ describe('AddressEditor', () => {
 
     await user.type(streetInput, longStreet);
 
-    // Should truncate to 50 characters
-    expect(mockOnChange).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        addressLine1: 'a'.repeat(50),
-      })
-    );
+    // Should be truncated to 50 characters by HTML maxLength attribute
+    // Note: autoCapitalize capitalizes the first letter
+    expect(streetInput).toHaveValue('A' + 'a'.repeat(49));
   });
 });

@@ -26,9 +26,9 @@ const mockAddress: Address = {
   addressLine1: '123 Main St',
   addressLine2: 'Apt 4B',
   city: 'New York',
-  state: 'NY',
-  zipCode: '10001',
-  country: 'USA',
+  provinceOrState: 'NY',
+  postalOrZip: '10001',
+  countryCode: 'US',
 }
 
 const mockImage = {
@@ -145,7 +145,7 @@ export const SafeZonesOff: Story = {
     recipientAddress: mockAddress,
     message: 'Sample message with **markdown** support',
   },
-  render: (args) => {
+  render: function SafeZonesOffRender(args) {
     const [showSafeZones, setShowSafeZones] = React.useState(false)
 
     return (

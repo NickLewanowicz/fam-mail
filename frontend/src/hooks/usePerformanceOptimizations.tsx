@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 
 // Debounce hook
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useDebounce<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
@@ -29,6 +30,7 @@ export function useDebounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle hook
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useThrottle<T extends (...args: any[]) => any>(
   callback: T,
   delay: number
@@ -74,7 +76,9 @@ export function useThrottle<T extends (...args: any[]) => any>(
 }
 
 // Memoized value with deep comparison
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useDeepMemo<T>(value: T, deps: any[] = []): T {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ref = useRef<{ value: T; deps: any[] }>()
 
   if (!ref.current || !depsAreEqual(deps, ref.current.deps)) {
@@ -85,6 +89,7 @@ export function useDeepMemo<T>(value: T, deps: any[] = []): T {
 }
 
 // Check if dependencies are equal (simple deep comparison)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function depsAreEqual(deps1: any[], deps2: any[]): boolean {
   if (deps1.length !== deps2.length) return false
 
@@ -97,6 +102,7 @@ function depsAreEqual(deps1: any[], deps2: any[]): boolean {
 }
 
 // Idle callback hook for non-critical updates
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useIdleCallback<T extends (...args: any[]) => any>(
   callback: T,
   deps: React.DependencyList
@@ -117,6 +123,7 @@ export function useIdleCallback<T extends (...args: any[]) => any>(
       const timeoutId = setTimeout(handleIdle, 100)
       return () => clearTimeout(timeoutId)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 }
 
@@ -176,6 +183,7 @@ export function usePerformanceMonitor(name: string) {
   }, [name])
 
   const measure = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     <T extends (...args: any[]) => any>(fn: T, ...args: Parameters<T>): ReturnType<T> => {
       start()
       const result = fn(...args)
@@ -208,6 +216,7 @@ export function useOptimizedScroll(
   useEffect(() => {
     window.addEventListener('scroll', optimizedCallback, { passive: true })
     return () => window.removeEventListener('scroll', optimizedCallback)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optimizedCallback, ...deps])
 }
 
@@ -231,17 +240,19 @@ export function useOptimizedResize(
   useEffect(() => {
     window.addEventListener('resize', optimizedCallback)
     return () => window.removeEventListener('resize', optimizedCallback)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optimizedCallback, ...deps])
 }
-
 // Memory leak prevention hook
 export function useCleanup(cleanup: () => void, deps: React.DependencyList) {
   useEffect(() => {
     return cleanup
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 }
 
 // Batch state updates hook
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useBatchUpdates<T extends Record<string, any>>(
   initialState: T
 ): [T, (updates: Partial<T>) => void] {

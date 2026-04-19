@@ -1,10 +1,14 @@
 import { EmailService, type EmailData } from '../services/emailService'
+import { getConfig } from '../config'
 
-// Security headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+function getCorsHeaders(): Record<string, string> {
+  const allowed = getConfig().server.allowedOrigins
+  return {
+    'Access-Control-Allow-Origin': allowed[0] || '',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Vary': 'Origin',
+  }
 }
 
 const securityHeaders = {
@@ -29,15 +33,41 @@ function createJsonResponse(data: any, status: number = 200): Response {
       status,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders,
+        ...getCorsHeaders(),
       },
     }
   )
   return addSecurityHeaders(response)
 }
 
-// Email service instance
-const emailService = new EmailService()
+// Email service instance (exported for testing)
+let emailService: EmailService = new EmailService()
+
+/**
+ * Replace the email service instance. Used for testing.
+ * @internal
+ */
+export function _setEmailService(service: EmailService): void {
+  emailService = service
+}
+
+function verifyWebhookSecret(req: Request): boolean {
+  const config = getConfig()
+  const secret = config.postgrid.webhookSecret
+
+  // If no secret configured, allow all requests (for development)
+  if (!secret) {
+    console.warn('WEBHOOK_SECRET not configured - accepting unverified webhook')
+    return true
+  }
+
+  // Check for secret in header or query parameter
+  const headerSecret = req.headers.get('x-webhook-secret') || req.headers.get('authorization')?.replace('Bearer ', '')
+  const url = new URL(req.url)
+  const querySecret = url.searchParams.get('secret')
+
+  return headerSecret === secret || querySecret === secret
+}
 
 // Handle SendGrid webhook format
 function parseSendGridWebhook(body: any): EmailData | null {
@@ -109,6 +139,13 @@ function parseGenericWebhook(body: any): EmailData | null {
 
 export async function handleEmailWebhook(req: Request): Promise<Response> {
   try {
+    if (!verifyWebhookSecret(req)) {
+      return createJsonResponse({
+        success: false,
+        error: 'Invalid webhook secret'
+      }, 401)
+    }
+
     const contentType = req.headers.get('content-type') || ''
     let emailData: EmailData | null = null
 
@@ -207,7 +244,7 @@ export async function handleEmailWebhook(req: Request): Promise<Response> {
   }
 }
 
-export async function handleWebhookHealth(req: Request): Promise<Response> {
+export async function handleWebhookHealth(_req: Request): Promise<Response> {
   return createJsonResponse({
     status: 'healthy',
     service: 'email-webhook',

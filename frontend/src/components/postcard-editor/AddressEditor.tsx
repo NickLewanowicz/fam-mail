@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { Address } from '../../types/address';
 import {
   validateAddress,
@@ -83,7 +83,7 @@ function AddressField({
 export function AddressEditor({
   address,
   onChange,
-  isEditing: externalIsEditing = false,
+  isEditing: externalIsEditing,
   onEditingChange,
   includeReturnAddress = false,
   returnAddress,
@@ -97,15 +97,12 @@ export function AddressEditor({
   const isEditing = externalIsEditing !== undefined ? externalIsEditing : internalIsEditing;
 
   const setIsEditing = useCallback((newState: boolean) => {
-    if (onEditingChange) {
-      onEditingChange(newState);
-    } else {
-      setInternalIsEditing(newState);
-    }
+    setInternalIsEditing(newState);
+    onEditingChange?.(newState);
   }, [onEditingChange]);
 
   // Initialize empty address if none provided
-  const currentAddress = address || {
+  const emptyAddress = useMemo(() => ({
     firstName: '',
     lastName: '',
     addressLine1: '',
@@ -114,18 +111,11 @@ export function AddressEditor({
     provinceOrState: '',
     postalOrZip: '',
     countryCode: 'US',
-  };
+  }), []);
 
-  const currentReturnAddress = returnAddress || {
-    firstName: '',
-    lastName: '',
-    addressLine1: '',
-    addressLine2: '',
-    city: '',
-    provinceOrState: '',
-    postalOrZip: '',
-    countryCode: 'US',
-  };
+  const currentAddress = address || emptyAddress;
+
+  const currentReturnAddress = returnAddress || emptyAddress;
 
   // Validate address on change
   useEffect(() => {

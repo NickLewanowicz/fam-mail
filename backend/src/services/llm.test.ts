@@ -1,6 +1,14 @@
 import { describe, it, expect } from "bun:test";
 import { LLMService } from "./llm";
 
+// Type-safe mock fetch
+const createMockFetch = (responseBody: any) => {
+  return async (_url: string | Request, _init?: RequestInit) => ({
+    ok: true,
+    json: async () => responseBody,
+  } as Response);
+};
+
 describe("LLM Service", () => {
   const mockConfig = {
     provider: "openrouter" as const,
@@ -18,26 +26,25 @@ describe("LLM Service", () => {
       from: "sender@example.com",
     };
 
-    global.fetch = async () => ({
-      ok: true,
-      json: async () => ({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              recipient: {
-                name: "John Doe",
-                addressLine1: "123 Main St",
-                city: "New York",
-                state: "NY",
-                zipCode: "10001",
-                country: "US",
-              },
-              message: "Happy Birthday!",
-            }),
-          },
-        }],
-      }),
-    }) as Response;
+    const mockFetch = createMockFetch({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            recipient: {
+              name: "John Doe",
+              addressLine1: "123 Main St",
+              city: "New York",
+              state: "NY",
+              zipCode: "10001",
+              country: "US",
+            },
+            message: "Happy Birthday!",
+          }),
+        },
+      }],
+    });
+
+    global.fetch = mockFetch as any;
 
     const result = await service.parseEmail(email);
     expect(result.recipient.name).toBe("John Doe");
@@ -48,16 +55,15 @@ describe("LLM Service", () => {
   it("should throw on invalid JSON response", async () => {
     const service = new LLMService(mockConfig);
 
-    global.fetch = async () => ({
-      ok: true,
-      json: async () => ({
-        choices: [{
-          message: {
-            content: "not valid json",
-          },
-        }],
-      }),
-    }) as Response;
+    const mockFetch = createMockFetch({
+      choices: [{
+        message: {
+          content: "not valid json",
+        },
+      }],
+    });
+
+    global.fetch = mockFetch as any;
 
     const email = {
       subject: "Fammail Postcard",
@@ -71,21 +77,20 @@ describe("LLM Service", () => {
   it("should throw on missing required fields", async () => {
     const service = new LLMService(mockConfig);
 
-    global.fetch = async () => ({
-      ok: true,
-      json: async () => ({
-        choices: [{
-          message: {
-            content: JSON.stringify({
-              recipient: {
-                name: "John",
-                // missing required address fields
-              },
-            }),
-          },
-        }],
-      }),
-    }) as Response;
+    const mockFetch = createMockFetch({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            recipient: {
+              name: "John",
+              // missing required address fields
+            },
+          }),
+        },
+      }],
+    });
+
+    global.fetch = mockFetch as any;
 
     const email = {
       subject: "Fammail Postcard",

@@ -132,7 +132,7 @@ export function PostcardFront({
     }
   }
 
-  const handleRemoveImage = (e: React.MouseEvent) => {
+  const handleRemoveImage = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
     if (!readOnly) {
       imageEditor.reset()
@@ -140,7 +140,7 @@ export function PostcardFront({
       setShowEditor(false)
       setShowQualityInfo(false)
     }
-  }
+  }, [readOnly, imageEditor, onImageUpload])
 
   // Pan handlers for mouse events
   const handlePanStart = (e: React.MouseEvent) => {
@@ -172,7 +172,7 @@ export function PostcardFront({
       case 'Delete':
       case 'Backspace':
         if (e.shiftKey) {
-          handleRemoveImage(e as any)
+          handleRemoveImage(e as unknown as React.MouseEvent)
         }
         break
       case '+':

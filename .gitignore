@@ -40,3 +40,21 @@ test-results/
 frontend/test-results/
 frontend/tests/
 frontend/playwright-report/
+
+# Backup files
+*.backup
+*.backup2
+
+# Test databases
+test.db
+*.test.db
+
+# QA artifacts
+qa-screenshots/
+
+# Debug artifacts
+debug-*.png
+coverage_output.json
+
+# Debug/capture scripts
+capture_*.js

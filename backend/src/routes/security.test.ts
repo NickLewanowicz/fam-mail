@@ -1,5 +1,4 @@
-import { describe, it, expect, mock } from 'bun:test'
-import { marked } from 'marked'
+import { describe, it, expect } from 'bun:test'
 import DOMPurify from 'isomorphic-dompurify'
 
 describe('Security: XSS Protection', () => {

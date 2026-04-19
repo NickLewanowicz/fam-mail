@@ -47,7 +47,7 @@ export const WithImage: Story = {
 }
 
 export const Interactive: Story = {
-  render: (args) => {
+  render: function InteractiveRender(args) {
     const [selectedImage, setSelectedImage] = React.useState(args.selectedImage)
     const [isOpen, setIsOpen] = React.useState(args.isOpen || false)
 
@@ -89,7 +89,7 @@ export const Interactive: Story = {
 }
 
 export const WithError: Story = {
-  render: (args) => {
+  render: function WithErrorRender(args) {
     const [error, setError] = React.useState(false)
 
     return (

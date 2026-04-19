@@ -16,7 +16,9 @@
     "imapflow": "^1.2.4",
     "isomorphic-dompurify": "^2.34.0",
     "marked": "^17.0.0",
-    "nodemailer": "^7.0.12"
+    "nodemailer": "^7.0.12",
+    "jose": "^5.9.6",
+    "openid-client": "^6.1.0"
   },
   "devDependencies": {
     "@types/bun": "^1.0.0",

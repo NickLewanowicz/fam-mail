@@ -101,7 +101,7 @@ export const Interactive: Story = {
       countryCode: 'CA',
     },
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement: _canvasElement }) => {
     // This story is for manual testing of form interactions
     // Users can test validation, form filling, and submission
   },
@@ -120,10 +120,10 @@ export const ValidationErrors: Story = {
       countryCode: 'CA',
     },
   },
-  render: (args) => {
+  render: function ValidationErrorsRender(args) {
     const [showErrors, setShowErrors] = React.useState(false)
 
-    const handleSubmit = (address: Address) => {
+    const handleSubmit = (_address: Address) => {
       // Simulate validation error
       setShowErrors(true)
     }

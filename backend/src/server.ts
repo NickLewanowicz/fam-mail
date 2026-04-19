@@ -7,11 +7,24 @@ import { Database } from './database'
 import { IMAPService } from './services/imap'
 import { PostGridService } from './services/postgrid'
 import { NotificationService } from './services/notifications'
+import { OIDCService } from './services/oidcService'
+import { JWTService } from './services/jwtService'
+import { AuthMiddleware } from './middleware/auth'
+import { setupAuthRoutes } from './routes/auth'
+import { DraftRoutes } from './routes/drafts'
+import type { LLMConfig } from './services/llm'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('origin') || ''
+  const allowed = config.server.allowedOrigins
+  const allowOrigin = allowed.includes(origin) ? origin : allowed[0] || ''
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin',
+  }
 }
 
 // Security headers using helmet's default configuration
@@ -36,31 +49,57 @@ function addSecurityHeaders(response: Response): Response {
   return response
 }
 
-function createJsonResponse(data: any, status: number = 200): Response {
+function createJsonResponse(data: any, status: number = 200, req?: Request): Response {
   const response = new Response(
     JSON.stringify(data),
     {
       status,
       headers: {
         'Content-Type': 'application/json',
-        ...corsHeaders,
+        ...(req ? getCorsHeaders(req) : {}),
       },
     }
   )
   return addSecurityHeaders(response)
 }
 
-function createCorsResponse(): Response {
+function createCorsResponse(req: Request): Response {
   return addSecurityHeaders(
     new Response(null, {
       status: 204,
-      headers: corsHeaders,
+      headers: getCorsHeaders(req),
     })
   )
 }
 
 const config = getConfig()
 const db = new Database(config.database.path)
+
+// Initialize OIDC service
+const oidcService = new OIDCService({
+  issuerUrl: config.oidc.issuerUrl,
+  clientId: config.oidc.clientId,
+  clientSecret: config.oidc.clientSecret,
+  redirectUri: config.oidc.redirectUri,
+  scopes: config.oidc.scopes,
+}, db)
+await oidcService.initialize()
+
+// Initialize JWT service
+const jwtService = new JWTService({
+  secret: config.jwt.secret,
+  expiresIn: config.jwt.expiresIn,
+  refreshExpiresIn: config.jwt.refreshExpiresIn,
+})
+
+// Initialize auth middleware
+const authMiddleware = new AuthMiddleware(jwtService, db)
+
+// Setup auth routes
+const authRoutes = setupAuthRoutes(oidcService, jwtService, authMiddleware, db)
+
+// Setup drafts routes
+const draftRoutes = new DraftRoutes(db, authMiddleware)
 
 // Initialize PostGrid
 const postgrid = new PostGridService({
@@ -94,21 +133,102 @@ const imap = new IMAPService(
     model: config.llm.model,
     endpoint: config.llm.endpoint,
     maxTokens: config.llm.maxTokens,
-  },
+  } as LLMConfig,
   postgrid
 )
 
 // Start IMAP polling on server start
 imap.start().catch(console.error)
 
-const isProduction = config.server.nodeEnv === 'production'
 const frontendDistPath = join(import.meta.dir, '../../frontend/dist')
 
 export async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
   if (req.method === 'OPTIONS') {
-    return createCorsResponse()
+    return createCorsResponse(req)
+  }
+
+  // Auth endpoints
+  if (url.pathname === '/api/auth/login' && req.method === 'POST') {
+    return authRoutes.handleAuthLogin(req)
+  }
+
+  if (url.pathname === '/api/auth/callback' && req.method === 'GET') {
+    return authRoutes.handleAuthCallback(req)
+  }
+
+  if (url.pathname === '/api/auth/me' && req.method === 'GET') {
+    return authRoutes.handleGetMe(req)
+  }
+
+  if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
+    return authRoutes.handleLogout(req)
+  }
+
+  // Drafts endpoints (all require authentication)
+  if (url.pathname === '/api/drafts' && req.method === 'GET') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.list(req, authResult.user!)
+  }
+
+  if (url.pathname === '/api/drafts' && req.method === 'POST') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.create(req, authResult.user!)
+  }
+
+  if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'GET') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.get(req, authResult.user!)
+  }
+
+  if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'PUT') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.update(req, authResult.user!)
+  }
+
+  if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'DELETE') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.delete(req, authResult.user!)
+  }
+
+  if (url.pathname.match(/^\/api\/drafts\/[^/]+\/publish$/) && req.method === 'POST') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.publish(req, authResult.user!)
+  }
+
+  if (url.pathname.match(/^\/api\/drafts\/[^/]+\/schedule$/) && req.method === 'POST') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.schedule(req, authResult.user!)
+  }
+
+  if (url.pathname.match(/^\/api\/drafts\/[^/]+\/cancel-schedule$/) && req.method === 'POST') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return draftRoutes.cancelSchedule(req, authResult.user!)
   }
 
   if (url.pathname === '/api/health') {
@@ -122,19 +242,27 @@ export async function handleRequest(req: Request): Promise<Response> {
         postgrid: config.postgrid.forceTestMode ? 'test (forced)' : config.postgrid.mode,
         database: 'connected',
         notifications: 'ready',
+        oidc: 'configured',
+        jwt: 'configured',
       },
-    })
+    }, 200, req)
   }
 
-  if (url.pathname === '/api/test') {
+  // #29: Debug endpoint only available in development mode
+  if (url.pathname === '/api/test' && process.env.NODE_ENV !== 'production') {
     return createJsonResponse({
       message: 'Hello from Fam Mail backend!',
       connected: true,
-    })
+    }, 200, req)
   }
 
+  // #30: Postcard creation requires authentication (PostGrid costs real money)
   if (url.pathname === '/api/postcards' && req.method === 'POST') {
-    return handlePostcardCreate(req)
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return createJsonResponse({ error: authResult.error }, 401, req)
+    }
+    return handlePostcardCreate(req, authResult.user!, db)
   }
 
   // Email webhook endpoints
@@ -146,7 +274,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return handleWebhookHealth(req)
   }
 
-  if (isProduction && !url.pathname.startsWith('/api')) {
+  if (config.server.nodeEnv === 'production' && !url.pathname.startsWith('/api')) {
     try {
       const filePath = join(frontendDistPath, url.pathname)
 
@@ -164,7 +292,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
-  return createJsonResponse({ error: 'Not Found' }, 404)
+  return createJsonResponse({ error: 'Not Found' }, 404, req)
 }
 
 // Export for testing
