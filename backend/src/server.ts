@@ -233,11 +233,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
-    return jsonResponse({
-      status: 'healthy',
-      version: '1.0.0',
-      timestamp: new Date().toISOString(),
-    }, 200, req)
+    return jsonResponse({ status: 'ok' }, 200, req)
   }
 
   // #29: Debug endpoint only available in development mode

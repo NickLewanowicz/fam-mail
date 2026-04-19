@@ -4,6 +4,286 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 10:33] Closed #58: [P2/Enhancement] Webhook btoa() stack overflow on large attachments
+
+Commit succeeded. Only the 3 relevant test files were included — the unrelated files (`CHANGELOG_AGENT.md`, orchestrator scripts, logs) were left unstaged.
+
+IMPLEMENTATION_COMPLETE
+
+**Issues closed:** #58
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 10:19] Closed #18: [Bug]: getConfig() requires IMAP env vars even though IMAP is paused for Beta
+
+led |
+| **#22** | Missing comprehensive postcard input validation test suite | Gaps in validation coverage |
+| **#17** | PostGrid env var naming mismatch | Postcard sending broken |
+
+---
+
+## 🟡 P1/P2 Backlog Items (Lower Priority)
+
+- #34 — Centralize CORS/security headers
+- #27 — 50 `no-explicit-any` lint warnings
+- #25 — Remove stale dev files and dead code
+- #45 — Frontend env vars (API URL hardc
+
+**Issues closed:** #18
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 10:13] Closed #19: [Bug]: Dockerfile references non-existent backend/pnpm-lock.yaml
+
+The issue was already resolved in a prior commit (`00aa7a8`). The current state of the codebase is correct:
+
+- **Dockerfile**: Uses root `pnpm-lock.yaml` with proper monorepo workspace setup
+- **docker-compose.yml**: Uses `bun -e fetch(...)` for healthcheck (no `curl` dependency)
+- **Tests**: 666 backend pass, ~160 frontend pass
+- **Lint**: Clean on both backend and frontend
+
+Issue #19 has been cl
+
+**Issues closed:** #19
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 10:09] Progress on #19: [Bug]: Dockerfile references non-existent backend/pnpm-lock.yaml
+
+Attempt 2. 13 tools, 0 commits. QA: GREEN.
+
+---
+
+## [2026-04-19 10:05] Progress on #19: [Bug]: Dockerfile references non-existent backend/pnpm-lock.yaml
+
+Attempt 1. 13 tools, 0 commits. QA: GREEN.
+
+---
+
+## [2026-04-19 10:02] Closed #20: [Feature]: Wire frontend authentication (OIDC login/callback)
+
+rapped in `AuthProvider`.
+
+2. **Updated `Header.tsx`** — Added user info display (name/avatar), sign out button, and auth-aware rendering using `useAuth()`.
+
+3. **Fixed auth components for React Router** — Replaced `window.location.href` redirects with `<Navigate>` components in `AuthCallbackPage`, `LoginPage`, and `ProtectedRoute`. Added error propagation via URL search params.
+
+4. **Added `react
+
+**Issues closed:** #20
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 09:52] Progress on #20: [Feature]: Wire frontend authentication (OIDC login/callback)
+
+Attempt 1. 59 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 09:36] Closed #21: [Feature]: Wire frontend drafts management UI
+
+ `SaveDraftModal.tsx` (detects `existingDraftId`) + `draftApi.ts::updateDraft()` |
+| **Delete draft** | `DraftCard.tsx` Delete button → `DraftList.tsx::handleDelete()` → `draftApi.ts::deleteDraft()` |
+| **Publish draft** | `DraftCard.tsx` Publish button → `DraftList.tsx::handlePublish()` → `draftApi.ts::publishDraft()` |
+| **Tests** | `DraftList.test.tsx` (13 tests), `DraftCard.test.tsx` (17 tests
+
+**Issues closed:** #21
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 09:27] Closed #24: [Task]: Security hardening - CORS, webhook secrets, .dockerignore
+
+nv files, test artifacts, backups, IDE files, orchestrator artifacts excluded |
+| **`helmet` removed** | ✅ Committed — was unused; custom security headers in `headers.ts` handle this |
+| **JWT secret validation** | ✅ Committed — enforces 32-char minimum for HS256, with helpful error message |
+| **CORS (`ALLOWED_ORIGINS`)** | ✅ Already correct — no changes needed |
+| **Webhook signature verificatio
+
+**Issues closed:** #24
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 09:21] Closed #26: [P1/Bug] Draft publish endpoint doesn't call PostGrid API - just changes state
+
+IMPLEMENTATION_COMPLETE
+
+The issue was already resolved in a prior commit. The `publish()` method in `backend/src/routes/drafts.ts` already implements the full PostGrid integration flow:
+
+- **Validation**: All required fields (address, content, size) are validated before sending
+- **PostGrid call**: `this.postgrid.createPostcard(postcardRequest)` is called with properly mapped fields
+- **Database 
+
+**Issues closed:** #26
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 09:18] Closed #28: [P1/Bug] Hardcoded colors in EnhancedInteractivePostcard.css bypass DaisyUI theming
+
+n 1 file):
+
+| Hardcoded Class | DaisyUI Replacement | Context |
+|---|---|---|
+| `bg-black/50` | `bg-neutral/50` | Loading overlay backdrop |
+| `bg-white` | `bg-base-100` | Loading overlay card |
+| `text-gray-600` | `text-base-content/70` | Progress text, tab labels |
+| `text-gray-500` | `text-base-content/50` | Last saved timestamp |
+| `bg-gray-200` | `bg-base-300` | Progress track, inactive tabs 
+
+**Issues closed:** #28
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 09:12] Closed #38: [P1/Security] frontHTML/backHTML passed to PostGrid without sanitization
+
+itization into both route handlers**:
+   - `postcards.ts` — sanitizes `frontHTML` and `backHTML` before PostGrid call
+   - `drafts.ts` — sanitizes `draft.frontHTML` and `finalBackHTML` before PostGrid call
+
+3. **Added 238 lines of test coverage** in `validation.test.ts` covering:
+   - Script/iframe/object/svg injection removal
+   - Event handler attribute stripping
+   - Safe HTML preservation (tex
+
+**Issues closed:** #38
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 09:01] Progress on #38: [P1/Security] frontHTML/backHTML passed to PostGrid without sanitization
+
+Attempt 1. 20 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 08:57] Closed #40: [P1/Bug] Size format inconsistency — 4x6 vs 6x4 across codebase causes wrong postcard dimensions
+
+ons now consistently use the PostGrid format (`6x4`, `9x6`, `11x6`):
+
+| File | Current State |
+|------|--------------|
+| `config/index.ts` | ✅ `"6x4" \| "9x6"` — PostGrid format |
+| `database/schema.sql` | ✅ `CHECK(size IN ('6x4', '9x6', '11x6'))` — PostGrid format |
+| `models/draft.ts` | ✅ `'6x4' \| '9x6' \| '11x6'` — PostGrid format |
+| `routes/drafts.ts` | ✅ default `'6x4'` — PostGrid format |
+
+
+**Issues closed:** #40
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 08:53] Orchestrator v2 Started
+
+39 open issues. PID=7343
+
+---
+
+## [2026-04-19 08:46] Progress on #40: [P1/Bug] Size format inconsistency — 4x6 vs 6x4 across codebase causes wrong postcard dimensions
+
+Attempt 1. 56 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 08:41] Closed #41: [P1/Security] Webhook accepts unauthenticated requests when WEBHOOK_SECRET is empty
+
+` (rejects with 401) when `POSTGRID_WEBHOOK_SECRET` is empty/not configured, with an error log
+  - Removed `?secret=` query parameter acceptance — header-only auth now, preventing secret leaks in server/proxy logs
+- **Updated all webhook tests** in `backend/src/routes/webhook.test.ts`:
+  - All tests now use a valid webhook secret and auth header
+  - Two tests flipped from "allows" → "rejects 401" 
+
+**Issues closed:** #41
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 08:33] Closed #42: [P1/Security] No rate limiting on postcard creation — financial exposure
+
+ed
+   - All draft **write** endpoints (`POST`, `PUT`, `DELETE`, `publish`, `schedule`, `cancel-schedule`) — rate limited
+   - Draft **read** endpoints (`GET /api/drafts`, `GET /api/drafts/:id`) — intentionally NOT rate limited (read-only)
+
+3. **Fixed memory leak** — added periodic `cleanup()` timer (every 5 minutes) for all rate limiters, with `unref()` so it doesn't prevent process exit.
+
+### `ba
+
+**Issues closed:** #42
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 08:26] Orchestrator v2 Started
+
+41 open issues. PID=43770
+
+---
+
+## [2026-04-19 08:23] Progress on #46: [P1/Bug] submitPostcard() sends no auth token — API will reject requests
+
+Attempt 1. 17 tools, 1 commits. QA: RED.
+
+---
+
+## [2026-04-19 08:20] Progress on #52: [P1/Bug] Duplicate Draft API modules with different auth behavior
+
+Attempt 3. 32 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 08:16] Progress on #52: [P1/Bug] Duplicate Draft API modules with different auth behavior
+
+Attempt 2. 35 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 08:10] Progress on #52: [P1/Bug] Duplicate Draft API modules with different auth behavior
+
+Attempt 1. 37 tools, 1 commits. QA: RED.
+
+---
+
+## [2026-04-19 08:05] Progress on #53: [P1/Bug] useLocalStorageDraft has stale closure — saves outdated draft data
+
+Attempt 2. 18 tools, 1 commits. QA: RED.
+
+---
+
 ## [2026-04-19 07:59] Orchestrator v2 Started
 
 43 open issues. PID=80867

@@ -58,15 +58,14 @@ describe('Backend Server', () => {
     })
 
     describe('GET /api/health', () => {
-        it('should return health check status', async () => {
+        it('should return minimal health response without service details', async () => {
             const req = new Request('http://localhost:3001/api/health')
             const res = await handleRequest(req)
             const data = await res.json() as Record<string, unknown>
 
             expect(res.status).toBe(200)
-            expect(data.status).toBe('healthy')
-            expect(data.timestamp).toBeDefined()
-            expect(data.version).toBe('1.0.0')
+            expect(data.status).toBe('ok')
+            expect(Object.keys(data)).toHaveLength(1)
         })
 
         it('should include CORS headers', async () => {
