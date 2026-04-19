@@ -3,6 +3,7 @@ import { Database } from "../database";
 import { LLMService, type LLMConfig } from "./llm";
 import { PostGridService } from "./postgrid";
 import type { PostGridPostcardRequest } from "../types/postgrid";
+import { logger } from "../utils/logger";
 
 interface IMAPConfig {
   host: string;
@@ -77,7 +78,7 @@ export class IMAPService {
     });
 
     await this.client.connect();
-    console.log(`Connected to IMAP: ${this.config.host}`);
+    logger.info(`Connected to IMAP: ${this.config.host}`);
 
     await this.processInbox();
     this.startPolling();
@@ -94,7 +95,7 @@ export class IMAPService {
 
   private startPolling(): void {
     this.pollTimer = setInterval(() => {
-      this.processInbox().catch(console.error);
+      this.processInbox().catch((error) => logger.error('IMAP polling error', { error }));
     }, this.config.pollIntervalSeconds * 1000);
   }
 
@@ -102,7 +103,7 @@ export class IMAPService {
     if (!this.client) return;
 
     const mailbox = await this.client.mailboxOpen(this.config.inbox);
-    console.log(`Processing mailbox: ${this.config.inbox}, ${mailbox.exists} messages`);
+    logger.info(`Processing mailbox: ${this.config.inbox}, ${mailbox.exists} messages`);
 
     const since = new Date();
     since.setDate(since.getDate() - this.config.initialSyncDays);
@@ -124,15 +125,15 @@ export class IMAPService {
       return;
     }
 
-    console.log(`Processing email: ${msg.id}`);
+    logger.info(`Processing email: ${msg.id}`);
 
     if (this.config.requireImageAttachment && !this.hasImageAttachment(msg.attachments)) {
-      console.log(`Skipping ${msg.id}: No image attachment`);
+      logger.info(`Skipping ${msg.id}: No image attachment`);
       return;
     }
 
     if (this.config.catchUpMode === "dry-run") {
-      console.log(`Dry-run: Marking ${msg.id} as processed`);
+      logger.info(`Dry-run: Marking ${msg.id} as processed`);
       return;
     }
 
@@ -144,7 +145,7 @@ export class IMAPService {
         from: msg.envelope.from[0]?.address || "",
       });
 
-      console.log(`Parsed email for ${parsed.recipient.name}`);
+      logger.info(`Parsed email for ${parsed.recipient.name}`);
 
       // Parse recipient name into first and last name
       const nameParts = parsed.recipient.name.trim().split(/\s+/);
@@ -168,7 +169,7 @@ export class IMAPService {
 
       // Call PostGrid API
       const postgridResult = await this.postgrid.createPostcard(postcardRequest);
-      console.log(`Created PostGrid postcard: ${postgridResult.id}`);
+      logger.info(`Created PostGrid postcard: ${postgridResult.id}`);
 
       // Store result in database
       const postcardId = `pc_${msg.id}`;
@@ -192,7 +193,7 @@ export class IMAPService {
       });
 
     } catch (error) {
-      console.error(`Error processing ${msg.id}:`, error);
+      logger.error(`Error processing ${msg.id}`, { error });
 
       // Store failure in database
       try {
@@ -209,7 +210,7 @@ export class IMAPService {
           errorMessage: error instanceof Error ? error.message : String(error),
         });
       } catch (dbError) {
-        console.error(`Failed to store error for ${msg.id}:`, dbError);
+        logger.error(`Failed to store error for ${msg.id}`, { error: dbError });
       }
     }
   }

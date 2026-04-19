@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react'
 import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
 import { PostcardBuilder } from './components/postcard/PostcardBuilder'
+import { DraftList, SaveDraftModal } from './components/drafts'
 import { ModalTestPage } from './ModalTestPage'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
+import type { Draft } from './types/postcard'
 
 interface BackendStatus {
   message?: string
@@ -12,6 +14,8 @@ interface BackendStatus {
   testMode?: boolean
   error?: string
 }
+
+type ViewMode = 'editor' | 'drafts'
 
 function App() {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>({})
@@ -23,6 +27,12 @@ function App() {
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
   const [showModalTest, setShowModalTest] = useState(false)
+
+  // Drafts UI state
+  const [activeView, setActiveView] = useState<ViewMode>('editor')
+  const [showSaveDraftModal, setShowSaveDraftModal] = useState(false)
+  const [activeDraftId, setActiveDraftId] = useState<string | null>(null)
+  const [draftRefreshTrigger, setDraftRefreshTrigger] = useState(0)
 
   useEffect(() => {
     fetch('/api/health')
@@ -59,7 +69,26 @@ function App() {
     setMessage('')
     setSubmissionSuccess(null)
     setSubmissionError(null)
+    setActiveDraftId(null)
   }
+
+  const handleLoadDraft = (draft: Draft) => {
+    setRecipientAddress(draft.recipientAddress ?? null)
+    setMessage(draft.message ?? '')
+    setActiveDraftId(draft.id)
+    setActiveView('editor')
+  }
+
+  const handleDraftSaved = (_draft: Draft) => {
+    setShowSaveDraftModal(false)
+    setDraftRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleDraftsChanged = () => {
+    setDraftRefreshTrigger(prev => prev + 1)
+  }
+
+  const hasEditorContent = recipientAddress !== null
 
   const isReadyToSend = recipientAddress &&
     recipientAddress.firstName &&
@@ -83,19 +112,43 @@ function App() {
             error={backendStatus.error}
           />
 
+          {/* View Tabs */}
+          <div role="tablist" className="tabs tabs-boxed justify-center">
+            <button
+              role="tab"
+              className={`tab ${activeView === 'editor' ? 'tab-active' : ''}`}
+              onClick={() => setActiveView('editor')}
+            >
+              ✏️ Editor
+            </button>
+            <button
+              role="tab"
+              className={`tab ${activeView === 'drafts' ? 'tab-active' : ''}`}
+              onClick={() => setActiveView('drafts')}
+            >
+              📋 My Drafts
+            </button>
+          </div>
+
           {/* Modal Test Toggle */}
           <div className="flex justify-center">
             <button
               className={`btn ${showModalTest ? 'btn-primary' : 'btn-outline'}`}
               onClick={() => setShowModalTest(!showModalTest)}
             >
-              {showModalTest ? 'Hide' : 'Show'} Modal Test Page
+              {showModalTest ? 'Hide Modal Test Page' : 'Show Modal Test Page'}
             </button>
           </div>
 
-          {/* Show Modal Test Page or Regular Builder */}
+          {/* Show Modal Test Page or View-based content */}
           {showModalTest ? (
             <ModalTestPage />
+          ) : activeView === 'drafts' ? (
+            <DraftList
+              onLoadDraft={handleLoadDraft}
+              onDraftsChanged={handleDraftsChanged}
+              refreshTrigger={draftRefreshTrigger}
+            />
           ) : !submissionSuccess ? (
             <>
               <PostcardBuilder
@@ -106,6 +159,18 @@ function App() {
                 message={message}
                 onMessageChange={setMessage}
               />
+
+              {/* Action buttons row */}
+              <div className="flex flex-wrap gap-3 justify-center">
+                <button
+                  data-testid="save-draft-btn"
+                  className="btn btn-outline"
+                  disabled={!hasEditorContent}
+                  onClick={() => setShowSaveDraftModal(true)}
+                >
+                  {activeDraftId ? 'Update Draft' : 'Save as Draft'}
+                </button>
+              </div>
 
               {isReadyToSend && (
                 <div className="card bg-primary text-primary-content shadow-xl">
@@ -286,6 +351,17 @@ function App() {
 
         </div>
       </main>
+
+      {/* Save Draft Modal */}
+      <SaveDraftModal
+        isOpen={showSaveDraftModal}
+        onClose={() => setShowSaveDraftModal(false)}
+        onSaved={handleDraftSaved}
+        recipientAddress={recipientAddress}
+        message={message}
+        selectedImage={selectedImage}
+        existingDraftId={activeDraftId}
+      />
 
       <footer className="footer footer-center p-10 bg-base-300 text-base-content">
         <aside>

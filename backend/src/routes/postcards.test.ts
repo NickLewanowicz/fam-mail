@@ -41,8 +41,20 @@ const validCAAddress = {
   countryCode: 'CA',
 }
 
-/** Helper to make a postcard request. */
+/** Helper to make a postcard request. Includes a valid return address by default. */
 function makeRequest(body: Record<string, unknown>): Request {
+  const fullBody = {
+    from: validUSAddress,
+    ...body,
+  }
+  return new Request('http://localhost/api/postcards', {
+    method: 'POST',
+    body: JSON.stringify(fullBody),
+  })
+}
+
+/** Helper to make a postcard request WITHOUT a return address. */
+function makeRequestNoFrom(body: Record<string, unknown>): Request {
   return new Request('http://localhost/api/postcards', {
     method: 'POST',
     body: JSON.stringify(body),
@@ -462,14 +474,15 @@ describe('handlePostcardCreate — Return Address Validation', () => {
     db = new Database(':memory:')
   })
 
-  it('accepts request without return address (from is optional)', async () => {
-    const req = makeRequest({
+  it('rejects request without return address (from is required)', async () => {
+    const req = makeRequestNoFrom({
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
     })
     const res = await handlePostcardCreate(req, mockUser, db)
-    // Should not be a validation error (may be 500 if PostGrid not configured)
-    expect(res.status).not.toBe(400)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from')).toBe(true)
   })
 
   it('accepts valid return address', async () => {
@@ -1229,6 +1242,158 @@ describe('validateImage — Comprehensive Suite', () => {
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('too short'))).toBe(true)
     })
+  })
+})
+
+// ============================================================================
+// Image Validation — Route-Level Tests
+// ============================================================================
+
+describe('handlePostcardCreate — Image Validation (Route Level)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  // Minimal valid JPEG base64
+  const minimalJPEG = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AKwA//9k='
+
+  // Minimal valid PNG base64
+  const minimalPNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=='
+
+  it('accepts a valid JPEG image without frontHTML or message', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      image: minimalJPEG,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    // Should not be a validation error (may be 500 if PostGrid not configured)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('accepts a valid PNG image without frontHTML or message', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      image: minimalPNG,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('accepts image alongside frontHTML', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      image: minimalJPEG,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('accepts image alongside message', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      message: 'Hello world',
+      image: minimalPNG,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('rejects SVG image at route level', async () => {
+    const svg = btoa('<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>')
+    const req = makeRequest({
+      to: validUSAddress,
+      image: svg,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects GIF image at route level', async () => {
+    const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00])
+    const gif = btoa(String.fromCharCode(...gifBytes))
+    const req = makeRequest({
+      to: validUSAddress,
+      image: gif,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects WebP image at route level', async () => {
+    const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
+    const webp = btoa(String.fromCharCode(...webpBytes))
+    const req = makeRequest({
+      to: validUSAddress,
+      image: webp,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects oversized image (>10MB) at route level', async () => {
+    const buffer = new Uint8Array(10 * 1024 * 1024 + 1)
+    buffer[0] = 0xff // JPEG magic
+    buffer[1] = 0xd8
+    buffer[2] = 0xff
+    let binary = ''
+    const chunkSize = 8192
+    for (let i = 0; i < buffer.length; i += chunkSize) {
+      const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
+      binary += String.fromCharCode(...chunk)
+    }
+    const base64 = btoa(binary)
+    const req = makeRequest({
+      to: validUSAddress,
+      image: base64,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects corrupt/truncated image at route level', async () => {
+    const randomBytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
+    const req = makeRequest({
+      to: validUSAddress,
+      image: btoa(String.fromCharCode(...randomBytes)),
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects invalid base64 string at route level', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      image: 'not-valid-base64!!!',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('reports image error alongside address errors', async () => {
+    const req = makeRequest({
+      to: { ...validUSAddress, city: '' },
+      image: 'not-valid-base64!!!',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'to.city')).toBe(true)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
   })
 })
 

@@ -36,7 +36,6 @@ export function useLocalStorageDraft<T>({
         }
       }
     } catch (error) {
-      console.error(`Failed to load draft from localStorage (key: ${key}):`, error)
       // Properly handle unknown errors by converting them to Error instances
       const errorInstance = error instanceof Error ? error : new Error(String(error))
       onError?.(errorInstance)
@@ -61,7 +60,6 @@ export function useLocalStorageDraft<T>({
           setIsDirty(false)
         }
       } catch (error) {
-        console.error(`Failed to save draft to localStorage (key: ${key}):`, error)
         // Properly handle unknown errors by converting them to Error instances
         const errorInstance = error instanceof Error ? error : new Error(String(error))
         onError?.(errorInstance)
@@ -96,7 +94,6 @@ export function useLocalStorageDraft<T>({
         setIsDirty(false)
       }
     } catch (error) {
-      console.error(`Failed to clear draft from localStorage (key: ${key}):`, error)
       // Properly handle unknown errors by converting them to Error instances
       const errorInstance = error instanceof Error ? error : new Error(String(error))
       onError?.(errorInstance)
@@ -114,7 +111,6 @@ export function useLocalStorageDraft<T>({
         setIsDirty(false)
       }
     } catch (error) {
-      console.error(`Failed to force save draft to localStorage (key: ${key}):`, error)
       // Properly handle unknown errors by converting them to Error instances
       const errorInstance = error instanceof Error ? error : new Error(String(error))
       onError?.(errorInstance)
@@ -162,12 +158,8 @@ function clearOldDrafts() {
     keysToRemove.forEach(key => {
       localStorage.removeItem(key)
     })
-
-    if (keysToRemove.length > 0) {
-      console.log(`Cleared ${keysToRemove.length} old draft(s) from localStorage`)
-    }
-  } catch (error) {
-    console.error('Failed to clear old drafts:', error)
+  } catch {
+    // Silently fail - clearing old drafts is best-effort
   }
 }
 

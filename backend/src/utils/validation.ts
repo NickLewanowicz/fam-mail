@@ -192,9 +192,11 @@ export function validateImage(base64Data: string): ValidationResult {
 
   // Early file size check using base64 length (avoid decoding huge payloads).
   // Base64 encodes 3 bytes as 4 chars; padding chars ('=') don't add data.
+  // Subtract padding chars to avoid overestimating the decoded byte count.
   // This avoids the cost of atob() on multi-megabyte strings.
   const MAX_SIZE = 10 * 1024 * 1024
-  const estimatedBytes = Math.floor((base64Data.length * 3) / 4)
+  const paddingChars = base64Data.endsWith('==') ? 2 : base64Data.endsWith('=') ? 1 : 0
+  const estimatedBytes = Math.floor(((base64Data.length - paddingChars) * 3) / 4)
   if (estimatedBytes > MAX_SIZE) {
     errors.push({ field: 'image', message: 'Image must be 10 MB or smaller' })
     // Still need to check format, but we can do it cheaply by only decoding

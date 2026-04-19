@@ -354,11 +354,11 @@ describe('handleEmailWebhook - edge cases', () => {
     })
 
     const response = await handleEmailWebhook(req)
-    expect(response.status).toBe(500)
+    expect(response.status).toBe(400)
 
     const data = await response.json()
     expect(data.success).toBe(false)
-    expect(data.error).toBe('Internal server error processing webhook')
+    expect(data.error).toBe('Unable to parse email data from webhook')
   })
 
   it('handles SendGrid event that is not delivered', async () => {

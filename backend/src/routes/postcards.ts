@@ -5,7 +5,7 @@ import type { PostGridPostcardRequest } from '../types/postgrid'
 import { getConfig } from '../config'
 import type { User } from '../models/user'
 import type { Database } from '../database'
-import { validateAddress, validateMessage, validateSize } from '../utils/validation'
+import { validateAddress, validateImage, validateMessage, validateSize } from '../utils/validation'
 
 function getCorsHeaders(): Record<string, string> {
   const allowed = getConfig().server.allowedOrigins
@@ -32,7 +32,7 @@ function addSecurityHeaders(response: Response): Response {
   return response
 }
 
-function createJsonResponse(data: any, status: number = 200): Response {
+function createJsonResponse(data: unknown, status: number = 200): Response {
   const response = new Response(
     JSON.stringify(data),
     {
@@ -59,7 +59,7 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
         postalOrZip: string
         countryCode: string
       }
-      from?: {
+      from: {
         firstName: string
         lastName: string
         addressLine1: string
@@ -72,9 +72,10 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       frontHTML?: string
       backHTML?: string
       message?: string
+      image?: string
       size?: string
     }
-    const { to, from, frontHTML, backHTML, message, size = '6x4' } = body
+    const { to, from, frontHTML, backHTML, message, image, size = '6x4' } = body
 
     // Collect all validation errors and return them together
     const allErrors: Array<{ field: string; message: string }> = []
@@ -88,16 +89,25 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       allErrors.push(...addressResult.errors)
     }
 
-    // Validate return address if provided
-    if (from) {
+    // Validate return address — required for physical mail
+    if (!from) {
+      allErrors.push({ field: 'from', message: 'Return address (from) is required' })
+    } else {
       const fromResult = validateAddress(from, 'from')
       if (!fromResult.valid) {
         allErrors.push(...fromResult.errors)
       }
     }
 
-    if (!frontHTML && !backHTML && !message) {
-      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, or message is required' })
+    if (!frontHTML && !backHTML && !message && !image) {
+      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or image is required' })
+    }
+
+    if (image) {
+      const imageResult = validateImage(image)
+      if (!imageResult.valid) {
+        allErrors.push(...imageResult.errors)
+      }
     }
 
     if (message) {

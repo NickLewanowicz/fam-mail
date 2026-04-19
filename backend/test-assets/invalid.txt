@@ -1,0 +1,10 @@
+This is not an image file.
+
+It is plain text content that should be rejected by the image upload validation.
+The system should display an error message like:
+"Invalid file type. Please upload JPG, PNG, or GIF."
+
+This file is used to test:
+- File type validation
+- Error message display
+- User feedback for invalid uploads

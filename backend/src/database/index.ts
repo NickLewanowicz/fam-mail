@@ -194,7 +194,7 @@ export class Database {
    */
   getPostcard(id: string): PostcardRecord | undefined {
     const stmt = this.db.prepare("SELECT * FROM postcards WHERE id = ?");
-    const row = stmt.get(id) as any;
+    const row = stmt.get(id) as PostcardRow | undefined;
     if (!row) return undefined;
     return this.rowToPostcardRecord(row);
   }
@@ -265,7 +265,7 @@ export class Database {
    * Converts a raw database row to a PostcardRecord with proper types.
    * @private
    */
-  private rowToPostcardRecord(row: any): PostcardRecord {
+  private rowToPostcardRecord(row: PostcardRow): PostcardRecord {
     return {
       id: row.id,
       emailMessageId: row.email_message_id,
@@ -372,8 +372,7 @@ export class Database {
   }>): void {
     try {
       const fields: string[] = [];
-      const values: any[] = [];
-
+      const values: (string | number | null)[] = [];
       if (data.email !== undefined) {
         fields.push("email = ?");
         values.push(data.email);
@@ -505,7 +504,7 @@ export class Database {
       WHERE user_id = ? AND state = ?
       ORDER BY created_at DESC
     `);
-    const rows = stmt.all(user_id, state) as any[];
+    const rows = stmt.all(user_id, state) as DraftRow[];
     return rows.map(row => this.rowToDraft(row));
   }
 
@@ -520,7 +519,7 @@ export class Database {
       WHERE user_id = ?
       ORDER BY created_at DESC
     `);
-    const rows = stmt.all(user_id) as any[];
+    const rows = stmt.all(user_id) as DraftRow[];
     return rows.map(row => this.rowToDraft(row));
   }
 
@@ -532,13 +531,13 @@ export class Database {
   insertDraft(data: {
     id: string;
     userId: string;
-    recipientAddress: string | Record<string, any>;
-    senderAddress?: string | Record<string, any>;
+    recipientAddress: string | Record<string, unknown>;
+    senderAddress?: string | Record<string, unknown>;
     message?: string;
     frontHTML?: string;
     backHTML?: string;
     imageData?: string;
-    imageMetadata?: string | Record<string, any>;
+    imageMetadata?: string | Record<string, unknown>;
     state?: 'draft' | 'ready';
     scheduledFor?: string;
     size?: '4x6' | '6x9' | '11x6';
@@ -600,20 +599,20 @@ export class Database {
    * @throws {DatabaseError} If update fails
    */
   updateDraft(id: string, data: Partial<{
-    recipientAddress: string | Record<string, any>;
-    senderAddress: string | Record<string, any>;
+    recipientAddress: string | Record<string, unknown>;
+    senderAddress: string | Record<string, unknown>;
     message: string;
     frontHTML: string;
     backHTML: string;
     imageData: string;
-    imageMetadata: string | Record<string, any>;
+    imageMetadata: string | Record<string, unknown>;
     state: 'draft' | 'ready';
     scheduledFor: string;
     size: '4x6' | '6x9' | '11x6';
   }>): void {
     try {
       const fields: string[] = [];
-      const values: any[] = [];
+      const values: (string | null)[] = [];
 
       if (data.recipientAddress !== undefined) {
         const recipientAddressStr = typeof data.recipientAddress === 'string'
@@ -701,7 +700,7 @@ export class Database {
    * Converts a raw database row to a Draft object with proper types.
    * @private
    */
-  private rowToDraft(row: any) {
+  private rowToDraft(row: DraftRow) {
     return {
       id: row.id,
       userId: row.user_id,

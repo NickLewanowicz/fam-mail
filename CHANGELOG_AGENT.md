@@ -1,0 +1,150 @@
+# Agent Changelog
+
+Auto-generated executive summaries from the fam-mail agent orchestrator.
+
+---
+
+## [2026-04-19 01:01] Orchestrator v2 Started
+
+43 open issues. PID=84816
+
+---
+
+## [2026-04-19 00:45] Orchestrator v2 Started
+
+18 open issues. PID=21926
+
+---
+
+## [2026-04-19 00:36] Orchestrator v2 Started
+
+18 open issues. PID=86858
+
+---
+
+## [2026-04-18 23:46] QA Fix
+
+Addressed: backend_tests, frontend_tests, backend_lint, frontend_lint, frontend_build
+
+---
+
+## [2026-04-18 23:46] Progress on #17: [Bug]: PostGrid env var naming mismatch breaks postcard sending
+
+Attempt 2. 4 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-18 23:45] Progress on #22: [Task]: Add comprehensive postcard input validation test suite
+
+Attempt 2. 11 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-18 23:43] QA Fix
+
+Addressed: backend_tests, frontend_tests, backend_lint
+
+---
+
+## [2026-04-18 23:43] Progress on #17: [Bug]: PostGrid env var naming mismatch breaks postcard sending
+
+Attempt 1. 4 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-18 23:41] QA Fix
+
+Addressed: backend_tests, frontend_tests, backend_lint
+
+---
+
+## [2026-04-18 23:40] Progress on #22: [Task]: Add comprehensive postcard input validation test suite
+
+Attempt 3. 6 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-18 23:38] Orchestrator v2 Started
+
+18 open issues. PID=76281
+
+---
+
+## [2026-04-18 23:37] Triage Scan
+
+
+
+---
+
+## [2026-04-18 23:37] Orchestrator v2 Started
+
+18 open issues. PID=72304
+
+---
+
+## [2026-04-18 23:36] Orchestrator v2 Started
+
+18 open issues. PID=70091
+
+---
+
+## [2026-04-18 23:32] Progress on #22: [Task]: Add comprehensive postcard input validation test suite
+
+Made progress. 22 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:30] Progress on #22: [Task]: Add comprehensive postcard input validation test suite
+
+Made progress. 25 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:26] QA Fix
+
+Fixed failing checks: backend_tests, frontend_tests
+
+---
+
+## [2026-04-18 23:25] Progress on #22: [Task]: Add comprehensive postcard input validation test suite
+
+Made progress. 2 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:23] Orchestrator Started
+
+Beginning autonomous issue resolution. Open issues: 18. Quota window: 5h.
+
+---
+
+## [2026-04-18 23:22] Progress on #30: [P0/Security] Postcard creation endpoint /api/postcards lacks authentication
+
+Made progress. 20 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:18] Progress on #30: [P0/Security] Postcard creation endpoint /api/postcards lacks authentication
+
+Made progress. 8 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:18] Progress on #30: [P0/Security] Postcard creation endpoint /api/postcards lacks authentication
+
+Made progress. 13 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:17] Progress on #30: [P0/Security] Postcard creation endpoint /api/postcards lacks authentication
+
+Made progress. 9 tool calls. Not yet confirmed fixed.
+
+---
+
+## [2026-04-18 23:16] Orchestrator Started
+
+Beginning autonomous issue resolution. Open issues: 20. Quota window: 5h.
+
+---
+

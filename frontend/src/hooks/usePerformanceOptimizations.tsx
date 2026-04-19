@@ -166,7 +166,7 @@ export function useResizeObserver(
 }
 
 // Performance monitoring hook
-export function usePerformanceMonitor(name: string) {
+export function usePerformanceMonitor(_name: string) {
   const startTimeRef = useRef<number>()
 
   const start = useCallback(() => {
@@ -176,11 +176,10 @@ export function usePerformanceMonitor(name: string) {
   const end = useCallback(() => {
     if (startTimeRef.current) {
       const duration = performance.now() - startTimeRef.current
-      console.log(`${name} took ${duration.toFixed(2)}ms`)
       return duration
     }
     return 0
-  }, [name])
+  }, [])
 
   const measure = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

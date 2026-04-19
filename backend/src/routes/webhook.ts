@@ -1,44 +1,7 @@
 import { EmailService, type EmailData } from '../services/emailService'
 import { getConfig } from '../config'
-
-function getCorsHeaders(): Record<string, string> {
-  const allowed = getConfig().server.allowedOrigins
-  return {
-    'Access-Control-Allow-Origin': allowed[0] || '',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Vary': 'Origin',
-  }
-}
-
-const securityHeaders = {
-  'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin'
-}
-
-function addSecurityHeaders(response: Response): Response {
-  Object.entries(securityHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value)
-  })
-  return response
-}
-
-function createJsonResponse(data: any, status: number = 200): Response {
-  const response = new Response(
-    JSON.stringify(data),
-    {
-      status,
-      headers: {
-        'Content-Type': 'application/json',
-        ...getCorsHeaders(),
-      },
-    }
-  )
-  return addSecurityHeaders(response)
-}
+import { jsonResponse } from '../middleware/headers'
+import { logger } from '../utils/logger'
 
 // Email service instance (exported for testing)
 let emailService: EmailService = new EmailService()
@@ -70,24 +33,25 @@ function verifyWebhookSecret(req: Request): boolean {
 }
 
 // Handle SendGrid webhook format
-function parseSendGridWebhook(body: any): EmailData | null {
+function parseSendGridWebhook(body: unknown): EmailData | null {
   try {
     // SendGrid sends events array, we're interested in "delivered" events
     if (!Array.isArray(body) || body.length === 0) {
       return null
     }
 
-    const event = body[0] // Process first event
+    const event = body[0] as Record<string, unknown> // Process first event
 
     // Parse the email from SendGrid format
     if (event.event === 'delivered' && event.email) {
+      const content = event.content as Record<string, unknown> | undefined
       return {
-        from: event.email || '',
-        to: [event.email || ''],
-        subject: event.subject || 'No Subject',
-        text: event.text || event.content?.text || '',
-        html: event.html || event.content?.html,
-        attachments: event.attachments || []
+        from: (event.email as string) || '',
+        to: [(event.email as string) || ''],
+        subject: (event.subject as string) || 'No Subject',
+        text: (event.text as string) || (content?.text as string) || '',
+        html: (event.html as string) || (content?.html as string),
+        attachments: (Array.isArray(event.attachments) ? event.attachments : []) as EmailData['attachments']
       }
     }
 
@@ -116,20 +80,22 @@ function parseMailgunWebhook(formData: URLSearchParams): EmailData | null {
 }
 
 // Handle generic email webhook (simple JSON format)
-function parseGenericWebhook(body: any): EmailData | null {
+function parseGenericWebhook(body: unknown): EmailData | null {
   try {
     // Basic validation
     if (!body || typeof body !== 'object') {
       return null
     }
 
+    const data = body as Record<string, unknown>
+
     return {
-      from: body.from || body.sender || '',
-      to: Array.isArray(body.to) ? body.to : [body.to || ''],
-      subject: body.subject || '',
-      text: body.text || body.plain || body.content || '',
-      html: body.html || body.bodyHtml,
-      attachments: body.attachments || []
+      from: (data.from as string) || (data.sender as string) || '',
+      to: Array.isArray(data.to) ? data.to as string[] : [String(data.to || '')],
+      subject: (data.subject as string) || '',
+      text: (data.text as string) || (data.plain as string) || (data.content as string) || '',
+      html: (data.html as string) || (data.bodyHtml as string),
+      attachments: (Array.isArray(data.attachments) ? data.attachments : []) as EmailData['attachments']
     }
   } catch (error) {
     console.error('Error parsing generic webhook:', error)
@@ -140,114 +106,113 @@ function parseGenericWebhook(body: any): EmailData | null {
 export async function handleEmailWebhook(req: Request): Promise<Response> {
   try {
     if (!verifyWebhookSecret(req)) {
-      return createJsonResponse({
+      return jsonResponse({
         success: false,
         error: 'Invalid webhook secret'
-      }, 401)
+      }, 401, req)
     }
 
     const contentType = req.headers.get('content-type') || ''
     let emailData: EmailData | null = null
 
-    // Parse based on content type
     if (contentType.includes('application/json')) {
-      const body = await req.json()
+      try {
+        const body = await req.json()
 
-      // Try different webhook formats
-      emailData = parseSendGridWebhook(body) || parseGenericWebhook(body)
-    } else if (contentType.includes('application/x-www-form-urlencoded')) {
-      const formData = await req.formData()
-      const params = new URLSearchParams()
-
-      // Convert FormData to URLSearchParams for parsing
-      for (const [key, value] of formData.entries()) {
-        params.append(key, value.toString())
-      }
-
-      emailData = parseMailgunWebhook(params)
-    } else if (contentType.includes('multipart/form-data')) {
-      // Handle multipart form data (with attachments)
-      const formData = await req.formData()
-
-      // Extract fields from multipart data
-      const from = formData.get('from')?.toString() || ''
-      const to = formData.get('to')?.toString() || formData.get('recipient')?.toString() || ''
-      const subject = formData.get('subject')?.toString() || ''
-      const text = formData.get('text')?.toString() || formData.get('body-plain')?.toString() || ''
-      const html = formData.get('html')?.toString() || formData.get('body-html')?.toString() || undefined
-
-      // Extract attachments
-      const attachments: Array<{ filename: string; contentType: string; data: string }> = []
-      for (const [key, value] of formData.entries()) {
-        if (value instanceof File && key.startsWith('attachment')) {
-          const arrayBuffer = await value.arrayBuffer()
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)))
-
-          attachments.push({
-            filename: value.name,
-            contentType: value.type,
-            data: base64
-          })
+        // Try SendGrid format first (array of events)
+        if (Array.isArray(body)) {
+          emailData = parseSendGridWebhook(body)
+          if (!emailData) {
+            // Empty array or non-delivered event — fall back to generic
+            emailData = parseGenericWebhook(body)
+          }
+        } else {
+          // Generic JSON format
+          emailData = parseGenericWebhook(body)
         }
+      } catch {
+        // Malformed JSON
+        return jsonResponse({
+          success: false,
+          error: 'Unable to parse email data from webhook'
+        }, 400, req)
       }
-
-      emailData = {
-        from,
-        to: to.split(',').map(t => t.trim()).filter(t => t),
-        subject,
-        text,
-        html,
-        attachments
+    } else if (contentType.includes('multipart/form-data')) {
+      try {
+        const formData = await req.formData()
+        const params = new URLSearchParams()
+        formData.forEach((value, key) => {
+          params.set(key, typeof value === 'string' ? value : '')
+        })
+        emailData = parseMailgunWebhook(params)
+      } catch {
+        return jsonResponse({
+          success: false,
+          error: 'Unable to parse email data from webhook'
+        }, 400, req)
       }
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      try {
+        const text = await req.text()
+        const params = new URLSearchParams(text)
+        emailData = parseMailgunWebhook(params)
+      } catch {
+        return jsonResponse({
+          success: false,
+          error: 'Unable to parse email data from webhook'
+        }, 400, req)
+      }
+    } else {
+      return jsonResponse({
+        success: false,
+        error: 'Unable to parse email data from webhook'
+      }, 400, req)
     }
 
     if (!emailData) {
-      return createJsonResponse({
+      return jsonResponse({
         success: false,
         error: 'Unable to parse email data from webhook'
-      }, 400)
+      }, 400, req)
     }
 
-    // Validate the email data
+    // Validate email data
     const validation = emailService.validateEmailData(emailData)
     if (!validation.isValid) {
-      return createJsonResponse({
+      return jsonResponse({
         success: false,
         error: 'Invalid email data',
         details: validation.errors
-      }, 400)
+      }, 400, req)
     }
 
-    // Process the email and create a postcard
+    // Process email and create postcard
     const result = await emailService.processEmail(emailData)
-
     if (!result.success) {
-      return createJsonResponse({
+      return jsonResponse({
         success: false,
         error: result.error || 'Failed to process email'
-      }, 500)
+      }, 500, req)
     }
 
-    return createJsonResponse({
+    return jsonResponse({
       success: true,
       message: 'Email successfully processed and postcard created',
       postcard: result.result
-    })
-
+    }, 200, req)
   } catch (error) {
-    console.error('Webhook processing error:', error)
-    return createJsonResponse({
+    logger.error('Error processing email webhook', { error })
+    return jsonResponse({
       success: false,
-      error: 'Internal server error processing webhook',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, 500)
+      error: 'Internal server error processing webhook'
+    }, 500, req)
   }
 }
 
 export async function handleWebhookHealth(_req: Request): Promise<Response> {
-  return createJsonResponse({
+  return jsonResponse({
     status: 'healthy',
     service: 'email-webhook',
     timestamp: new Date().toISOString()
-  })
+  }, 200, _req)
 }

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "zai-coding-plan/glm-5.1",
+  "provider": {
+    "zai-coding-plan": {
+      "options": {
+        "timeout": 600000,
+        "chunkTimeout": 120000
+      },
+      "models": {
+        "glm-5.1": {
+          "options": {
+            "thinking": {"type": "disabled"}
+          }
+        },
+        "glm-5": {
+          "options": {
+            "thinking": {"type": "disabled"}
+          }
+        },
+        "glm-5-turbo": {
+          "options": {
+            "thinking": {"type": "disabled"}
+          }
+        },
+        "glm-4.7": {
+          "options": {
+            "thinking": {"type": "disabled"}
+          }
+        },
+        "glm-4.7-flash": {
+          "options": {
+            "thinking": {"type": "disabled"}
+          }
+        }
+      }
+    }
+  },
+  "instructions": ["CLAUDE.md", ".opencode/prompts/system.md"],
+  "permission": {
+    "edit": "allow",
+    "bash": {
+      "*": "allow",
+      "rm -rf *": "deny",
+      "git push --force*": "deny",
+      "git reset --hard*": "ask"
+    },
+    "skill": {
+      "*": "allow"
+    },
+    "task": {
+      "*": "allow"
+    }
+  },
+  "agent": {
+    "build": {
+      "mode": "primary",
+      "model": "zai-coding-plan/glm-5.1",
+      "prompt": "{file:./.opencode/prompts/build.md}",
+      "temperature": 0.2,
+      "permission": {
+        "edit": "allow",
+        "bash": {
+          "*": "allow"
+        },
+        "task": {
+          "*": "allow"
+        }
+      }
+    },
+    "plan": {
+      "mode": "primary",
+      "model": "zai-coding-plan/glm-5.1",
+      "temperature": 0.1,
+      "permission": {
+        "edit": "deny",
+        "bash": {
+          "*": "deny",
+          "git *": "allow",
+          "gh *": "allow",
+          "pnpm test*": "allow",
+          "pnpm lint*": "allow",
+          "ls *": "allow",
+          "cat *": "allow"
+        }
+      }
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 15000
+  },
+  "watcher": {
+    "ignore": ["node_modules/**", "dist/**", ".git/**", "test-assets/**", "data/**"]
+  }
+}

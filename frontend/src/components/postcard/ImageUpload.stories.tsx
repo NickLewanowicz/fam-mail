@@ -25,14 +25,14 @@ const mockImage = {
 
 export const Default: Story = {
   args: {
-    onImageSelect: (file, preview) => console.log('Selected:', file, preview),
+    onImageSelect: () => {},
     selectedImage: null,
   },
 }
 
 export const Open: Story = {
   args: {
-    onImageSelect: (file, preview) => console.log('Selected:', file, preview),
+    onImageSelect: () => {},
     selectedImage: null,
     isOpen: true,
   },
@@ -40,7 +40,7 @@ export const Open: Story = {
 
 export const WithImage: Story = {
   args: {
-    onImageSelect: (file, preview) => console.log('Selected:', file, preview),
+    onImageSelect: () => {},
     selectedImage: mockImage,
     isOpen: true,
   },
@@ -104,8 +104,7 @@ export const WithError: Story = {
           {...args}
           onImageSelect={(file, preview) => {
             if (error && file.type === 'application/pdf') {
-              // Simulate error
-              console.error('Invalid file type')
+              // Simulate error - silently skip invalid files
             } else {
               args.onImageSelect(file, preview)
             }
@@ -118,7 +117,7 @@ export const WithError: Story = {
 
 export const DragAndDrop: Story = {
   args: {
-    onImageSelect: (file, preview) => console.log('Selected:', file, preview),
+    onImageSelect: () => {},
     selectedImage: null,
     isOpen: true,
   },
@@ -133,7 +132,7 @@ export const DragAndDrop: Story = {
 
 export const MobileView: Story = {
   args: {
-    onImageSelect: (file, preview) => console.log('Selected:', file, preview),
+    onImageSelect: () => {},
     selectedImage: null,
     isOpen: true,
   },

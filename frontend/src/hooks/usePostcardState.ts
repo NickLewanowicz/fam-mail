@@ -95,8 +95,8 @@ export function usePostcardState() {
           setState(draft)
           setHistory(prev => ({ ...prev, present: draft }))
         }
-      } catch (error) {
-        console.error('Failed to load draft:', error)
+      } catch {
+        // Silently fail - draft loading is best-effort
       } finally {
         setIsLoading(false)
       }
@@ -162,8 +162,8 @@ export function usePostcardState() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(draftToSave))
         setLastSaved(new Date())
         setIsDirty(false)
-      } catch (error) {
-        console.error('Failed to save draft:', error)
+      } catch {
+        // Silently fail - draft saving is best-effort
       } finally {
         saveInProgressRef.current = false
       }

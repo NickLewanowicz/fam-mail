@@ -31,20 +31,20 @@ const mockAddress: Partial<Address> = {
 
 export const Empty: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
   },
 }
 
 export const WithInitialAddress: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
     initialAddress: mockAddress,
   },
 }
 
 export const PartialAddress: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
     initialAddress: {
       firstName: 'Jane',
       lastName: '',
@@ -59,7 +59,7 @@ export const PartialAddress: Story = {
 
 export const CanadianAddress: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
     initialAddress: {
       firstName: 'Sarah',
       lastName: 'Smith',
@@ -75,7 +75,7 @@ export const CanadianAddress: Story = {
 
 export const UKAddress: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
     initialAddress: {
       firstName: 'James',
       lastName: 'Brown',
@@ -90,7 +90,7 @@ export const UKAddress: Story = {
 
 export const Interactive: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
     initialAddress: {
       firstName: 'Test',
       lastName: 'User',
@@ -109,7 +109,7 @@ export const Interactive: Story = {
 
 export const ValidationErrors: Story = {
   args: {
-    onSubmit: (address) => console.log('Submitted:', address),
+    onSubmit: () => {},
     initialAddress: {
       firstName: '',
       lastName: '',
