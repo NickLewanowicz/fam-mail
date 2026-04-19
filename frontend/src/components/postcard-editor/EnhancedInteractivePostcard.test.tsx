@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { EnhancedInteractivePostcard } from './EnhancedInteractivePostcard'
 
 // Mock CSS
@@ -24,20 +24,27 @@ vi.mock('./PostcardFront', () => ({
   ),
 }))
 
-// Mock PostcardBack
-vi.mock('./PostcardBack', () => ({
-  PostcardBack: ({ message, onMessageChange }: {
+// Mock PostcardBack — vi.hoisted ensures the mock component is available
+// when the hoisted vi.mock factory runs, even for React.lazy() dynamic imports.
+const MockPostcardBack = vi.hoisted(() => {
+  return function MockPostcardBack({ message, onMessageChange }: {
     message: string
     onMessageChange: (msg: string) => void
     [key: string]: unknown
-  }) => (
-    <div data-testid="postcard-back-mock">
-      <span data-testid="message-display">{message}</span>
-      <button data-testid="change-msg-btn" onClick={() => onMessageChange('new message')}>
-        Change Message
-      </button>
-    </div>
-  ),
+  }) {
+    return (
+      <div data-testid="postcard-back-mock">
+        <span data-testid="message-display">{message}</span>
+        <button data-testid="change-msg-btn" onClick={() => onMessageChange('new message')}>
+          Change Message
+        </button>
+      </div>
+    )
+  }
+})
+
+vi.mock('./PostcardBack', () => ({
+  PostcardBack: MockPostcardBack,
 }))
 
 // Create a mock state that can be modified per test
@@ -122,8 +129,10 @@ describe('EnhancedInteractivePostcard', () => {
     window.confirm = originalConfirm
   })
 
-  it('renders without crashing', () => {
-    render(<EnhancedInteractivePostcard />)
+  it('renders without crashing', async () => {
+    await act(async () => {
+      render(<EnhancedInteractivePostcard />)
+    })
     expect(screen.getByTestId('postcard-front-mock')).toBeInTheDocument()
     expect(screen.getByTestId('postcard-back-mock')).toBeInTheDocument()
   })
