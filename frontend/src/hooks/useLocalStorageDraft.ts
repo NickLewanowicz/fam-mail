@@ -27,12 +27,23 @@ export function useLocalStorageDraft<T>({
   const valueRef = useRef<T>(value)
   valueRef.current = value
 
+  // Refs for callbacks/options that may change between renders — read .current
+  // at call time so closures never go stale.
+  const serializeRef = useRef(serialize)
+  serializeRef.current = serialize
+  const deserializeRef = useRef(deserialize)
+  deserializeRef.current = deserialize
+  const onErrorRef = useRef(onError)
+  onErrorRef.current = onError
+  const defaultValueRef = useRef(defaultValue)
+  defaultValueRef.current = defaultValue
+
   // Load value from localStorage on mount
   useEffect(() => {
     try {
       const storedValue = localStorage.getItem(key)
       if (storedValue) {
-        const parsedValue = deserialize(storedValue)
+        const parsedValue = deserializeRef.current(storedValue)
         if (isMountedRef.current) {
           setValue(parsedValue)
           setLastSaved(new Date())
@@ -41,13 +52,13 @@ export function useLocalStorageDraft<T>({
     } catch (error) {
       // Properly handle unknown errors by converting them to Error instances
       const errorInstance = error instanceof Error ? error : new Error(String(error))
-      onError?.(errorInstance)
+      onErrorRef.current?.(errorInstance)
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false)
       }
     }
-  }, [key, deserialize, onError])
+  }, [key])
 
   // Save value to localStorage with debouncing
   const saveValue = useCallback((newValue: T) => {
@@ -56,7 +67,7 @@ export function useLocalStorageDraft<T>({
 
     debounceTimerRef.current = setTimeout(() => {
       try {
-        const serializedValue = serialize(newValue)
+        const serializedValue = serializeRef.current(newValue)
         localStorage.setItem(key, serializedValue)
         if (isMountedRef.current) {
           setLastSaved(new Date())
@@ -65,7 +76,7 @@ export function useLocalStorageDraft<T>({
       } catch (error) {
         // Properly handle unknown errors by converting them to Error instances
         const errorInstance = error instanceof Error ? error : new Error(String(error))
-        onError?.(errorInstance)
+        onErrorRef.current?.(errorInstance)
 
         // If localStorage is full, try to clear old drafts
         if (error instanceof Error && error.name === 'QuotaExceededError') {
@@ -73,7 +84,7 @@ export function useLocalStorageDraft<T>({
         }
       }
     }, debounceMs)
-  }, [key, debounceMs, serialize, onError])
+  }, [key, debounceMs])
 
   // Update value and trigger save
   const updateValue = useCallback((newValue: T | ((prev: T) => T)) => {
@@ -97,22 +108,22 @@ export function useLocalStorageDraft<T>({
     try {
       localStorage.removeItem(key)
       if (isMountedRef.current) {
-        setValue(defaultValue)
+        setValue(defaultValueRef.current)
         setLastSaved(null)
         setIsDirty(false)
       }
     } catch (error) {
       // Properly handle unknown errors by converting them to Error instances
       const errorInstance = error instanceof Error ? error : new Error(String(error))
-      onError?.(errorInstance)
+      onErrorRef.current?.(errorInstance)
     }
-  }, [key, defaultValue, onError])
+  }, [key])
 
   // Force immediate save — reads current value via ref to avoid stale closure
   const forceSave = useCallback(() => {
     clearTimeout(debounceTimerRef.current)
     try {
-      const serializedValue = serialize(valueRef.current)
+      const serializedValue = serializeRef.current(valueRef.current)
       localStorage.setItem(key, serializedValue)
       if (isMountedRef.current) {
         setLastSaved(new Date())
@@ -120,9 +131,9 @@ export function useLocalStorageDraft<T>({
       }
     } catch (error) {
       const errorInstance = error instanceof Error ? error : new Error(String(error))
-      onError?.(errorInstance)
+      onErrorRef.current?.(errorInstance)
     }
-  }, [key, serialize, onError])
+  }, [key])
 
   // Cleanup on unmount
   useEffect(() => {

@@ -180,6 +180,96 @@ describe('useLocalStorageDraft', () => {
     expect(storage.setItem).toHaveBeenCalledWith('force-key', JSON.stringify({ name: 'initial' }))
   })
 
+  it('uses latest serialize function after rerender (no stale closure)', () => {
+    const serializeA = vi.fn((v: object) => JSON.stringify({ ...v, tag: 'A' }))
+    const serializeB = vi.fn((v: object) => JSON.stringify({ ...v, tag: 'B' }))
+
+    const { result, rerender } = renderHook(
+      ({ serialize }: { serialize: (v: object) => string }) =>
+        useLocalStorageDraft({
+          key: 'stale-test',
+          defaultValue: { name: 'initial' },
+          debounceMs: 50,
+          serialize,
+        }),
+      { initialProps: { serialize: serializeA } }
+    )
+
+    act(() => { vi.runAllTimers() })
+
+    // Update with serialize A
+    act(() => { result.current.setValue({ name: 'first' }) })
+    act(() => { vi.advanceTimersByTime(100) })
+
+    expect(serializeA).toHaveBeenCalled()
+
+    // Rerender with a different serialize function
+    rerender({ serialize: serializeB })
+
+    act(() => { result.current.setValue({ name: 'second' }) })
+    act(() => { vi.advanceTimersByTime(100) })
+
+    // The second save must use serializeB, not the stale serializeA
+    expect(serializeB).toHaveBeenCalled()
+  })
+
+  it('uses latest onError callback after rerender (no stale closure)', () => {
+    const onErrorA = vi.fn()
+    const onErrorB = vi.fn()
+
+    // Use a single hook that we rerender with different onError callbacks
+    const brokenSerialize = () => { throw new Error('serialize fail') }
+
+    const { result, rerender } = renderHook(
+      ({ onError, serialize }: { onError: (e: Error) => void; serialize: (v: object) => string }) =>
+        useLocalStorageDraft({
+          key: 'stale-error-test',
+          defaultValue: { name: 'val' },
+          debounceMs: 100,
+          onError,
+          serialize,
+        }),
+      { initialProps: { onError: onErrorA, serialize: JSON.stringify as (v: object) => string } }
+    )
+
+    act(() => { vi.runAllTimers() })
+
+    // Rerender with new onError and broken serialize, then forceSave
+    rerender({ onError: onErrorB, serialize: brokenSerialize as (v: object) => string })
+    act(() => { result.current.forceSave() })
+
+    // onErrorB should be called (not stale onErrorA)
+    expect(onErrorB).toHaveBeenCalled()
+    expect(onErrorA).not.toHaveBeenCalled()
+  })
+
+  it('clearDraft uses latest defaultValue after rerender', () => {
+    const defaultA = { name: 'default-A' }
+    const defaultB = { name: 'default-B' }
+
+    const { result, rerender } = renderHook(
+      ({ defaultValue }: { defaultValue: { name: string } }) =>
+        useLocalStorageDraft({
+          key: 'stale-default-test',
+          defaultValue,
+          debounceMs: 100,
+        }),
+      { initialProps: { defaultValue: defaultA } }
+    )
+
+    act(() => { vi.runAllTimers() })
+
+    // Set some value
+    act(() => { result.current.setValue({ name: 'changed' }) })
+
+    // Rerender with new default, then clear
+    rerender({ defaultValue: defaultB })
+    act(() => { result.current.clearDraft() })
+
+    // Should use the latest defaultValue (defaultB), not the stale one
+    expect(result.current.value).toEqual({ name: 'default-B' })
+  })
+
   it('handles deserialization errors gracefully', () => {
     storage.getItem.mockReturnValue('not-valid-json{{{')
     const onError = vi.fn()
