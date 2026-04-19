@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll } from 'bun:test'
 import { JWTService } from './services/jwtService'
 import type { User } from './models/user'
+import type { Database } from './database'
 
 describe('Backend Server', () => {
     // Import after environment setup
     let handleRequest: (req: Request) => Promise<Response>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let db: any
+    let db: Database
     let jwtService: JWTService
 
     beforeAll(async () => {

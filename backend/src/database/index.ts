@@ -26,7 +26,6 @@ export interface PostcardRecord {
 /**
  * Database row interface for postcards table (raw SQLite types).
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface PostcardRow {
   id: string;
   email_message_id: string;
@@ -64,7 +63,6 @@ interface UserRow {
 /**
  * Database row interface for sessions table (raw SQLite types).
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface SessionRow {
   id: string;
   user_id: string;
