@@ -37,7 +37,7 @@
   backface-visibility: hidden;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 40px oklch(0 0 0 / 0.15), 0 8px 16px oklch(0 0 0 / 0.1);
   background: var(--b1);
 }
 
@@ -90,7 +90,7 @@
 
 /* Keyboard Help */
 .keyboard-help {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.1);
 }
 
 .keyboard-help kbd {
@@ -103,7 +103,7 @@
   background-color: var(--b2);
   border: 1px solid oklch(from var(--bc) l c h / 0.2);
   border-radius: 3px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 0 oklch(0 0 0 / 0.1);
 }
 
 /* Flip Button Animation */
