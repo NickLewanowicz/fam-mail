@@ -4,6 +4,7 @@ import { marked } from 'marked'
 import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from '../../utils/postcardTemplate'
 import { AddressForm } from '../address/AddressForm'
 import type { Address } from '../../types/address'
+import { ALLOWED_TYPES, MAX_FILE_SIZE } from '../../utils/imageProcessing'
 
 interface PostcardBuilderProps {
   onAddressChange: (address: Address | null) => void
@@ -13,9 +14,6 @@ interface PostcardBuilderProps {
   recipientAddress: Address | null
   message: string
 }
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024
-const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif']
 
 export function PostcardBuilder({
   onAddressChange,
@@ -42,7 +40,7 @@ export function PostcardBuilder({
 
   const validateFile = (file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return `Invalid file type. Please upload a JPG, PNG, or GIF image.`
+      return `Invalid file type. Please upload a JPG, PNG, GIF, or WebP image.`
     }
     if (file.size > MAX_FILE_SIZE) {
       return `File size must be less than ${MAX_FILE_SIZE / 1024 / 1024}MB. Your file is ${(file.size / 1024 / 1024).toFixed(2)}MB.`
@@ -241,7 +239,7 @@ export function PostcardBuilder({
                       <span className="font-semibold">Click to upload</span> or drag and drop
                     </p>
                     <p className="text-xs opacity-70">
-                      JPG, PNG or GIF (max {MAX_FILE_SIZE / 1024 / 1024}MB)
+                      JPG, PNG, GIF or WebP (max {MAX_FILE_SIZE / 1024 / 1024}MB)
                     </p>
                     <input
                       ref={fileInputRef}

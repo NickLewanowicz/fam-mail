@@ -4,6 +4,29 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 10:51] Progress on #51: [P2/Bug] Image validation accepts inconsistent formats across components
+
+Attempt 1. 15 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 10:49] Closed #54: [P2/Enhancement] Static file responses lack security headers in production
+
+The fix is exactly right — focused, atomic changes:
+
+1. **Added `applyHeaders` to the import** from `./middleware/headers`
+2. **Wrapped both static file responses** with `applyHeaders()` so they get CSP, X-Frame-Options, HSTS, CORS, and all other security headers
+
+IMPLEMENTATION_COMPLETE
+
+**Issues closed:** #54
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
 ## [2026-04-19 10:45] Closed #55: [P2/Bug] OIDC state store is in-memory Map with no expiry — memory leak
 
 via `StateEntry.createdAt`) and lazy `evictExpired()` on access were already in place

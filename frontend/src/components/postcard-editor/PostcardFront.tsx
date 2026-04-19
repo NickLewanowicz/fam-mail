@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useImageEditor } from '../../hooks/useImageEditor'
-import { POSTCARD_DIMENSIONS } from '../../utils/imageProcessing'
+import { POSTCARD_DIMENSIONS, ALLOWED_TYPES } from '../../utils/imageProcessing'
 import type { PostcardImage } from '../../hooks/usePostcardState'
 
 interface PostcardFrontProps {
@@ -486,7 +486,7 @@ export function PostcardFront({
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+          accept={ALLOWED_TYPES.join(',')}
           onChange={handleFileInputChange}
           className="hidden"
           aria-label="Upload image file"

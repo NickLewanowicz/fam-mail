@@ -299,7 +299,7 @@ describe('PostcardBuilder', () => {
 
       expect(screen.getByText(/Click to upload/)).toBeInTheDocument()
       expect(screen.getByText(/or drag and drop/)).toBeInTheDocument()
-      expect(screen.getByText(/JPG, PNG or GIF/)).toBeInTheDocument()
+      expect(screen.getByText(/JPG, PNG, GIF or WebP/)).toBeInTheDocument()
     })
 
     it('should render file input with correct attributes', () => {
@@ -308,7 +308,7 @@ describe('PostcardBuilder', () => {
       const fileInput = document.getElementById('postcard-front-image')
       expect(fileInput).toBeInTheDocument()
       expect(fileInput).toHaveAttribute('type', 'file')
-      expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/jpg,image/png,image/gif')
+      expect(fileInput).toHaveAttribute('accept', 'image/jpeg,image/jpg,image/png,image/gif,image/webp')
       expect(fileInput).toHaveClass('hidden')
     })
 

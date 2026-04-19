@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { PostcardFront } from './PostcardFront'
+import { ALLOWED_TYPES } from '../../utils/imageProcessing'
 
 // Mock the useImageEditor hook
 const mockReset = vi.fn()
@@ -102,7 +103,7 @@ describe('PostcardFront', () => {
       const onImageUpload = vi.fn()
       render(<PostcardFront onImageUpload={onImageUpload} />)
       const input = screen.getByLabelText('Upload image file') as HTMLInputElement
-      expect(input.accept).toBe('image/jpeg,image/jpg,image/png,image/gif,image/webp')
+      expect(input.accept).toBe(ALLOWED_TYPES.join(','))
     })
   })
 

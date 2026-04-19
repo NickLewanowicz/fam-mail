@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ImageUpload } from './ImageUpload'
+import { ALLOWED_TYPES } from '../../utils/imageProcessing'
 
 describe('ImageUpload', () => {
   it('should render the image upload component', () => {
@@ -24,7 +25,7 @@ describe('ImageUpload', () => {
     const fileInput = document.querySelector('#postcard-image-upload')
     expect(fileInput).toBeInTheDocument()
     expect(fileInput).toHaveAttribute('type', 'file')
-    expect(fileInput).toHaveAttribute('accept', 'image/*,application/pdf')
+    expect(fileInput).toHaveAttribute('accept', ALLOWED_TYPES.join(','))
   })
 
   it('should validate file type', () => {
@@ -36,7 +37,7 @@ describe('ImageUpload', () => {
     
     fireEvent.change(fileInput, { target: { files: [invalidFile] } })
     
-    expect(screen.getByText(/please upload a jpg, png, or pdf file/i)).toBeInTheDocument()
+    expect(screen.getByText(/please upload a jpg, png, gif, or webp image/i)).toBeInTheDocument()
     expect(onImageSelect).not.toHaveBeenCalled()
   })
 

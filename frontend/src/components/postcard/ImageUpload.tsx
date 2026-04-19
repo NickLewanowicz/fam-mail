@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ALLOWED_TYPES, MAX_FILE_SIZE } from '../../utils/imageProcessing'
 
 interface ImageUploadProps {
   onImageSelect: (file: File, preview: string) => void
@@ -11,12 +12,9 @@ export function ImageUpload({ onImageSelect, selectedImage, isOpen = false, onTo
   const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
-  const ACCEPTED_FORMATS = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
-  const MAX_FILE_SIZE = 10 * 1024 * 1024
-
   const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_FORMATS.includes(file.type)) {
-      return 'Please upload a JPG, PNG, or PDF file'
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return 'Please upload a JPG, PNG, GIF, or WebP image'
     }
     if (file.size > MAX_FILE_SIZE) {
       return 'File size must be less than 10MB'
@@ -108,11 +106,11 @@ export function ImageUpload({ onImageSelect, selectedImage, isOpen = false, onTo
                   id="postcard-image-upload"
                   type="file"
                   className="file-input file-input-bordered w-full"
-                  accept="image/*,application/pdf"
+                  accept={ALLOWED_TYPES.join(',')}
                   onChange={handleFileChange}
                 />
                 <label className="label">
-                  <span className="label-text-alt">Accepted formats: JPG, PNG, PDF (max 10MB)</span>
+                  <span className="label-text-alt">Accepted formats: JPG, PNG, GIF, WebP (max 10MB)</span>
                 </label>
               </div>
             </div>
