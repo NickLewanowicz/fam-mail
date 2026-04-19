@@ -1,21 +1,21 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies (monorepo root install)
 FROM base AS install
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY backend/package.json ./backend/
 RUN corepack enable pnpm && pnpm install --frozen-lockfile
 
 # Build backend
 FROM install AS build-backend
-COPY backend/package.json backend/pnpm-lock.yaml ./backend/
-RUN cd backend && pnpm install --frozen-lockfile
 COPY backend/tsconfig.json backend/src ./backend/
-RUN cd backend && bun build src/index.ts --outdir ./dist
+RUN cd backend && bun build src/index.ts --outdir ./dist --target bun
 
 # Production image
 FROM base AS release
 COPY --from=install /app/node_modules ./node_modules
+COPY --from=install /app/backend/node_modules ./backend/node_modules
 COPY --from=build-backend /app/backend/dist ./backend/dist
 COPY backend/src/database/schema.sql ./backend/src/database/
 
