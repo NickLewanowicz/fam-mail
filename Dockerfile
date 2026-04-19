@@ -1,33 +1,32 @@
-FROM oven/bun:1 AS base
+# pnpm install runs reliably on Tower; bun install can hang on "Resolving..." in this environment.
+FROM node:20-bookworm-slim AS install
 WORKDIR /app
-
-# Install dependencies (monorepo root install)
-FROM base AS install
+RUN corepack enable && corepack prepare pnpm@9 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
-RUN corepack enable pnpm && pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
-# Build frontend (static assets served by backend in production)
 FROM install AS build-frontend
 COPY frontend ./frontend
 RUN cd frontend && pnpm build
 
-# Build backend
-FROM install AS build-backend
+FROM oven/bun:1 AS build-backend
+WORKDIR /app
+COPY --from=install /app/node_modules ./node_modules
+COPY --from=install /app/backend/node_modules ./backend/node_modules
 COPY backend/tsconfig.json ./backend/
 COPY backend/src ./backend/src
 RUN cd backend && bun build src/index.ts --outdir ./dist --target bun
 
-# Production image
-FROM base AS release
+FROM oven/bun:1 AS release
+WORKDIR /app
 COPY --from=install /app/node_modules ./node_modules
 COPY --from=install /app/backend/node_modules ./backend/node_modules
 COPY --from=build-backend /app/backend/dist ./backend/dist
 COPY --from=build-frontend /app/frontend/dist ./frontend/dist
 COPY backend/src/database/schema.sql ./backend/src/database/schema.sql
 
-# Create data directory
 RUN mkdir -p /data
 
 ENV PORT=8484
