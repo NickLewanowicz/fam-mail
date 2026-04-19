@@ -201,7 +201,7 @@ describe('DraftList', () => {
     })
   })
 
-  it('should call deleteDraft when Delete is clicked', async () => {
+  it('should call deleteDraft when Delete is clicked and confirmed', async () => {
     const user = userEvent.setup()
     vi.mocked(listDrafts).mockResolvedValueOnce([mockDrafts[0]])
     vi.mocked(deleteDraft).mockResolvedValueOnce(undefined)
@@ -212,7 +212,12 @@ describe('DraftList', () => {
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
     })
 
+    // Click Delete to open confirmation dialog
     await user.click(screen.getByText('Delete'))
+
+    // Confirm deletion in the dialog
+    const confirmButtons = screen.getAllByText('Delete')
+    await user.click(confirmButtons[confirmButtons.length - 1])
 
     await waitFor(() => {
       expect(deleteDraft).toHaveBeenCalledWith('draft-1')
@@ -253,7 +258,7 @@ describe('DraftList', () => {
     })
   })
 
-  it('should call onDraftsChanged after delete', async () => {
+  it('should call onDraftsChanged after delete is confirmed', async () => {
     const user = userEvent.setup()
     const onDraftsChanged = vi.fn()
     vi.mocked(listDrafts).mockResolvedValueOnce([mockDrafts[0]])
@@ -265,7 +270,12 @@ describe('DraftList', () => {
       expect(screen.getByText('Jane Smith')).toBeInTheDocument()
     })
 
+    // Click Delete to open confirmation dialog
     await user.click(screen.getByText('Delete'))
+
+    // Confirm deletion in the dialog
+    const confirmButtons = screen.getAllByText('Delete')
+    await user.click(confirmButtons[confirmButtons.length - 1])
 
     await waitFor(() => {
       expect(onDraftsChanged).toHaveBeenCalled()

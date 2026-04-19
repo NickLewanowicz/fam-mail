@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import type { Draft } from '../../types/postcard'
+import { Modal, ModalHeader, ModalBody, ModalFooter } from '../ui/Modal'
 
 interface DraftCardProps {
   draft: Draft
@@ -17,10 +19,16 @@ export function DraftCard({
   isPublishing = false,
   isDeleting = false,
 }: DraftCardProps) {
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const recipient = draft.recipientAddress
   const createdDate = new Date(draft.createdAt).toLocaleDateString()
   const updatedDate = new Date(draft.updatedAt).toLocaleDateString()
   const isReady = draft.state === 'ready'
+
+  const handleDeleteConfirm = () => {
+    setShowDeleteConfirm(false)
+    onDelete(draft.id)
+  }
 
   return (
     <div className="card bg-base-100 shadow-md border border-base-300 hover:shadow-lg transition-shadow">
@@ -88,7 +96,7 @@ export function DraftCard({
 
           <button
             className="btn btn-sm btn-ghost text-error"
-            onClick={() => onDelete(draft.id)}
+            onClick={() => setShowDeleteConfirm(true)}
             disabled={isPublishing || isDeleting}
           >
             {isDeleting ? (
@@ -102,6 +110,41 @@ export function DraftCard({
           </button>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Modal isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} size="sm">
+        <ModalHeader title="Delete Draft?" onClose={() => setShowDeleteConfirm(false)} />
+        <ModalBody>
+          <p className="text-sm">
+            Are you sure you want to delete the draft for{' '}
+            <span className="font-semibold">{recipient.firstName} {recipient.lastName}</span>?
+            This action cannot be undone.
+          </p>
+        </ModalBody>
+        <ModalFooter>
+          <button
+            className="btn btn-ghost"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={isDeleting}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-error"
+            onClick={handleDeleteConfirm}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <span className="loading loading-spinner loading-xs"></span>
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

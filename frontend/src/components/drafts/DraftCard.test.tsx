@@ -169,7 +169,7 @@ describe('DraftCard', () => {
     expect(onLoad).toHaveBeenCalledWith(baseDraft)
   })
 
-  it('should call onDelete when Delete is clicked', async () => {
+  it('should show confirmation dialog when Delete is clicked', async () => {
     const user = userEvent.setup()
     const onDelete = vi.fn()
 
@@ -183,7 +183,54 @@ describe('DraftCard', () => {
     )
 
     await user.click(screen.getByText('Delete'))
+    // Confirmation dialog should be visible, onDelete NOT called yet
+    expect(onDelete).not.toHaveBeenCalled()
+    expect(screen.getByText('Delete Draft?')).toBeInTheDocument()
+    expect(screen.getByText(/Are you sure you want to delete/)).toBeInTheDocument()
+  })
+
+  it('should call onDelete when confirmed in delete dialog', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn()
+
+    render(
+      <DraftCard
+        draft={baseDraft}
+        onLoad={vi.fn()}
+        onDelete={onDelete}
+        onPublish={vi.fn()}
+      />
+    )
+
+    // Click Delete to open confirmation
+    await user.click(screen.getByText('Delete'))
+    // Click the confirm Delete button inside the modal
+    const confirmButtons = screen.getAllByText('Delete')
+    // The last one is the modal confirm button (btn-error)
+    await user.click(confirmButtons[confirmButtons.length - 1])
     expect(onDelete).toHaveBeenCalledWith('draft-1')
+  })
+
+  it('should not call onDelete when cancel is clicked in delete dialog', async () => {
+    const user = userEvent.setup()
+    const onDelete = vi.fn()
+
+    render(
+      <DraftCard
+        draft={baseDraft}
+        onLoad={vi.fn()}
+        onDelete={onDelete}
+        onPublish={vi.fn()}
+      />
+    )
+
+    // Click Delete to open confirmation
+    await user.click(screen.getByText('Delete'))
+    // Click Cancel
+    await user.click(screen.getByText('Cancel'))
+    expect(onDelete).not.toHaveBeenCalled()
+    // Dialog should be closed
+    expect(screen.queryByText('Delete Draft?')).not.toBeInTheDocument()
   })
 
   it('should call onPublish when Publish is clicked', async () => {
