@@ -1,6 +1,7 @@
-import { postgridService } from './postgrid'
+import { getPostgridService } from './postgrid'
 import { EmailParser, type EmailParseResult, type ParsedEmail } from './emailParser'
 import type { PostGridPostcardRequest } from '../types/postgrid'
+import { logger } from '../utils/logger'
 
 export interface EmailData {
   from: string
@@ -39,7 +40,7 @@ export class EmailService {
     this.parser = new EmailParser()
   }
 
-  async processEmail(emailData: EmailData): Promise<{ success: boolean; result?: any; error?: string }> {
+  async processEmail(emailData: EmailData): Promise<{ success: boolean; result?: PostGridPostcardResponse; error?: string }> {
     try {
       // Parse the email to extract recipient, message, and images
       const parsedEmail: ParsedEmail = {
@@ -67,6 +68,7 @@ export class EmailService {
       const postcardRequest = this.convertToPostcardRequest(parseResult)
 
       // Create postcard using PostGrid service
+      const postgridService = getPostgridService()
       if (!postgridService) {
         return {
           success: false,
@@ -82,7 +84,7 @@ export class EmailService {
       }
 
     } catch (error) {
-      console.error('EmailService error:', error)
+      logger.error('EmailService error', { error })
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error processing email'
@@ -232,7 +234,7 @@ export class EmailService {
     `.trim()
   }
 
-  validateEmailData(emailData: any): { isValid: boolean; errors: string[] } {
+  validateEmailData(emailData: EmailData): { isValid: boolean; errors: string[] } {
     const errors: string[] = []
 
     if (!emailData.from || typeof emailData.from !== 'string') {

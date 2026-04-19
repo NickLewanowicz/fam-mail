@@ -1,4 +1,5 @@
 import type { PostGridPostcardRequest, PostGridPostcardResponse, PostGridError } from '../types/postgrid'
+import { logger } from '../utils/logger'
 
 export interface PostGridConfig {
   mode: "test" | "live";
@@ -54,7 +55,7 @@ export class PostGridService {
 
   getEffectiveMode(): "test" | "live" {
     if (this.config.forceTestMode) {
-      console.warn("FORCE TEST MODE ENABLED - Using test API regardless of POSTGRID_MODE");
+      logger.warn("FORCE TEST MODE ENABLED - Using test API regardless of POSTGRID_MODE");
       return "test";
     }
     return this.config.mode;
@@ -91,7 +92,7 @@ export class PostGridService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({})) as { message?: string; error?: { type: string; message: string } }
-        console.error('PostGrid API Error:', {
+        logger.error('PostGrid API Error', {
           status: response.status,
           statusText: response.statusText,
           errorData,
@@ -124,17 +125,32 @@ export class PostGridService {
 
 let _postgridService: PostGridService | null = null
 
+/**
+ * Register a configured PostGridService instance (called by server.ts at startup).
+ */
+export function setPostgridService(service: PostGridService): void {
+  _postgridService = service
+}
+
+/**
+ * Get the registered PostGridService instance.
+ * Returns null if not configured (e.g., missing env vars during tests).
+ */
+export function getPostgridService(): PostGridService | null {
+  return _postgridService
+}
+
+// Auto-initialize from environment variables (used when running outside of server.ts)
+// Uses canonical names matching config/index.ts: POSTGRID_TEST_API_KEY / POSTGRID_LIVE_API_KEY
 try {
-  const isTestMode = process.env.TEST_MODE === 'true'
-  const apiKey = isTestMode
-    ? process.env.POSTGRID_TEST_KEY
-    : process.env.POSTGRID_PROD_KEY
+  const mode = (process.env.POSTGRID_MODE || 'test') as 'test' | 'live'
+  const apiKey = mode === 'test'
+    ? process.env.POSTGRID_TEST_API_KEY
+    : process.env.POSTGRID_LIVE_API_KEY
 
   if (apiKey) {
-    _postgridService = new PostGridService(apiKey, isTestMode)
+    _postgridService = new PostGridService(apiKey, mode === 'test')
   }
 } catch {
   // Service will be null if no API key is provided (e.g., during tests)
 }
-
-export const postgridService = _postgridService as PostGridService
