@@ -158,7 +158,7 @@ describe('handleEmailWebhook - webhook secret verification', () => {
     expect(data.error).toBe('Invalid webhook secret')
   })
 
-  it('allows request when no webhook secret configured (empty string)', async () => {
+  it('returns 401 when webhook secret is not configured (empty string)', async () => {
     mockGetConfig.mockImplementation(() => ({
       postgrid: { webhookSecret: '' },
       server: { allowedOrigins: ['http://localhost:5173'] },
@@ -171,8 +171,11 @@ describe('handleEmailWebhook - webhook secret verification', () => {
     })
 
     const response = await handleEmailWebhook(req)
-    // Should not return 401, will continue to processing
-    expect(response.status).not.toBe(401)
+    expect(response.status).toBe(401)
+
+    const data = await response.json()
+    expect(data.success).toBe(false)
+    expect(data.error).toBe('Invalid webhook secret')
   })
 
   it('allows request with correct x-webhook-secret header', async () => {
@@ -191,7 +194,7 @@ describe('handleEmailWebhook - webhook secret verification', () => {
     expect(response.status).not.toBe(401)
   })
 
-  it('allows request with correct ?secret= query param', async () => {
+  it('rejects request with ?secret= query param (header-only auth)', async () => {
     mockGetConfig.mockImplementation(() => ({
       postgrid: { webhookSecret: 'test-secret' },
       server: { allowedOrigins: ['http://localhost:5173'] },
@@ -204,14 +207,18 @@ describe('handleEmailWebhook - webhook secret verification', () => {
     })
 
     const response = await handleEmailWebhook(req)
-    expect(response.status).not.toBe(401)
+    expect(response.status).toBe(401)
+
+    const data = await response.json()
+    expect(data.success).toBe(false)
+    expect(data.error).toBe('Invalid webhook secret')
   })
 })
 
 describe('handleEmailWebhook - content type handling', () => {
   beforeEach(() => {
     mockGetConfig.mockImplementation(() => ({
-      postgrid: { webhookSecret: '' },
+      postgrid: { webhookSecret: 'test-secret' },
       server: { allowedOrigins: ['http://localhost:5173'] },
     }))
     mockValidateEmailData.mockImplementation(() => ({ isValid: true, errors: [] }))
@@ -221,7 +228,7 @@ describe('handleEmailWebhook - content type handling', () => {
   it('returns 400 for unparseable content type', async () => {
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/xml' },
+      headers: { 'Content-Type': 'application/xml', 'x-webhook-secret': 'test-secret' },
       body: '<email></email>',
     })
 
@@ -246,7 +253,7 @@ describe('handleEmailWebhook - content type handling', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify(sendGridBody),
     })
 
@@ -270,7 +277,7 @@ describe('handleEmailWebhook - content type handling', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify(genericBody),
     })
 
@@ -293,6 +300,7 @@ describe('handleEmailWebhook - content type handling', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
+      headers: { 'x-webhook-secret': 'test-secret' },
       body: formData,
     })
 
@@ -316,7 +324,7 @@ describe('handleEmailWebhook - content type handling', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'x-webhook-secret': 'test-secret' },
       body: params.toString(),
     })
 
@@ -333,7 +341,7 @@ describe('handleEmailWebhook - content type handling', () => {
 describe('handleEmailWebhook - validation and processing', () => {
   beforeEach(() => {
     mockGetConfig.mockImplementation(() => ({
-      postgrid: { webhookSecret: '' },
+      postgrid: { webhookSecret: 'test-secret' },
       server: { allowedOrigins: ['http://localhost:5173'] },
     }))
     // Reset mock call counts
@@ -349,7 +357,7 @@ describe('handleEmailWebhook - validation and processing', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify({ from: '', to: [], subject: '' }),
     })
 
@@ -371,7 +379,7 @@ describe('handleEmailWebhook - validation and processing', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify({ from: 'test@example.com', to: ['recipient@example.com'], subject: 'Test' }),
     })
 
@@ -391,7 +399,7 @@ describe('handleEmailWebhook - validation and processing', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify({ from: 'test@example.com', to: ['recipient@example.com'], subject: 'Test' }),
     })
 
@@ -410,7 +418,7 @@ describe('handleEmailWebhook - validation and processing', () => {
 describe('handleEmailWebhook - edge cases', () => {
   beforeEach(() => {
     mockGetConfig.mockImplementation(() => ({
-      postgrid: { webhookSecret: '' },
+      postgrid: { webhookSecret: 'test-secret' },
       server: { allowedOrigins: ['http://localhost:5173'] },
     }))
   })
@@ -418,7 +426,7 @@ describe('handleEmailWebhook - edge cases', () => {
   it('handles malformed JSON gracefully', async () => {
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: '{ invalid json }',
     })
 
@@ -446,7 +454,7 @@ describe('handleEmailWebhook - edge cases', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify(sendGridBody),
     })
 
@@ -466,7 +474,7 @@ describe('handleEmailWebhook - edge cases', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify([]),
     })
 
@@ -496,6 +504,7 @@ describe('handleEmailWebhook - edge cases', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
+      headers: { 'x-webhook-secret': 'test-secret' },
       body: formData,
     })
 
@@ -526,7 +535,7 @@ describe('handleEmailWebhook - edge cases', () => {
 describe('handleEmailWebhook - security headers', () => {
   beforeEach(() => {
     mockGetConfig.mockImplementation(() => ({
-      postgrid: { webhookSecret: '' },
+      postgrid: { webhookSecret: 'test-secret' },
       server: { allowedOrigins: ['http://localhost:5173'] },
     }))
     mockValidateEmailData.mockImplementation(() => ({ isValid: true, errors: [] }))
@@ -536,7 +545,7 @@ describe('handleEmailWebhook - security headers', () => {
   it('includes security headers in successful response', async () => {
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify({ from: 'test@example.com', to: ['recipient@example.com'], subject: 'Test' }),
     })
 
@@ -556,7 +565,7 @@ describe('handleEmailWebhook - security headers', () => {
 
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-webhook-secret': 'test-secret' },
       body: JSON.stringify({ from: '', to: [], subject: '' }),
     })
 
@@ -576,7 +585,7 @@ describe('handleEmailWebhook - CORS headers', () => {
     process.env.ALLOWED_ORIGINS = 'http://localhost:5173,https://example.com'
 
     mockGetConfig.mockImplementation(() => ({
-      postgrid: { webhookSecret: '' },
+      postgrid: { webhookSecret: 'test-secret' },
       server: { allowedOrigins: ['http://localhost:5173', 'https://example.com'] },
     }))
     mockValidateEmailData.mockImplementation(() => ({ isValid: true, errors: [] }))
@@ -598,6 +607,7 @@ describe('handleEmailWebhook - CORS headers', () => {
       headers: {
         'Content-Type': 'application/json',
         'Origin': 'http://localhost:5173',
+        'x-webhook-secret': 'test-secret',
       },
       body: JSON.stringify({ from: 'test@example.com', to: ['recipient@example.com'], subject: 'Test' }),
     })

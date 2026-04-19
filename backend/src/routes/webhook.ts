@@ -18,18 +18,16 @@ function verifyWebhookSecret(req: Request): boolean {
   const config = getConfig()
   const secret = config.postgrid.webhookSecret
 
-  // If no secret configured, allow all requests (for development)
+  // Reject all requests when WEBHOOK_SECRET is not configured
   if (!secret) {
-    console.warn('WEBHOOK_SECRET not configured - accepting unverified webhook')
-    return true
+    logger.error('WEBHOOK_SECRET is not configured — webhook authentication is disabled. Set POSTGRID_WEBHOOK_SECRET in your environment.')
+    return false
   }
 
-  // Check for secret in header or query parameter
+  // Check for secret in header only (query params leak into server/CDN logs)
   const headerSecret = req.headers.get('x-webhook-secret') || req.headers.get('authorization')?.replace('Bearer ', '')
-  const url = new URL(req.url)
-  const querySecret = url.searchParams.get('secret')
 
-  return headerSecret === secret || querySecret === secret
+  return headerSecret === secret
 }
 
 // Handle SendGrid webhook format
