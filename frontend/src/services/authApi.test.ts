@@ -1,0 +1,182 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import {
+  getToken,
+  setToken,
+  removeToken,
+  initiateLogin,
+  fetchCurrentUser,
+  logoutUser,
+  getAuthHeaders,
+  AuthApiError,
+} from './authApi'
+
+describe('authApi', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    // Reset localStorage mock for jsdom
+    const store: Record<string, string> = {}
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => store[key] ?? null),
+      setItem: vi.fn((key: string, value: string) => { store[key] = value }),
+      removeItem: vi.fn((key: string) => { delete store[key] }),
+      clear: vi.fn(() => { Object.keys(store).forEach(k => delete store[k]) }),
+      length: 0,
+      key: vi.fn(() => null),
+    })
+    global.fetch = vi.fn()
+  })
+
+  describe('token management', () => {
+    it('getToken returns null when no token stored', () => {
+      expect(getToken()).toBeNull()
+    })
+
+    it('setToken stores token in localStorage', () => {
+      setToken('my-token')
+      expect(getToken()).toBe('my-token')
+    })
+
+    it('removeToken clears token from localStorage', () => {
+      setToken('my-token')
+      removeToken()
+      expect(getToken()).toBeNull()
+    })
+  })
+
+  describe('initiateLogin', () => {
+    it('returns authUrl on success', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ authUrl: 'https://auth.example.com/authorize?state=abc' }),
+      } as Response)
+
+      const url = await initiateLogin()
+      expect(url).toBe('https://auth.example.com/authorize?state=abc')
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+    })
+
+    it('throws AuthApiError on failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Server error' }),
+      } as Response)
+
+      const error = await initiateLogin().catch((e) => e)
+      expect(error).toBeInstanceOf(AuthApiError)
+      expect(error.message).toBe('Server error')
+      expect(error.status).toBe(500)
+    })
+
+    it('throws with fallback message on non-JSON response', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: async () => { throw new Error('Not JSON') },
+      } as Response)
+
+      const error = await initiateLogin().catch((e) => e)
+      expect(error).toBeInstanceOf(AuthApiError)
+      expect(error.message).toBe('Login initiation failed')
+      expect(error.status).toBe(503)
+    })
+  })
+
+  describe('fetchCurrentUser', () => {
+    it('returns user on success', async () => {
+      const mockUser = {
+        id: 'user-1',
+        oidcSub: 'sub-1',
+        oidcIssuer: 'https://auth.example.com',
+        email: 'test@example.com',
+        emailVerified: true,
+        firstName: 'Test',
+        lastName: 'User',
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      }
+
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ user: mockUser }),
+      } as Response)
+
+      const user = await fetchCurrentUser('my-token')
+      expect(user).toEqual(mockUser)
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/me', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer my-token',
+        },
+      })
+    })
+
+    it('throws AuthApiError on failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Unauthorized' }),
+      } as Response)
+
+      await expect(fetchCurrentUser('bad-token')).rejects.toThrow('Failed to fetch user')
+    })
+  })
+
+  describe('logoutUser', () => {
+    it('calls logout endpoint with token', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ message: 'Logged out successfully' }),
+      } as Response)
+
+      await logoutUser('my-token')
+      expect(global.fetch).toHaveBeenCalledWith('/api/auth/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer my-token',
+        },
+      })
+    })
+
+    it('throws AuthApiError on failure', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({ error: 'Server error' }),
+      } as Response)
+
+      await expect(logoutUser('my-token')).rejects.toThrow('Logout failed')
+    })
+  })
+
+  describe('getAuthHeaders', () => {
+    it('returns headers without Authorization when no token', () => {
+      const headers = getAuthHeaders()
+      expect(headers).toEqual({ 'Content-Type': 'application/json' })
+    })
+
+    it('returns headers with Authorization when token exists', () => {
+      setToken('my-token')
+      const headers = getAuthHeaders()
+      expect(headers).toEqual({
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer my-token',
+      })
+    })
+  })
+
+  describe('AuthApiError', () => {
+    it('has correct name and status', () => {
+      const error = new AuthApiError('test error', 418)
+      expect(error.name).toBe('AuthApiError')
+      expect(error.message).toBe('test error')
+      expect(error.status).toBe(418)
+      expect(error).toBeInstanceOf(Error)
+    })
+  })
+})
