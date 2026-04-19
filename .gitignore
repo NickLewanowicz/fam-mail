@@ -37,8 +37,12 @@ frontend/.claude_sessions/
 # Test results
 test-results/
 frontend/test-results/
-frontend/tests/
 frontend/playwright-report/
+
+# Test artifacts (but allow E2E test source files)
+frontend/tests/e2e/*-snapshots/
+frontend/tests/visual/*-snapshots/
+frontend/tests/visual/screenshots/
 
 # Backup files
 *.backup
@@ -59,3 +63,8 @@ coverage_output.json
 
 # Debug/capture scripts
 capture_*.js
+test-api.js
+test-postcard-api.sh
+
+# Dev artifacts
+GIT_HISTORY_REWRITE_REPORT.md

@@ -14,6 +14,10 @@ test.db
 qa-screenshots
 debug-*.png
 capture_*.js
+test-api.js
+test-postcard-api.sh
+GIT_HISTORY_REWRITE_REPORT.md
+coverage_output.json
 frontend/.storybook
 frontend/tests
 frontend/dist
