@@ -4,6 +4,56 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 11:17] Closed #49: [P2/Enhancement] Session table and rate limiter have no cleanup — memory/DB bloat
+
+Calls `db.deleteExpiredSessions()` to remove expired sessions from the SQLite database. Wrapped in try/catch to prevent cleanup failures from crashing the server. Logs the count of deleted sessions when > 0.
+
+3. **Startup cleanup** (new) — `runPeriodicCleanup()` is called immediately on server startup (line 50), ensuring expired data is cleaned before the first request even arrives.
+
+4. **Timer un
+
+**Issues closed:** #49
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 11:12] Closed #50: [P2/Bug] Refresh tokens generated but never usable — no /api/auth/refresh endpoint
+
+randomUUID()` to `generateRefreshToken()`, ensuring every generated token is unique even within the same second.
+
+### All Changes Committed (d5b9e2f)
+| File | Change |
+|------|--------|
+| `backend/src/services/jwtService.ts` | Added `typ` claim, `verifyRefreshToken()`, `jti` on refresh tokens |
+| `backend/src/database/index.ts` | Added `getSessionByRefreshToken()`, `deleteExpiredSessions()`, `dele
+
+**Issues closed:** #50
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 10:55] Closed #51: [P2/Bug] Image validation accepts inconsistent formats across components
+
+ded `accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"` with `accept={ALLOWED_TYPES.join(',')}`. This was the only remaining component with a hardcoded format list.
+
+2. **`ImageUpload.test.tsx`** — Updated the file input `accept` attribute assertion to use `ALLOWED_TYPES.join(',')` instead of a hardcoded string, ensuring the test stays in sync with the canonical constant.
+
+3. **`Postcar
+
+**Issues closed:** #51
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
 ## [2026-04-19 10:51] Progress on #51: [P2/Bug] Image validation accepts inconsistent formats across components
 
 Attempt 1. 15 tools, 0 commits. QA: RED.

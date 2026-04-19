@@ -827,11 +827,10 @@ describe("DraftRoutes", () => {
       expect(response.status).toBe(200);
       expect(data.message).toBe("Schedule cancelled");
 
-      // Verify draft state is reverted (scheduledFor is not cleared due to implementation bug - undefined doesn't clear the value)
+      // Verify draft state is reverted and scheduledFor is cleared
       const updatedDraft = db.getDraft(draft.id);
       expect(updatedDraft?.state).toBe("draft");
-      // Note: scheduledFor is not actually cleared by the current implementation
-      // TODO: The implementation should pass null instead of undefined to clear scheduledFor
+      expect(updatedDraft?.scheduledFor).toBeUndefined();
     });
 
     it("should return 400 when draft is not scheduled", async () => {

@@ -654,7 +654,7 @@ export class Database {
     imageData: string;
     imageMetadata: string | Record<string, unknown>;
     state: 'draft' | 'ready';
-    scheduledFor: string;
+    scheduledFor: string | null;
     size: '6x4' | '9x6' | '11x6';
   }>): void {
     try {

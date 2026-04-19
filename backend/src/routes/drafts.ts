@@ -386,7 +386,7 @@ export class DraftRoutes {
     // Revert to draft state
     this.db.updateDraft(id, {
       state: 'draft',
-      scheduledFor: undefined,
+      scheduledFor: null,
     })
 
     return jsonResponse({ message: 'Schedule cancelled' })
