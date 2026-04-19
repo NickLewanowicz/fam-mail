@@ -4,6 +4,22 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 10:45] Closed #55: [P2/Bug] OIDC state store is in-memory Map with no expiry — memory leak
+
+via `StateEntry.createdAt`) and lazy `evictExpired()` on access were already in place
+
+**`backend/src/routes/auth.test.ts`** (commit `8a478d4`):
+- Fixed the "evicts expired states on callback" test — the previous monkey-patching approach was incorrect (it set `Date.now` to the past before creating a second entry, but the original entry was still fresh)
+- Correct approach: advance `Date.now` 11 min
+
+**Issues closed:** #55
+
+**Files changed:** 2
+
+**Tests:** All passing (GREEN)
+
+---
+
 ## [2026-04-19 10:38] Progress on #55: [P2/Bug] OIDC state store is in-memory Map with no expiry — memory leak
 
 Attempt 1. 5 tools, 0 commits. QA: GREEN.

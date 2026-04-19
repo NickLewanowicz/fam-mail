@@ -12,7 +12,7 @@ import { JWTService } from './services/jwtService'
 import { AuthMiddleware } from './middleware/auth'
 import { RateLimiter, getClientIp } from './middleware/rateLimit'
 import { jsonResponse } from './utils/response'
-import { createCorsResponse } from './middleware/headers'
+import { applyHeaders, createCorsResponse } from './middleware/headers'
 import { setupAuthRoutes } from './routes/auth'
 import { DraftRoutes } from './routes/drafts'
 import type { LLMConfig } from './services/llm'
@@ -274,12 +274,12 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const bunFile = file(filePath)
       if (await bunFile.exists()) {
-        return new Response(bunFile)
+        return applyHeaders(new Response(bunFile), req)
       }
 
       const indexFile = file(join(frontendDistPath, 'index.html'))
       if (await indexFile.exists()) {
-        return new Response(indexFile)
+        return applyHeaders(new Response(indexFile), req)
       }
     } catch (error) {
       logger.error('Error serving static file', { error })
