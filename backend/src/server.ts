@@ -24,14 +24,32 @@ const postcardRateLimiter = new RateLimiter(5, 60_000) // 5/min postcards (costs
 const webhookRateLimiter = new RateLimiter(20, 60_000) // 20/min webhooks
 const draftRateLimiter = new RateLimiter(30, 60_000) // 30/min drafts
 
-// Periodic cleanup of expired rate-limit entries to prevent memory leaks
+// Periodic cleanup of expired rate-limit entries and expired sessions
+// to prevent memory/DB bloat (#49)
 const CLEANUP_INTERVAL_MS = 5 * 60_000 // every 5 minutes
-const cleanupTimer = setInterval(() => {
+
+function runPeriodicCleanup(): void {
+  // Rate limiter cleanup — remove expired entries from memory
   authRateLimiter.cleanup()
   postcardRateLimiter.cleanup()
   webhookRateLimiter.cleanup()
   draftRateLimiter.cleanup()
-}, CLEANUP_INTERVAL_MS)
+
+  // Session cleanup — delete expired sessions from DB
+  try {
+    const deleted = db.deleteExpiredSessions()
+    if (deleted > 0) {
+      logger.info('Cleaned up expired sessions', { deleted })
+    }
+  } catch (error) {
+    logger.error('Failed to clean up expired sessions', { error })
+  }
+}
+
+// Run cleanup immediately on startup
+runPeriodicCleanup()
+
+const cleanupTimer = setInterval(runPeriodicCleanup, CLEANUP_INTERVAL_MS)
 // Don't prevent process exit
 if (cleanupTimer.unref) cleanupTimer.unref()
 
