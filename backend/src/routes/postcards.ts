@@ -1,6 +1,6 @@
 import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
-import { postgridService } from '../services/postgrid'
+import { getPostgridService } from '../services/postgrid'
 import type { PostGridPostcardRequest } from '../types/postgrid'
 import { getConfig } from '../config'
 import type { User } from '../models/user'
@@ -59,12 +59,22 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
         postalOrZip: string
         countryCode: string
       }
+      from?: {
+        firstName: string
+        lastName: string
+        addressLine1: string
+        addressLine2?: string
+        city: string
+        provinceOrState: string
+        postalOrZip: string
+        countryCode: string
+      }
       frontHTML?: string
       backHTML?: string
       message?: string
       size?: string
     }
-    const { to, frontHTML, backHTML, message, size = '6x4' } = body
+    const { to, from, frontHTML, backHTML, message, size = '6x4' } = body
 
     // Collect all validation errors and return them together
     const allErrors: Array<{ field: string; message: string }> = []
@@ -76,6 +86,14 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
     const addressResult = validateAddress(to, 'to')
     if (!addressResult.valid) {
       allErrors.push(...addressResult.errors)
+    }
+
+    // Validate return address if provided
+    if (from) {
+      const fromResult = validateAddress(from, 'from')
+      if (!fromResult.valid) {
+        allErrors.push(...fromResult.errors)
+      }
     }
 
     if (!frontHTML && !backHTML && !message) {
@@ -98,9 +116,10 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       return createJsonResponse({ error: 'Validation failed', errors: allErrors }, 400)
     }
 
+    const postgridService = getPostgridService()
     if (!postgridService) {
       return createJsonResponse({
-        error: 'PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable.'
+        error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.'
       }, 500)
     }
 
@@ -158,6 +177,7 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
 
     const postcardRequest: PostGridPostcardRequest = {
       to,
+      from,
       size: size as '6x4' | '9x6' | '11x6',
       frontHTML,
       backHTML: finalBackHTML,
