@@ -1,7 +1,12 @@
 node_modules/
+.opencode/node_modules/
 dist/
 build/
 .env
+.env.*
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 .env.local
 .env.*.local
 
@@ -53,6 +58,16 @@ frontend/tests/visual/screenshots/
 # Test databases
 test.db
 *.test.db
+dev.db
+backend/dev.db
+
+# Cursor / local agent transcripts
+.cursor/
+agent-transcripts/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
 
 # QA artifacts
 qa-screenshots/
@@ -68,8 +83,10 @@ test-postcard-api.sh
 
 # Dev artifacts
 GIT_HISTORY_REWRITE_REPORT.md
+PROGRESS.md
 
 # Orchestrator artifacts
 logs/
 agent-progress.json
+nightshift-progress.json
 CHANGELOG_AGENT.md

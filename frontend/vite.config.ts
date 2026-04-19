@@ -45,24 +45,9 @@ export default defineConfig(({ mode }) => {
             // Router — loaded eagerly in main.tsx
             if (id.includes('node_modules/react-router-dom/')) return 'vendor-router';
 
-            // Heavy editor — lazy-loaded via dynamic import in PostcardBuilder/MessageEditor
-            // @uiw/react-md-editor bundles its own CSS, codemirror, and extensions (~1MB)
-            if (id.includes('node_modules/@uiw/react-md-editor/')
-              || id.includes('node_modules/@codemirror/')
-              || id.includes('node_modules/@lezer/')
-              || id.includes('node_modules/crelt/')
-              || id.includes('node_modules/w3c-keyname/')
-              || id.includes('node_modules/style-mod/')
-              || id.includes('node_modules/@milkdown/')) {
-              return 'vendor-md-editor';
-            }
-
-            // Markdown parser + sanitizer — lazy-loaded with PostcardBuilder
+            // Markdown parser + sanitizer
             if (id.includes('node_modules/marked/')) return 'vendor-markdown';
             if (id.includes('node_modules/dompurify/')) return 'vendor-sanitize';
-
-            // Form library — lazy-loaded with AddressForm inside PostcardBuilder
-            if (id.includes('node_modules/react-hook-form/')) return 'vendor-forms';
           },
         },
       },

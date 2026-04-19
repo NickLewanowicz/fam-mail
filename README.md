@@ -1,191 +1,144 @@
 # Fam Mail
 
-Send physical postcards to your loved ones through a beautiful web interface or automated email-to-postcard pipeline. Powered by PostGrid for USPS delivery.
+Send physical postcards through a web UI backed by [PostGrid](https://www.postgrid.com/) (printing and USPS delivery).
 
-## What is Fam Mail?
+## What it does
 
-Fam Mail is a full-stack postcard-sending application with two modes of operation:
-
-1. **Web UI** — A polished React app where users compose postcards with addresses, images, and messages, save drafts, and send physical mail via PostGrid.
-2. **Email-to-Postcard** — An automated pipeline that monitors an IMAP inbox for postcard requests, parses content with an LLM, and sends the postcard without manual intervention.
-
-**What is PostGrid?** PostGrid provides APIs for sending physical mail programmatically. Postcards are printed, addressed, and delivered via USPS. Learn more at [postgrid.com](https://www.postgrid.com/).
+Fam Mail is a small full-stack app for composing a postcard (photo, message, addresses), previewing front and back, and submitting it to PostGrid. An optional **email-to-postcard** mode can watch an IMAP mailbox, parse requests with an LLM, and create mail automatically when that stack is configured.
 
 ## Features
 
-- **Web Postcard Builder** — Upload images, compose messages in Markdown, enter US/CA addresses, preview front and back
-- **Draft System** — Save, edit, schedule, and publish drafts
-- **OIDC Authentication** — Google OAuth (or any OIDC provider) with JWT sessions
-- **Email-to-Postcard Pipeline** — IMAP polling, LLM-powered email parsing, automatic postcard creation
-- **Comprehensive Validation** — Address format (US/CA postal codes), image type/size, message length, return address
-- **PostGrid Integration** — Test mode for development, live mode for real mail, force-test safety switch
-- **Rate Limiting** — Per-IP rate limiting on auth endpoints to prevent abuse
-- **SQLite Database** — Track users, drafts, sessions, and processed emails
-- **Docker Deployment** — Single-container deployment with Docker Compose
-- **Full Test Suite** — 560+ backend tests, 70+ frontend tests, lint, build checks
+- **Postcard builder** — Image upload, Markdown message, US/CA address validation, live preview
+- **Drafts API** — Save and resume work via the REST API (used by the UI)
+- **OIDC sign-in** — Google or any OIDC provider, with JWT access and refresh cookies
+- **PostGrid** — Test mode for development, live mode for real mail, optional mock mode
+- **Hardening** — Central security headers, CORS, rate limits on auth and costly routes
+- **SQLite** — Users, drafts, sessions, and (when enabled) email pipeline state
+- **Docker** — One image: API plus built static frontend on a single port
+- **Tests** — Hundreds of backend (`bun test`) and frontend (`vitest`) unit tests; Playwright available for E2E
 
-## Tech Stack
+## Tech stack
 
 | Layer | Technology |
-|-------|-----------|
-| **Backend** | Bun + TypeScript, manual HTTP routing, SQLite |
-| **Frontend** | Vite + React 18 + TypeScript, Tailwind CSS + DaisyUI |
-| **Auth** | OIDC (Google) + JWT access/refresh tokens |
-| **Mail** | PostGrid API (USPS postcards) |
-| **Email Parsing** | IMAP + LLM (OpenRouter / Ollama / custom) |
-| **Package Manager** | pnpm workspaces |
-| **CI** | GitHub Actions |
+|-------|------------|
+| Backend | Bun, TypeScript, SQLite |
+| Frontend | Vite, React 18, TypeScript, Tailwind CSS, DaisyUI |
+| Auth | OIDC + JWT |
+| Mail | PostGrid |
+| Package manager | pnpm workspaces |
 
-## Quick Start
+## Screenshots
+
+Screenshots are not embedded in this repository yet. After you run the app locally or via Docker, capture the login flow, create flow, and preview screens here to help new contributors and users see the UI at a glance.
+
+## Quick start (development)
 
 ### Prerequisites
 
-- [Bun](https://bun.sh/) (v1.0+)
-- [pnpm](https://pnpm.io/) (v8+)
-- [PostGrid API Key](https://www.postgrid.com/) (free test key available)
+- [Bun](https://bun.sh/) 1.x
+- [pnpm](https://pnpm.io/) 8+
+- A PostGrid account (test keys are enough for development)
 
-### 1. Install Dependencies
+### Install
 
 ```bash
 pnpm install
 ```
 
-### 2. Configure Environment
+### Environment
+
+The backend process loads `.env` from the **`backend/`** package directory when you use `pnpm dev`.
 
 ```bash
-cp .env.example backend/.env
+cp backend/.env.example backend/.env
 ```
 
-Edit `backend/.env` with your configuration. At minimum you need:
+Edit `backend/.env`. Minimum for the web UI and API:
 
 ```env
-# PostGrid (required)
 POSTGRID_MODE=test
 POSTGRID_TEST_API_KEY=your_test_key
 POSTGRID_LIVE_API_KEY=your_live_key
 
-# Auth (required for web UI)
 OIDC_ISSUER_URL=https://accounts.google.com/.well-known/openid-configuration
 OIDC_CLIENT_ID=your_google_client_id
 OIDC_CLIENT_SECRET=your_google_client_secret
 OIDC_REDIRECT_URI=http://localhost:8484/api/auth/callback
 JWT_SECRET=your-secret-at-least-32-characters-long
-
-# LLM (required for email-to-postcard)
-LLM_PROVIDER=openrouter
-LLM_API_KEY=your_openrouter_key
-LLM_MODEL=openai/gpt-4o
 ```
 
-### 3. Start Development
+See `backend/.env.example` and the root `.env.example` for the full variable list (IMAP, LLM, webhooks, etc.).
+
+### Run
 
 ```bash
 pnpm dev
 ```
 
-Frontend: `http://localhost:5173` | Backend: `http://localhost:8484`
+- Frontend dev server: `http://localhost:5173` (proxies `/api` to the backend)
+- Backend: `http://localhost:8484`
 
-## API Reference
+For production-like local behavior (single origin), build the frontend and run the backend with `NODE_ENV=production` so it serves `frontend/dist` from the same port as the API.
 
-All endpoints return JSON. Authentication uses `Authorization: Bearer <jwt>` header.
+## API overview
 
-### Public Endpoints
+Responses are JSON unless the server is serving static assets. Authenticated routes use `Authorization: Bearer <access_token>`.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/health` | Health check (status, version, timestamp) |
-| `POST` | `/api/auth/login` | Initiate OIDC login flow (rate-limited) |
-| `GET` | `/api/auth/callback` | OIDC callback handler (rate-limited) |
-
-### Authenticated Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/auth/me` | Get current user profile |
-| `POST` | `/api/auth/logout` | End session |
-| `POST` | `/api/postcards` | Create and send a postcard |
-| `GET` | `/api/drafts` | List user's drafts |
-| `POST` | `/api/drafts` | Create a draft |
-| `GET` | `/api/drafts/:id` | Get a specific draft |
-| `PUT` | `/api/drafts/:id` | Update a draft |
-| `DELETE` | `/api/drafts/:id` | Delete a draft |
-| `POST` | `/api/drafts/:id/publish` | Send draft as postcard via PostGrid |
-| `POST` | `/api/drafts/:id/schedule` | Schedule draft for future sending |
-| `POST` | `/api/drafts/:id/cancel-schedule` | Cancel scheduled send |
-
-### Webhook Endpoints
-
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| `POST` | `/api/webhook/email` | `WEBHOOK_SECRET` | Receive inbound email webhooks (SendGrid, Mailgun, generic) |
-| `GET` | `/api/webhook/health` | None | Webhook service health |
+| Area | Examples |
+|------|-----------|
+| Health | `GET /api/health` |
+| Auth | `POST /api/auth/login`, `GET /api/auth/callback`, `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/refresh` |
+| Postcards | `POST /api/postcards` |
+| Drafts | `GET/POST /api/drafts`, `GET/PUT/DELETE /api/drafts/:id`, publish / schedule actions |
+| Webhooks | `POST /api/webhook/email`, `GET /api/webhook/health` |
 
 ## Commands
 
 ```bash
-pnpm dev                 # Start frontend + backend in dev mode
-pnpm build               # Build for production
-pnpm test                # Run all tests (backend + frontend)
-pnpm lint                # Lint all code
+pnpm dev          # Frontend + backend in watch mode
+pnpm build        # Production build (all workspace packages)
+pnpm test         # Backend + frontend unit tests
+pnpm lint         # Lint all packages
 
-# Individual packages
-cd backend && pnpm test  # Backend tests only (Bun test)
-cd frontend && pnpm test # Frontend tests only (Vitest)
+pnpm --filter backend test
+pnpm --filter frontend test
 ```
 
-## Project Structure
+## Repository layout
 
 ```
 fam-mail/
-├── backend/
-│   └── src/
-│       ├── config/          # Environment config schema
-│       ├── database/        # SQLite operations
-│       ├── middleware/       # Auth, CORS, rate limiting, headers
-│       ├── models/          # User, Draft, Session models
-│       ├── routes/          # HTTP route handlers
-│       ├── services/        # PostGrid, IMAP, LLM, notifications
-│       ├── utils/           # Validation, logging, responses
-│       └── validation/      # Postcard request validation
-├── frontend/
-│   └── src/
-│       ├── components/      # React components (postcard, drafts, auth, UI)
-│       ├── hooks/           # Custom hooks (draft persistence, etc.)
-│       ├── services/        # API clients
-│       ├── types/           # TypeScript type definitions
-│       └── utils/           # Postal validation, image processing
-├── docs/                    # Architecture, deployment, plans
+├── backend/src/     # HTTP server, routes, PostGrid, auth, DB
+├── frontend/src/    # React UI
+├── docs/            # Contributing and architecture notes
 ├── docker-compose.yml
 ├── Dockerfile
 └── pnpm-workspace.yaml
 ```
 
-## Docker Deployment
+Project-specific OpenCode / Claude Code configuration lives under `.opencode/` for contributors who use those tools.
+
+## Docker
+
+The image installs workspace dependencies, runs `pnpm build` in `frontend`, bundles the backend with `bun build`, and copies `frontend/dist` next to the backend so **one process on port 8484** serves the API and static UI.
 
 ```bash
 cp .env.example .env
-# Edit .env with production values
+# Edit .env for production: secrets, OIDC redirect URL matching your public URL, etc.
 
-docker-compose up -d
-# App available on port 8484
+docker compose up --build -d
 ```
 
-## Environment Variables
+Then open `http://localhost:8484` (or your host / reverse proxy). Ensure `OIDC_REDIRECT_URI` and any public URL settings match how users reach the app.
 
-See `.env.example` for the complete list. Key categories:
+## Environment variables
 
-| Category | Variables | Required |
-|----------|----------|----------|
-| **PostGrid** | `POSTGRID_MODE`, `POSTGRID_TEST_API_KEY`, `POSTGRID_LIVE_API_KEY` | Yes |
-| **Auth** | `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `JWT_SECRET` | Yes (web UI) |
-| **IMAP** | `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD`, `SUBJECT_FILTER` | Yes (email mode) |
-| **LLM** | `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL` | Yes (email mode) |
-| **Server** | `PORT` (default 8484), `DATABASE_PATH`, `LOG_LEVEL` | No |
+See `.env.example` and `backend/.env.example`. Groupings include PostGrid, OIDC/JWT, server port and database path, optional IMAP and LLM settings for the email pipeline, and webhook secrets.
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines.
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
 
 ## License
 
-MIT - see [LICENSE](LICENSE) for details.
+MIT — see [LICENSE](LICENSE).

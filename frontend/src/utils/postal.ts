@@ -304,13 +304,38 @@ export function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+const US_STATES: Record<string, string> = {
+  ALABAMA: 'AL', ALASKA: 'AK', ARIZONA: 'AZ', ARKANSAS: 'AR', CALIFORNIA: 'CA',
+  COLORADO: 'CO', CONNECTICUT: 'CT', DELAWARE: 'DE', FLORIDA: 'FL', GEORGIA: 'GA',
+  HAWAII: 'HI', IDAHO: 'ID', ILLINOIS: 'IL', INDIANA: 'IN', IOWA: 'IA',
+  KANSAS: 'KS', KENTUCKY: 'KY', LOUISIANA: 'LA', MAINE: 'ME', MARYLAND: 'MD',
+  MASSACHUSETTS: 'MA', MICHIGAN: 'MI', MINNESOTA: 'MN', MISSISSIPPI: 'MS', MISSOURI: 'MO',
+  MONTANA: 'MT', NEBRASKA: 'NE', NEVADA: 'NV', NEWHAMPSHIRE: 'NH', NEWJERSEY: 'NJ',
+  NEWMEXICO: 'NM', NEWYORK: 'NY', NORTHCAROLINA: 'NC', NORTHDAKOTA: 'ND', OHIO: 'OH',
+  OKLAHOMA: 'OK', OREGON: 'OR', PENNSYLVANIA: 'PA', RHODEISLAND: 'RI', SOUTHCAROLINA: 'SC',
+  SOUTHDAKOTA: 'SD', TENNESSEE: 'TN', TEXAS: 'TX', UTAH: 'UT', VERMONT: 'VT',
+  VIRGINIA: 'VA', WASHINGTON: 'WA', WESTVIRGINIA: 'WV', WISCONSIN: 'WI', WYOMING: 'WY',
+  DISTRICTOFCOLUMBIA: 'DC',
+};
+
+const CA_PROVINCES: Record<string, string> = {
+  ALBERTA: 'AB', BRITISHCOLUMBIA: 'BC', MANITOBA: 'MB', NEWBRUNSWICK: 'NB',
+  NEWFOUNDLANDANDLABRADOR: 'NL', NOVASCOTIA: 'NS', ONTARIO: 'ON',
+  PRINCEEDWARDISLAND: 'PE', QUEBEC: 'QC', SASKATCHEWAN: 'SK',
+  NORTHWESTTERRITORIES: 'NT', NUNAVUT: 'NU', YUKON: 'YT',
+};
+
 export function formatStateProvince(state: string, countryCode: string): string {
   if (!state) return '';
 
   const cleaned = state.toUpperCase().replace(/\s/g, '');
 
-  // Ensure proper format (2 letters for US/CA)
   if (countryCode === 'US' || countryCode === 'CA') {
+    if (/^[A-Z]{2}$/.test(cleaned)) return cleaned;
+
+    const lookup = countryCode === 'US' ? US_STATES : CA_PROVINCES;
+    if (lookup[cleaned]) return lookup[cleaned];
+
     return cleaned.slice(0, 2);
   }
 

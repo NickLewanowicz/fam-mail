@@ -6,6 +6,7 @@ export interface PostGridConfig {
   testApiKey: string;
   liveApiKey: string;
   forceTestMode: boolean;
+  mockMode?: boolean;
   webhookSecret: string;
   size: "6x4" | "9x6";
   senderId: string;
@@ -16,6 +17,7 @@ export class PostGridService {
   private apiKey: string
   private baseUrl: string
   private isTestMode: boolean
+  private mockMode: boolean
 
   constructor(configOrApiKey?: PostGridConfig | string, testMode = false) {
     this.baseUrl = 'https://api.postgrid.com/print-mail/v1'
@@ -28,12 +30,14 @@ export class PostGridService {
       }
       this.apiKey = configOrApiKey
       this.isTestMode = testMode
+      this.mockMode = false
       // Create a minimal config for compatibility
       this.config = {
         mode: testMode ? 'test' : 'live',
         testApiKey: configOrApiKey,
         liveApiKey: configOrApiKey,
         forceTestMode: false,
+        mockMode: false,
         webhookSecret: '',
         size: '6x4',
         senderId: '',
@@ -41,6 +45,7 @@ export class PostGridService {
     } else {
       // New constructor: PostGridService(config)
       this.config = configOrApiKey
+      this.mockMode = configOrApiKey.mockMode ?? false
       this.isTestMode = configOrApiKey.mode === 'test' || configOrApiKey.forceTestMode
       this.apiKey = this.getActiveKey()
     }
@@ -62,6 +67,22 @@ export class PostGridService {
   }
 
   async createPostcard(request: PostGridPostcardRequest): Promise<PostGridPostcardResponse> {
+    if (this.mockMode) {
+      const mockId = `mock_${crypto.randomUUID()}`
+      logger.info('PostGrid MOCK: returning fake postcard', { id: mockId })
+      return {
+        id: mockId,
+        object: 'postcard',
+        live: false,
+        status: 'ready',
+        to: request.to,
+        sendDate: new Date().toISOString(),
+        size: request.size || '6x4',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as PostGridPostcardResponse
+    }
+
     try {
       const formData = new URLSearchParams()
 
@@ -153,6 +174,7 @@ try {
       testApiKey: testApiKey || '',
       liveApiKey: liveApiKey || '',
       forceTestMode: (process.env.POSTGRID_FORCE_TEST_MODE || 'false') === 'true',
+      mockMode: (process.env.POSTGRID_MOCK || '').toLowerCase() === 'true',
       webhookSecret: process.env.POSTGRID_WEBHOOK_SECRET || '',
       size: (process.env.POSTCARD_SIZE as '6x4' | '9x6') || '6x4',
       senderId: process.env.POSTCARD_SENDER_ID || '',

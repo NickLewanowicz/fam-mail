@@ -202,15 +202,18 @@ describe('Postal Utilities', () => {
 
   describe('formatStateProvince', () => {
     it('should format US state codes to 2 letters', () => {
-      expect(formatStateProvince('New York', 'US')).toBe('NE');
+      expect(formatStateProvince('New York', 'US')).toBe('NY');
       expect(formatStateProvince('california', 'US')).toBe('CA');
       expect(formatStateProvince('TX', 'US')).toBe('TX');
+      expect(formatStateProvince('North Carolina', 'US')).toBe('NC');
+      expect(formatStateProvince('west virginia', 'US')).toBe('WV');
     });
 
     it('should format Canadian province codes to 2 letters', () => {
       expect(formatStateProvince('Ontario', 'CA')).toBe('ON');
-      expect(formatStateProvince('british columbia', 'CA')).toBe('BR');
+      expect(formatStateProvince('british columbia', 'CA')).toBe('BC');
       expect(formatStateProvince('QC', 'CA')).toBe('QC');
+      expect(formatStateProvince('Nova Scotia', 'CA')).toBe('NS');
     });
 
     it('should return as-is for other countries', () => {

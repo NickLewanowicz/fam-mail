@@ -1,0 +1,9 @@
+{
+  "project": "fam-mail",
+  "description": "Email-to-postcard service with React frontend and Bun backend",
+  "commands": {
+    "test": "cd backend && bun test && cd ../frontend && npx vitest run",
+    "lint": "cd backend && pnpm lint && cd ../frontend && pnpm lint",
+    "build": "cd frontend && pnpm build"
+  }
+}

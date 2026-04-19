@@ -7,6 +7,7 @@ export interface Config {
     testApiKey: string;
     liveApiKey: string;
     forceTestMode: boolean;
+    mockMode: boolean;
     webhookSecret: string;
     size: "6x4" | "9x6";
     senderId: string;
@@ -136,12 +137,15 @@ function getEnvEnum<T extends string>(key: string, defaultValue: T, allowedValue
 }
 
 export function getConfig(): Config {
+  const isMock = getEnvBool("POSTGRID_MOCK", false);
+
   return {
     postgrid: {
       mode: getEnvEnum("POSTGRID_MODE", "test", ["test", "live"] as const),
-      testApiKey: getEnvRequired("POSTGRID_TEST_API_KEY"),
-      liveApiKey: getEnvRequired("POSTGRID_LIVE_API_KEY"),
+      testApiKey: isMock ? getEnv("POSTGRID_TEST_API_KEY", "mock-test-key") : getEnvRequired("POSTGRID_TEST_API_KEY"),
+      liveApiKey: isMock ? getEnv("POSTGRID_LIVE_API_KEY", "mock-live-key") : getEnvRequired("POSTGRID_LIVE_API_KEY"),
       forceTestMode: getEnvBool("POSTGRID_FORCE_TEST_MODE", false),
+      mockMode: isMock,
       webhookSecret: getEnv("POSTGRID_WEBHOOK_SECRET", ""),
       size: getEnvEnum("POSTCARD_SIZE", "6x4", ["6x4", "9x6"] as const),
       senderId: getEnv("POSTCARD_SENDER_ID", ""),

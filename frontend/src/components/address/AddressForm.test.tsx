@@ -201,8 +201,7 @@ describe('AddressForm', () => {
             provinceOrState: 'ON',
             postalOrZip: 'M5V 2N6',
             countryCode: 'CA'
-          }),
-          expect.any(Object)
+          })
         )
       })
     })
@@ -227,19 +226,16 @@ describe('AddressForm', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(
-          {
-            firstName: 'John',
-            lastName: 'Doe',
-            addressLine1: '123 Main St',
-            addressLine2: '',
-            city: 'Toronto',
-            provinceOrState: 'ON',
-            postalOrZip: 'M5V 2N6',
-            countryCode: 'CA'
-          },
-          expect.any(Object)
-        )
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          firstName: 'John',
+          lastName: 'Doe',
+          addressLine1: '123 Main St',
+          addressLine2: '',
+          city: 'Toronto',
+          provinceOrState: 'ON',
+          postalOrZip: 'M5V 2N6',
+          countryCode: 'CA'
+        })
       })
     })
 
@@ -262,19 +258,16 @@ describe('AddressForm', () => {
       await user.click(submitButton)
 
       await waitFor(() => {
-        expect(mockOnSubmit).toHaveBeenCalledWith(
-          {
-            firstName: 'Jane',
-            lastName: 'Smith',
-            addressLine1: '456 Oak Ave',
-            addressLine2: 'Apt 7B',
-            city: 'Vancouver',
-            provinceOrState: 'BC',
-            postalOrZip: 'V6A 1L1',
-            countryCode: 'CA'
-          },
-          expect.any(Object)
-        )
+        expect(mockOnSubmit).toHaveBeenCalledWith({
+          firstName: 'Jane',
+          lastName: 'Smith',
+          addressLine1: '456 Oak Ave',
+          addressLine2: 'Apt 7B',
+          city: 'Vancouver',
+          provinceOrState: 'BC',
+          postalOrZip: 'V6A 1L1',
+          countryCode: 'CA'
+        })
       })
     })
 
@@ -320,8 +313,7 @@ describe('AddressForm', () => {
         expect(mockOnSubmit).toHaveBeenCalledWith(
           expect.objectContaining({
             countryCode: 'US'
-          }),
-          expect.any(Object)
+          })
         )
       })
     })

@@ -1,0 +1,44 @@
+# NightShift orchestrator config for fam-mail
+# Used by: nightshift.py run --config .claude/nightshift.yaml
+
+project_dir: "."
+
+agent:
+  backend: opencode
+  port: 4096
+  model_provider: zai-coding-plan
+  model_id: glm-5.1
+
+issue_tracker:
+  type: github
+  priority_labels:
+    - P0-critical
+    - P1-high  
+    - P2-medium
+    - P3-low
+
+qa:
+  commands:
+    - name: backend_tests
+      cmd: "cd backend && bun test 2>&1"
+      timeout: 30
+    - name: frontend_tests
+      cmd: "cd frontend && npx vitest run 2>&1"
+      timeout: 90
+    - name: backend_lint
+      cmd: "cd backend && pnpm lint 2>&1"  
+      timeout: 30
+    - name: frontend_lint
+      cmd: "cd frontend && pnpm lint 2>&1"
+      timeout: 30
+    - name: frontend_build
+      cmd: "cd frontend && pnpm build 2>&1"
+      timeout: 60
+
+session:
+  max_wait_seconds: 900
+  max_attempts_per_issue: 3
+
+changelog_file: CHANGELOG_AGENT.md
+progress_file: nightshift-progress.json
+log_dir: logs/nightshift

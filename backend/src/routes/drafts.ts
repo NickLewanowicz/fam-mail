@@ -151,7 +151,8 @@ export class DraftRoutes {
 
   async publish(req: Request, user: User): Promise<Response> {
     const url = new URL(req.url)
-    const id = url.pathname.split('/').pop()
+    const segments = url.pathname.split('/')
+    const id = segments[3] // /api/drafts/{id}/publish
 
     if (!id) {
       return jsonResponse({ error: 'Draft ID is required' }, 400, req)
@@ -325,7 +326,8 @@ export class DraftRoutes {
 
   async schedule(req: Request, user: User): Promise<Response> {
     const url = new URL(req.url)
-    const id = url.pathname.split('/').pop()
+    const segments = url.pathname.split('/')
+    const id = segments[3] // /api/drafts/{id}/schedule
     const body = await req.json() as { scheduledFor: string }
 
     if (!id) {
@@ -363,7 +365,8 @@ export class DraftRoutes {
 
   async cancelSchedule(req: Request, user: User): Promise<Response> {
     const url = new URL(req.url)
-    const id = url.pathname.split('/').pop()
+    const segments = url.pathname.split('/')
+    const id = segments[3] // /api/drafts/{id}/cancel-schedule
 
     if (!id) {
       return jsonResponse({ error: 'Draft ID is required' }, 400, req)

@@ -94,6 +94,7 @@ const postgrid = new PostGridService({
   testApiKey: config.postgrid.testApiKey,
   liveApiKey: config.postgrid.liveApiKey,
   forceTestMode: config.postgrid.forceTestMode,
+  mockMode: config.postgrid.mockMode,
   webhookSecret: config.postgrid.webhookSecret,
   size: config.postgrid.size,
   senderId: config.postgrid.senderId,
@@ -272,7 +273,14 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
-    return withSecurityHeaders(jsonResponse({ status: 'ok' }, 200, req), req)
+    return withSecurityHeaders(
+      jsonResponse(
+        { status: 'healthy', version: '1.0.0', timestamp: new Date().toISOString() },
+        200,
+        req
+      ),
+      req
+    )
   }
 
   // #29: Debug endpoint only available in development mode

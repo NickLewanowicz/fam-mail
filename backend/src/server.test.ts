@@ -64,8 +64,11 @@ describe('Backend Server', () => {
             const data = await res.json() as Record<string, unknown>
 
             expect(res.status).toBe(200)
-            expect(data.status).toBe('ok')
-            expect(Object.keys(data)).toHaveLength(1)
+            expect(data.status).toBe('healthy')
+            expect(data.version).toBe('1.0.0')
+            expect(typeof data.timestamp).toBe('string')
+            expect(Number.isNaN(Date.parse(String(data.timestamp)))).toBe(false)
+            expect(Object.keys(data).sort()).toEqual(['status', 'timestamp', 'version'])
         })
 
         it('should include CORS headers', async () => {
