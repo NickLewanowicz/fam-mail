@@ -1,7 +1,22 @@
-import { describe, it, expect, beforeEach } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll } from 'bun:test'
 import { handlePostcardCreate } from './postcards'
 import type { User } from '../models/user'
 import { Database } from '../database'
+
+// ---------------------------------------------------------------------------
+// Environment setup — required by getConfig() in route handler
+// ---------------------------------------------------------------------------
+
+beforeAll(() => {
+  process.env.POSTGRID_TEST_API_KEY = process.env.POSTGRID_TEST_API_KEY || 'test-key-for-validation-tests'
+  process.env.POSTGRID_LIVE_API_KEY = process.env.POSTGRID_LIVE_API_KEY || 'live-key-for-validation-tests'
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret-for-validation-tests'
+  process.env.OIDC_ISSUER_URL = process.env.OIDC_ISSUER_URL || 'https://accounts.google.com'
+  process.env.OIDC_CLIENT_ID = process.env.OIDC_CLIENT_ID || 'test-client-id'
+  process.env.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET || 'test-client-secret'
+  process.env.OIDC_REDIRECT_URI = process.env.OIDC_REDIRECT_URI || 'http://localhost:3000/auth/callback'
+  process.env.LLM_API_KEY = process.env.LLM_API_KEY || 'test-llm-key'
+})
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -243,12 +258,12 @@ describe('handlePostcardCreate — Address Validation', () => {
 
   // --- Content requirement ---------------------------------------------------
 
-  it('requires at least one of frontHTML, backHTML, or message', async () => {
+  it('requires at least one of frontHTML, backHTML, message, or image', async () => {
     const req = makeRequest({ to: validUSAddress })
     const res = await handlePostcardCreate(req, mockUser, db)
     const data = await getResponse(res)
     expect(res.status).toBe(400)
-    expect(data.errors!.some(e => e.message.includes('frontHTML, backHTML, or message'))).toBe(true)
+    expect(data.errors!.some(e => e.message.includes('frontHTML, backHTML, message, or image'))).toBe(true)
   })
 
   // --- Missing `to` entirely -------------------------------------------------

@@ -36,8 +36,8 @@ export class AuthMiddleware {
     }
   }
 
-  requireAuth(handler: (req: Request, user: User) => Promise<any>) {
-    return async (req: Request): Promise<any> => {
+  requireAuth(handler: (req: Request, user: User) => Promise<Response>) {
+    return async (req: Request): Promise<Response> => {
       const { user, error } = await this.authenticate(req)
 
       if (error) {

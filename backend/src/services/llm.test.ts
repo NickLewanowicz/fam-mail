@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import { LLMService } from "./llm";
 
 // Type-safe mock fetch
-const createMockFetch = (responseBody: any) => {
+const createMockFetch = (responseBody: unknown) => {
   return async (_url: string | Request, _init?: RequestInit) => ({
     ok: true,
     json: async () => responseBody,
@@ -44,7 +44,7 @@ describe("LLM Service", () => {
       }],
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown as typeof fetch;
 
     const result = await service.parseEmail(email);
     expect(result.recipient.name).toBe("John Doe");
@@ -63,7 +63,7 @@ describe("LLM Service", () => {
       }],
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown as typeof fetch;
 
     const email = {
       subject: "Fammail Postcard",
@@ -90,7 +90,7 @@ describe("LLM Service", () => {
       }],
     });
 
-    global.fetch = mockFetch as any;
+    global.fetch = mockFetch as unknown as typeof fetch;
 
     const email = {
       subject: "Fammail Postcard",
