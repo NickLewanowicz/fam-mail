@@ -542,16 +542,16 @@ describe('App Component', () => {
         expect(screen.getByTestId('mock-postcard-builder')).toBeInTheDocument()
       })
 
-      // Show modal test
-      await user.click(screen.getByText('Show Modal Test'))
+      // Show modal test — button text split across text nodes, use regex
+      await user.click(screen.getByText(/Show Modal Test Page/))
 
       await waitFor(() => {
         expect(screen.getByTestId('mock-modal-test-page')).toBeInTheDocument()
         expect(screen.queryByTestId('mock-postcard-builder')).not.toBeInTheDocument()
       })
 
-      // Hide modal test
-      await user.click(screen.getByText('Hide Modal Test'))
+      // Hide modal test — button text split across text nodes, use regex
+      await user.click(screen.getByText(/Hide Modal Test Page/))
 
       await waitFor(() => {
         expect(screen.queryByTestId('mock-modal-test-page')).not.toBeInTheDocument()
