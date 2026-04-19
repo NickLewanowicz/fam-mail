@@ -307,4 +307,179 @@ describe('Backend Server', () => {
             expect(data.error).toBe('Not Found')
         })
     })
+
+    describe('Rate limiting (#42)', () => {
+        it('should rate limit POST /api/postcards after exceeding limit', async () => {
+            // The postcard rate limiter allows 5 req/min.
+            // The first 5 should pass (though they'll get 401 auth errors — that's fine,
+            // we just need to confirm the rate limiter fires AFTER the limit).
+            for (let i = 0; i < 5; i++) {
+                const req = new Request('http://localhost:3001/api/postcards', {
+                    method: 'POST',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-postcards' },
+                    body: JSON.stringify({}),
+                })
+                const res = await handleRequest(req)
+                // All should be 401 (auth failure), not 429
+                expect(res.status).toBe(401)
+            }
+
+            // 6th request from same IP should be 429
+            const req = new Request('http://localhost:3001/api/postcards', {
+                method: 'POST',
+                headers: { 'x-forwarded-for': 'rate-limit-test-postcards' },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+            const data = (await res.json()) as { error: string; retryAfter?: number }
+            expect(data.error).toBe('Too many requests')
+            expect(data.retryAfter).toBeDefined()
+            expect(data.retryAfter!).toBeGreaterThan(0)
+        })
+
+        it('should rate limit POST /api/webhook/email after exceeding limit', async () => {
+            // Webhook rate limiter allows 20 req/min
+            for (let i = 0; i < 20; i++) {
+                const req = new Request('http://localhost:3001/api/webhook/email', {
+                    method: 'POST',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-webhooks' },
+                    body: JSON.stringify({}),
+                })
+                await handleRequest(req)
+            }
+
+            // 21st request should be 429
+            const req = new Request('http://localhost:3001/api/webhook/email', {
+                method: 'POST',
+                headers: { 'x-forwarded-for': 'rate-limit-test-webhooks' },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+            const data = (await res.json()) as { error: string }
+            expect(data.error).toBe('Too many requests')
+        })
+
+        it('should rate limit POST /api/drafts after exceeding limit', async () => {
+            // Draft rate limiter allows 30 req/min
+            for (let i = 0; i < 30; i++) {
+                const req = new Request('http://localhost:3001/api/drafts', {
+                    method: 'POST',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-drafts' },
+                    body: JSON.stringify({}),
+                })
+                await handleRequest(req)
+            }
+
+            // 31st request should be 429
+            const req = new Request('http://localhost:3001/api/drafts', {
+                method: 'POST',
+                headers: { 'x-forwarded-for': 'rate-limit-test-drafts' },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+            const data = (await res.json()) as { error: string }
+            expect(data.error).toBe('Too many requests')
+        })
+
+        it('should rate limit PUT /api/drafts/:id after exceeding limit', async () => {
+            for (let i = 0; i < 30; i++) {
+                const req = new Request('http://localhost:3001/api/drafts/test-id', {
+                    method: 'PUT',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-drafts-put' },
+                    body: JSON.stringify({}),
+                })
+                await handleRequest(req)
+            }
+
+            const req = new Request('http://localhost:3001/api/drafts/test-id', {
+                method: 'PUT',
+                headers: { 'x-forwarded-for': 'rate-limit-test-drafts-put' },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+        })
+
+        it('should rate limit DELETE /api/drafts/:id after exceeding limit', async () => {
+            for (let i = 0; i < 30; i++) {
+                const req = new Request('http://localhost:3001/api/drafts/test-id', {
+                    method: 'DELETE',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-drafts-delete' },
+                })
+                await handleRequest(req)
+            }
+
+            const req = new Request('http://localhost:3001/api/drafts/test-id', {
+                method: 'DELETE',
+                headers: { 'x-forwarded-for': 'rate-limit-test-drafts-delete' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+        })
+
+        it('should rate limit POST /api/drafts/:id/publish after exceeding limit', async () => {
+            for (let i = 0; i < 30; i++) {
+                const req = new Request('http://localhost:3001/api/drafts/test-id/publish', {
+                    method: 'POST',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-drafts-publish' },
+                    body: JSON.stringify({}),
+                })
+                await handleRequest(req)
+            }
+
+            const req = new Request('http://localhost:3001/api/drafts/test-id/publish', {
+                method: 'POST',
+                headers: { 'x-forwarded-for': 'rate-limit-test-drafts-publish' },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+        })
+
+        it('should not rate limit GET /api/drafts', async () => {
+            // GET drafts should not be rate limited (read-only, no DB writes concern)
+            for (let i = 0; i < 35; i++) {
+                const req = new Request('http://localhost:3001/api/drafts', {
+                    method: 'GET',
+                    headers: { 'x-forwarded-for': 'rate-limit-test-drafts-get' },
+                })
+                const res = await handleRequest(req)
+                // Should always get 401 (auth required), never 429
+                expect(res.status).toBe(401)
+            }
+        })
+
+        it('should track different IPs independently for postcard rate limiting', async () => {
+            // Exhaust limit for IP-A
+            for (let i = 0; i < 5; i++) {
+                const req = new Request('http://localhost:3001/api/postcards', {
+                    method: 'POST',
+                    headers: { 'x-forwarded-for': 'ip-postcard-A' },
+                    body: JSON.stringify({}),
+                })
+                await handleRequest(req)
+            }
+
+            // IP-A should be rate limited
+            const reqA = new Request('http://localhost:3001/api/postcards', {
+                method: 'POST',
+                headers: { 'x-forwarded-for': 'ip-postcard-A' },
+                body: JSON.stringify({}),
+            })
+            const resA = await handleRequest(reqA)
+            expect(resA.status).toBe(429)
+
+            // IP-B should NOT be rate limited
+            const reqB = new Request('http://localhost:3001/api/postcards', {
+                method: 'POST',
+                headers: { 'x-forwarded-for': 'ip-postcard-B' },
+                body: JSON.stringify({}),
+            })
+            const resB = await handleRequest(reqB)
+            expect(resB.status).toBe(401) // auth failure, not rate limit
+        })
+    })
 })

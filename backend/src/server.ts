@@ -18,8 +18,31 @@ import { DraftRoutes } from './routes/drafts'
 import type { LLMConfig } from './services/llm'
 import { logger } from './utils/logger'
 
-// Rate limiter for auth endpoints: 10 requests per minute per IP
-const authRateLimiter = new RateLimiter(10, 60_000)
+// Rate limiters — per-endpoint tuning to balance UX and abuse prevention
+const authRateLimiter = new RateLimiter(10, 60_000) // 10/min auth
+const postcardRateLimiter = new RateLimiter(5, 60_000) // 5/min postcards (costs real money)
+const webhookRateLimiter = new RateLimiter(20, 60_000) // 20/min webhooks
+const draftRateLimiter = new RateLimiter(30, 60_000) // 30/min drafts
+
+// Periodic cleanup of expired rate-limit entries to prevent memory leaks
+const CLEANUP_INTERVAL_MS = 5 * 60_000 // every 5 minutes
+const cleanupTimer = setInterval(() => {
+  authRateLimiter.cleanup()
+  postcardRateLimiter.cleanup()
+  webhookRateLimiter.cleanup()
+  draftRateLimiter.cleanup()
+}, CLEANUP_INTERVAL_MS)
+// Don't prevent process exit
+if (cleanupTimer.unref) cleanupTimer.unref()
+
+/** Helper: check rate limit and return 429 if exceeded */
+function checkRateLimit(limiter: RateLimiter, req: Request): Response | null {
+  const { allowed, retryAfterMs } = limiter.check(getClientIp(req))
+  if (!allowed) {
+    return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429, req)
+  }
+  return null
+}
 
 const config = getConfig()
 const db = new Database(config.database.path)
@@ -106,18 +129,14 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   // Auth endpoints — rate limited to prevent brute-force attacks
   if (url.pathname === '/api/auth/login' && req.method === 'POST') {
-    const { allowed, retryAfterMs } = authRateLimiter.check(getClientIp(req))
-    if (!allowed) {
-      return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429, req)
-    }
+    const rateLimitResponse = checkRateLimit(authRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
     return authRoutes.handleAuthLogin(req)
   }
 
   if (url.pathname === '/api/auth/callback' && req.method === 'GET') {
-    const { allowed, retryAfterMs } = authRateLimiter.check(getClientIp(req))
-    if (!allowed) {
-      return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429, req)
-    }
+    const rateLimitResponse = checkRateLimit(authRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
     return authRoutes.handleAuthCallback(req)
   }
 
@@ -130,6 +149,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   // Drafts endpoints (all require authentication)
+  // Write operations are rate limited (#42)
   if (url.pathname === '/api/drafts' && req.method === 'GET') {
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
@@ -139,6 +159,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/drafts' && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -155,6 +178,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'PUT') {
+    const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -163,6 +189,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'DELETE') {
+    const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -171,6 +200,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/publish$/) && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -179,6 +211,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/schedule$/) && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -187,6 +222,9 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/cancel-schedule$/) && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -211,7 +249,11 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   // #30: Postcard creation requires authentication (PostGrid costs real money)
+  // #42: Rate limited to prevent financial exposure
   if (url.pathname === '/api/postcards' && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(postcardRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
+
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
       return jsonResponse({ error: authResult.error }, 401, req)
@@ -219,8 +261,10 @@ export async function handleRequest(req: Request): Promise<Response> {
     return handlePostcardCreate(req, authResult.user!, db)
   }
 
-  // Email webhook endpoints
+  // Email webhook endpoints — rate limited (#42)
   if (url.pathname === '/api/webhook/email' && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(webhookRateLimiter, req)
+    if (rateLimitResponse) return rateLimitResponse
     return handleEmailWebhook(req)
   }
 
