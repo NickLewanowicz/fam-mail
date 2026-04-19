@@ -18,11 +18,7 @@ describe('Backend Server', () => {
         process.env.POSTGRID_TEST_API_KEY = 'pg_test_123'
         process.env.POSTGRID_LIVE_API_KEY = 'pg_live_456'
         process.env.POSTGRID_FORCE_TEST_MODE = 'false'
-        process.env.IMAP_HOST = 'imap.example.com'
-        process.env.IMAP_PORT = '993'
-        process.env.IMAP_USER = 'test@example.com'
-        process.env.IMAP_PASSWORD = 'password'
-        process.env.SUBJECT_FILTER = 'Fammail Postcard'
+        // IMAP vars intentionally omitted — server starts without them (#18)
         process.env.LLM_PROVIDER = 'openrouter'
         process.env.LLM_API_KEY = 'sk-123'
         process.env.LLM_MODEL = 'openai/gpt-4o'

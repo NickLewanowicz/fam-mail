@@ -17,11 +17,7 @@ process.env.OIDC_CLIENT_ID = "test-client-id";
 process.env.OIDC_CLIENT_SECRET = "test-client-secret";
 process.env.OIDC_REDIRECT_URI = "http://localhost:5173/auth/callback";
 process.env.JWT_SECRET = "test-jwt-secret-key-16chars";
-process.env.IMAP_HOST = "test.imap.com";
-process.env.IMAP_USER = "test@user.com";
-process.env.IMAP_PASSWORD = "test-password";
-process.env.IMAP_PORT = "993";
-process.env.IMAP_TLS = "true";
+// IMAP vars intentionally omitted — not required for beta (#18)
 
 const TEST_DB = join(tmpdir(), `test-drafts-${Date.now()}.db`);
 

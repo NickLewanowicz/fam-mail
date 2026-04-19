@@ -20,9 +20,7 @@ process.env.OIDC_CLIENT_ID = 'test-client-id'
 process.env.OIDC_CLIENT_SECRET = 'test-client-secret'
 process.env.OIDC_REDIRECT_URI = 'http://localhost:3000/auth/callback'
 process.env.OIDC_ISSUER_URL = 'https://accounts.google.com'
-process.env.IMAP_HOST = 'localhost'
-process.env.IMAP_USER = 'test'
-process.env.IMAP_PASSWORD = 'test'
+// IMAP vars intentionally omitted — not required for beta (#18)
 
 // Test user data
 const testUser: User = {

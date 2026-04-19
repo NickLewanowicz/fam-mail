@@ -92,4 +92,27 @@ describe("Configuration", () => {
 
     expect(() => getConfig()).toThrow("IMAP_USER is required");
   });
+
+  it("should start server with minimal config (no IMAP, no LLM key) (#18)", () => {
+    // This is the exact config needed for the web UI postcard flow in beta.
+    // No IMAP vars, no LLM key — only PostGrid, OIDC, JWT, and database.
+    process.env.POSTGRID_MODE = "test";
+    process.env.POSTGRID_TEST_API_KEY = "pg_test_min";
+    process.env.POSTGRID_LIVE_API_KEY = "pg_live_min";
+    process.env.JWT_SECRET = "test-secret-key-minimum-32-characters-long";
+    process.env.OIDC_ISSUER_URL = "https://accounts.google.com";
+    process.env.OIDC_CLIENT_ID = "minimal-client";
+    process.env.OIDC_CLIENT_SECRET = "minimal-secret";
+    process.env.OIDC_REDIRECT_URI = "http://localhost:8484/api/auth/callback";
+    // Explicitly ensure no IMAP
+    delete process.env.IMAP_HOST;
+    delete process.env.IMAP_USER;
+    delete process.env.IMAP_PASSWORD;
+
+    const config = getConfig();
+    expect(config.imap).toBeNull();
+    expect(config.postgrid.mode).toBe("test");
+    expect(config.jwt.secret).toBe("test-secret-key-minimum-32-characters-long");
+    expect(config.oidc.clientId).toBe("minimal-client");
+  });
 });
