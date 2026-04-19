@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "bun:test";
 import { Database } from "../database";
 import { DraftRoutes } from "./drafts";
+import { AuthMiddleware } from "../middleware/auth";
 import type { User } from "../models/user";
 import type { Draft } from "../models/draft";
 import type { PostGridPostcardResponse } from "../types/postgrid";
@@ -66,7 +67,7 @@ describe("DraftRoutes", () => {
   let draftRoutes: DraftRoutes;
   let user1: User;
   let user2: User;
-  let mockPostgrid: any;
+  let mockPostgrid: ReturnType<typeof createMockPostgrid>;
 
   beforeEach(() => {
     if (existsSync(TEST_DB)) {
@@ -104,7 +105,7 @@ describe("DraftRoutes", () => {
 
     mockPostgrid = createMockPostgrid();
     // DraftRoutes needs an AuthMiddleware but we pass user directly, so pass a dummy
-    draftRoutes = new DraftRoutes(db, null as any, mockPostgrid);
+    draftRoutes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
   });
 
   // Helper function to create a test draft
@@ -142,7 +143,7 @@ describe("DraftRoutes", () => {
   }
 
   // Helper function to create a test Request
-  function createRequest(url: string, body?: any): Request {
+  function createRequest(url: string, body?: unknown): Request {
     const init: RequestInit = { method: "GET" };
     if (body) {
       init.method = "POST";
@@ -473,10 +474,10 @@ describe("DraftRoutes", () => {
       const draft = createTestDraft(user1.id, "draft");
       db.insertDraft(draft);
 
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
-      const data = await response.json() as { success?: boolean; message?: string; postcard?: any };
+      const data = await response.json() as { success?: boolean; message?: string; postcard?: PostGridPostcardResponse };
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
@@ -495,10 +496,10 @@ describe("DraftRoutes", () => {
       const draft = createTestDraft(user1.id, "draft");
       db.insertDraft(draft);
 
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
-      const data = await response.json() as { success?: boolean; postcard?: any };
+      const data = await response.json() as { success?: boolean; postcard?: PostGridPostcardResponse };
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
@@ -523,10 +524,10 @@ describe("DraftRoutes", () => {
       };
       db.insertDraft(draft);
 
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
-      const data = await response.json() as { error?: string; errors?: any[] };
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
 
       expect(response.status).toBe(400);
       expect(data.error).toBe("Validation failed");
@@ -541,16 +542,16 @@ describe("DraftRoutes", () => {
       draft.backHTML = undefined;
       db.insertDraft(draft);
 
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
-      const data = await response.json() as { error?: string; errors?: any[] };
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
 
       expect(response.status).toBe(400);
       expect(data.error).toBe("Validation failed");
       expect(data.errors).toBeDefined();
       // Should have exactly one content error
-      const contentErrors = data.errors!.filter((e: any) => e.field === "content");
+      const contentErrors = data.errors!.filter((e: { field?: string }) => e.field === "content");
       expect(contentErrors.length).toBe(1);
     });
 
@@ -559,7 +560,7 @@ describe("DraftRoutes", () => {
       db.insertDraft(draft);
 
       // DraftRoutes with no postgrid service
-      const routes = new DraftRoutes(db, null as any, null);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, null);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
       const data = await response.json() as { error?: string };
@@ -579,7 +580,7 @@ describe("DraftRoutes", () => {
         },
       });
 
-      const routes = new DraftRoutes(db, null as any, failingPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, failingPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
       const data = await response.json() as { success?: boolean; error?: string };
@@ -604,7 +605,7 @@ describe("DraftRoutes", () => {
         },
       });
 
-      const routes = new DraftRoutes(db, null as any, failingPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, failingPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
 
@@ -619,7 +620,7 @@ describe("DraftRoutes", () => {
       const draft = createTestDraft(user1.id, "ready");
       db.insertDraft(draft);
 
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
       const data = await response.json() as { error?: string };
@@ -630,7 +631,7 @@ describe("DraftRoutes", () => {
 
     it("should return 404 when not found", async () => {
       const nonExistentId = crypto.randomUUID();
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${nonExistentId}`);
       const response = await routes.publish(req, user1);
       const data = await response.json() as { error?: string };
@@ -643,7 +644,7 @@ describe("DraftRoutes", () => {
       const draft = createTestDraft(user2.id, "draft");
       db.insertDraft(draft);
 
-      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
       const data = await response.json() as { error?: string };
@@ -658,9 +659,9 @@ describe("DraftRoutes", () => {
       draft.message = "Hello **world**!\nThis is a test.";
       db.insertDraft(draft);
 
-      let capturedRequest: any = null;
+      let capturedRequest: Record<string, unknown> = null;
       const spyPostgrid = createMockPostgrid({
-        createPostcard: async (req: any) => {
+        createPostcard: async (req: unknown) => {
           capturedRequest = req;
           return {
             id: 'postgrid-spy-id',
@@ -675,7 +676,7 @@ describe("DraftRoutes", () => {
         },
       });
 
-      const routes = new DraftRoutes(db, null as any, spyPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
 
@@ -692,9 +693,9 @@ describe("DraftRoutes", () => {
       draft.message = "This message should be ignored";
       db.insertDraft(draft);
 
-      let capturedRequest: any = null;
+      let capturedRequest: Record<string, unknown> = null;
       const spyPostgrid = createMockPostgrid({
-        createPostcard: async (req: any) => {
+        createPostcard: async (req: unknown) => {
           capturedRequest = req;
           return {
             id: 'postgrid-spy-id',
@@ -709,7 +710,7 @@ describe("DraftRoutes", () => {
         },
       });
 
-      const routes = new DraftRoutes(db, null as any, spyPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
 
@@ -722,9 +723,9 @@ describe("DraftRoutes", () => {
       draft.size = "6x9";
       db.insertDraft(draft);
 
-      let capturedRequest: any = null;
+      let capturedRequest: Record<string, unknown> = null;
       const spyPostgrid = createMockPostgrid({
-        createPostcard: async (req: any) => {
+        createPostcard: async (req: unknown) => {
           capturedRequest = req;
           return {
             id: 'postgrid-spy-id',
@@ -739,7 +740,7 @@ describe("DraftRoutes", () => {
         },
       });
 
-      const routes = new DraftRoutes(db, null as any, spyPostgrid);
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
 
@@ -774,7 +775,7 @@ describe("DraftRoutes", () => {
       const draft = createTestDraft(user1.id, "draft");
       db.insertDraft(draft);
 
-      const body = {} as any;
+      const body = {} as Record<string, unknown>;
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`, body);
       const response = await draftRoutes.schedule(req, user1);
       const data = await response.json() as { error?: string };

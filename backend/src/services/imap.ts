@@ -112,7 +112,7 @@ export class IMAPService {
       since.getTime() > 0 ? { since } : "1:*",
       { envelope: true, bodyParts: [''], source: true }
     )) {
-      await this.processMessage(msg as unknown as EmailMessage);
+      await this.processMessage(msg as EmailMessage);
     }
   }
 

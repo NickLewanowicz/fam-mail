@@ -18,9 +18,9 @@ describe("IMAP Service", () => {
 
   it("should filter emails by subject", () => {
     const imap = new IMAPService(
-      { subjectFilter: "Fammail Postcard" } as any,
+      { subjectFilter: "Fammail Postcard" } as unknown as import("./imap").IMAPConfig,
       db,
-      {} as any,
+      {} as unknown as import("./llm").LLMConfig,
       postgrid
     );
 
@@ -31,9 +31,9 @@ describe("IMAP Service", () => {
 
   it("should check for image attachments", () => {
     const imap = new IMAPService(
-      { requireImageAttachment: true } as any,
+      { requireImageAttachment: true } as unknown as import("./imap").IMAPConfig,
       db,
-      {} as any,
+      {} as unknown as import("./llm").LLMConfig,
       postgrid
     );
 

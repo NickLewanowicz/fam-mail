@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test'
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test'
 
 // Mock config — this must come before importing webhook
 const mockGetConfig = mock(() => ({
@@ -19,7 +19,7 @@ const { handleEmailWebhook, handleWebhookHealth, _setEmailService } = await impo
 _setEmailService({
   validateEmailData: mockValidateEmailData,
   processEmail: mockProcessEmail,
-} as any)
+} as unknown as import('../services/emailService').EmailService)
 
 describe('handleWebhookHealth', () => {
   it('returns 200 with status healthy', async () => {
@@ -498,7 +498,14 @@ describe('handleEmailWebhook - security headers', () => {
 })
 
 describe('handleEmailWebhook - CORS headers', () => {
+  let originalAllowedOrigins: string | undefined
   beforeEach(() => {
+    // Preserve and override env so getCorsHeaders (which calls getConfig
+    // from the real module when Bun has already cached the import) sees
+    // the correct allowed origins.
+    originalAllowedOrigins = process.env.ALLOWED_ORIGINS
+    process.env.ALLOWED_ORIGINS = 'http://localhost:5173,https://example.com'
+
     mockGetConfig.mockImplementation(() => ({
       postgrid: { webhookSecret: '' },
       server: { allowedOrigins: ['http://localhost:5173', 'https://example.com'] },
@@ -507,10 +514,22 @@ describe('handleEmailWebhook - CORS headers', () => {
     mockProcessEmail.mockImplementation(() => Promise.resolve({ success: true, result: { id: 'pc_123' } }))
   })
 
+  afterEach(() => {
+    // Restore original env
+    if (originalAllowedOrigins === undefined) {
+      delete process.env.ALLOWED_ORIGINS
+    } else {
+      process.env.ALLOWED_ORIGINS = originalAllowedOrigins
+    }
+  })
+
   it('includes CORS headers in response', async () => {
     const req = new Request('http://localhost:8484/api/webhook/email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': 'http://localhost:5173',
+      },
       body: JSON.stringify({ from: 'test@example.com', to: ['recipient@example.com'], subject: 'Test' }),
     })
 

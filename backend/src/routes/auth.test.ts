@@ -68,7 +68,7 @@ const mockHandleCallback = mock(() =>
 const mockOidcService = {
   generateAuthUrl: mockGenerateAuthUrl,
   handleCallback: mockHandleCallback,
-} as any
+} as unknown as import('../services/oidcService').OIDCService
 
 // Setup routes
 const routes = setupAuthRoutes(mockOidcService, jwtService, authMiddleware, db)

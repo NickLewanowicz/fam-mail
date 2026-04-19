@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, afterAll } from 'bun:test'
 import { AuthMiddleware } from './auth'
 import { JWTService } from '../services/jwtService'
 import { Database } from '../database'
+import type { User } from '../models/user'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { unlinkSync, existsSync } from 'fs'
@@ -11,7 +12,7 @@ describe('AuthMiddleware', () => {
   let db: Database
   let jwtService: JWTService
   let middleware: AuthMiddleware
-  let testUser: any
+  let testUser: User
   let validToken: string
 
   beforeEach(async () => {
@@ -132,7 +133,7 @@ describe('AuthMiddleware', () => {
   describe('requireAuth()', () => {
     it('returns 401 JSON response when no auth header', async () => {
       const req = new Request('http://localhost:3000/test')
-      const handler = async (_req: Request, _user: any) => ({ message: 'Should not be called' })
+      const handler = async (_req: Request, _user: User) => ({ message: 'Should not be called' })
 
       const protectedHandler = middleware.requireAuth(handler)
       const response = await protectedHandler(req)
@@ -146,7 +147,7 @@ describe('AuthMiddleware', () => {
       const req = new Request('http://localhost:3000/test', {
         headers: { 'authorization': 'Basic invalid' },
       })
-      const handler = async (_req: Request, _user: any) => ({ message: 'Should not be called' })
+      const handler = async (_req: Request, _user: User) => ({ message: 'Should not be called' })
 
       const protectedHandler = middleware.requireAuth(handler)
       const response = await protectedHandler(req)
@@ -161,7 +162,7 @@ describe('AuthMiddleware', () => {
       const req = new Request('http://localhost:3000/test', {
         headers: { 'authorization': `Bearer ${invalidToken}` },
       })
-      const handler = async (_req: Request, _user: any) => ({ message: 'Should not be called' })
+      const handler = async (_req: Request, _user: User) => ({ message: 'Should not be called' })
 
       const protectedHandler = middleware.requireAuth(handler)
       const response = await protectedHandler(req)
@@ -177,9 +178,9 @@ describe('AuthMiddleware', () => {
       })
 
       let handlerCalled = false
-      let receivedUser: any = null
+      let receivedUser: User | null = null
 
-      const handler = async (req: Request, user: any) => {
+      const handler = async (req: Request, user: User) => {
         handlerCalled = true
         receivedUser = user
         return { message: 'Success', userId: user.id }
@@ -190,7 +191,7 @@ describe('AuthMiddleware', () => {
 
       expect(handlerCalled).toBe(true)
       expect(receivedUser).toBeDefined()
-      expect(receivedUser.id).toBe(testUser.id)
+      expect(receivedUser!.id).toBe(testUser.id)
       // requireAuth returns whatever the handler returns directly
       expect(result).toEqual({ message: 'Success', userId: testUser.id })
     })
@@ -208,7 +209,7 @@ describe('AuthMiddleware', () => {
         headers: { 'authorization': `Bearer ${tokenForNonExistentUser}` },
       })
 
-      const handler = async (_req: Request, _user: any) => ({ message: 'Should not be called' })
+      const handler = async (_req: Request, _user: User) => ({ message: 'Should not be called' })
 
       const protectedHandler = middleware.requireAuth(handler)
       const response = await protectedHandler(req)
@@ -220,7 +221,7 @@ describe('AuthMiddleware', () => {
 
     it('response from requireAuth on failure has correct JSON error body with proper Content-Type', async () => {
       const req = new Request('http://localhost:3000/test')
-      const handler = async (_req: Request, _user: any) => ({ message: 'Should not be called' })
+      const handler = async (_req: Request, _user: User) => ({ message: 'Should not be called' })
 
       const protectedHandler = middleware.requireAuth(handler)
       const response = await protectedHandler(req)
@@ -242,7 +243,7 @@ describe('AuthMiddleware', () => {
 
       let receivedReq: Request | null = null
 
-      const handler = async (req: Request, _user: any) => {
+      const handler = async (req: Request, _user: User) => {
         receivedReq = req
         return { url: req.url, method: req.method }
       }
@@ -266,7 +267,7 @@ describe('AuthMiddleware', () => {
         data: { key: 'value' },
       }
 
-      const handler = async (_req: Request, _user: any) => customResponse
+      const handler = async (_req: Request, _user: User) => customResponse
 
       const protectedHandler = middleware.requireAuth(handler)
       const result = await protectedHandler(req)
