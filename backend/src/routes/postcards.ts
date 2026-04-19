@@ -42,7 +42,7 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
     const allErrors: Array<{ field: string; message: string }> = []
 
     if (!to) {
-      return jsonResponse({ error: 'Missing required address fields' }, 400)
+      return jsonResponse({ error: 'Missing required address fields' }, 400, req)
     }
 
     const addressResult = validateAddress(to, 'to')
@@ -84,14 +84,14 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
     }
 
     if (allErrors.length > 0) {
-      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400)
+      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400, req)
     }
 
     const postgridService = getPostgridService()
     if (!postgridService) {
       return jsonResponse({
         error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.'
-      }, 500)
+      }, 500, req)
     }
 
     let finalBackHTML = backHTML
@@ -175,13 +175,13 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       success: true,
       postcard: result,
       testMode: postgridService.getTestMode(),
-    })
+    }, 200, req)
   } catch (error: unknown) {
     const status = (error as { status?: number }).status || 500
     return jsonResponse({
       success: false,
       error: (error as { message?: string }).message || 'Failed to create postcard',
       details: (error as { error?: unknown }).error,
-    }, status)
+    }, status, req)
   }
 }

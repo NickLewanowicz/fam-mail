@@ -4,6 +4,60 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 11:59] Progress on #34: [P2/Security] CORS and security headers duplicated inconsistently across routes
+
+Attempt 1. 30 tools, 0 commits. QA: GREEN.
+
+---
+
+## [2026-04-19 11:55] Closed #44: [P2/Enhancement] Lint errors block CI — 5 errors in postgrid.test.ts, postcards.test.ts, postcard.ts
+
+escribed in #44 has **already been resolved** in the current codebase:
+
+1. **`validation/postcard.ts`** — The `validateMessage` import was already removed (line 10 now shows `validateSize` instead)
+2. **`services/postgrid.test.ts`** — Line 1 imports `afterEach` from `bun:test` but it's used properly in the test file (only `beforeEach` was removed)
+3. **`routes/postcards.test.ts`** — Lines 790 and 
+
+**Issues closed:** #44
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 11:51] Closed #45: [P2/Enhancement] No environment variable configuration in frontend — API URL hardcoded
+
+centralized config:
+   - `frontend/src/utils/apiConfig.ts` — exports `API_BASE_URL` using `import.meta.env.VITE_API_URL ?? ''`
+   - All API modules (`api.ts`, `draftApi.ts`, `authApi.ts`) import from `apiConfig`
+
+3. **`vite.config.ts`** uses `loadEnv` with `env.VITE_API_URL || 'http://localhost:8484'` for the proxy target
+
+### ✅ Supporting infrastructure:
+- `frontend/src/vite-env.d.ts` has TypeScr
+
+**Issues closed:** #45
+
+**Tests:** All passing (GREEN)
+
+---
+
+## [2026-04-19 11:40] Closed #47: [P2/Enhancement] No React ErrorBoundary — any component error crashes entire app
+
+
+Here's a summary of what was accomplished for issue #47:
+
+1. **Added `SectionErrorFallback` component** in `App.tsx` — renders a DaisyUI `alert-error` inline within the page layout
+2. **Wrapped each major section** (`StatusCard`, `PostcardBuilder`, `DraftList`) in its own `<ErrorBoundary>` so a crash in one section doesn't take down the whole app
+3. **Created `App.error-boundary.test.tsx`** — 3 i
+
+**Issues closed:** #47
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
 ## [2026-04-19 11:26] Progress on #47: [P2/Enhancement] No React ErrorBoundary — any component error crashes entire app
 
 Attempt 1. 17 tools, 0 commits. QA: GREEN.

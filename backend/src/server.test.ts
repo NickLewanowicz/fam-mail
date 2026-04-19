@@ -477,4 +477,189 @@ describe('Backend Server', () => {
             expect(resB.status).toBe(401) // auth failure, not rate limit
         })
     })
+
+    describe('Security headers on all responses (#34)', () => {
+        const requiredSecurityHeaders = [
+            'X-Content-Type-Options',
+            'X-Frame-Options',
+            'X-XSS-Protection',
+            'Referrer-Policy',
+            'Content-Security-Policy',
+            'Strict-Transport-Security',
+            'Permissions-Policy',
+        ]
+
+        /** Helper: assert that a response has all required security headers */
+        function expectSecurityHeaders(res: Response): void {
+            for (const header of requiredSecurityHeaders) {
+                expect(res.headers.get(header)).toBeDefined()
+            }
+            expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff')
+            expect(res.headers.get('X-Frame-Options')).toBe('DENY')
+        }
+
+        /** Helper: assert origin-aware CORS headers are present */
+        function expectCorsHeaders(res: Response, expectedOrigin: string = 'http://localhost:5173'): void {
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe(expectedOrigin)
+            expect(res.headers.get('Access-Control-Allow-Credentials')).toBe('true')
+            expect(res.headers.get('Vary')).toBe('Origin')
+        }
+
+        it('OPTIONS preflight includes security headers', async () => {
+            const req = new Request('http://localhost:3001/api/health', {
+                method: 'OPTIONS',
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(204)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('GET /api/health includes security and CORS headers', async () => {
+            const req = new Request('http://localhost:3001/api/health', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(200)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('GET /api/test includes security and CORS headers', async () => {
+            const req = new Request('http://localhost:3001/api/test', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(200)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('404 responses include security and CORS headers', async () => {
+            const req = new Request('http://localhost:3001/api/nonexistent', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(404)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('POST /api/auth/login includes security and CORS headers', async () => {
+            const req = new Request('http://localhost:3001/api/auth/login', {
+                method: 'POST',
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            // Will be 200 with an authUrl or 500 if OIDC discovery fails
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('GET /api/auth/callback includes security headers even on error', async () => {
+            const req = new Request('http://localhost:3001/api/auth/callback', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            // Missing code/state → 400
+            expect(res.status).toBe(400)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('POST /api/auth/refresh includes security headers on error', async () => {
+            const req = new Request('http://localhost:3001/api/auth/refresh', {
+                method: 'POST',
+                headers: {
+                    origin: 'http://localhost:5173',
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            // Missing refresh token → 400
+            expect(res.status).toBe(400)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('GET /api/auth/me (unauthenticated) includes security headers', async () => {
+            const req = new Request('http://localhost:3001/api/auth/me', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(401)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('GET /api/drafts (unauthenticated) includes security headers', async () => {
+            const req = new Request('http://localhost:3001/api/drafts', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(401)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('POST /api/postcards (unauthenticated) includes security headers', async () => {
+            const req = new Request('http://localhost:3001/api/postcards', {
+                method: 'POST',
+                headers: { origin: 'http://localhost:5173' },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(401)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('429 rate-limited responses include security headers', async () => {
+            // Exhaust the postcard rate limiter (5 req/min)
+            for (let i = 0; i < 5; i++) {
+                const req = new Request('http://localhost:3001/api/postcards', {
+                    method: 'POST',
+                    headers: {
+                        'x-forwarded-for': 'security-header-rate-test',
+                        origin: 'http://localhost:5173',
+                    },
+                    body: JSON.stringify({}),
+                })
+                await handleRequest(req)
+            }
+
+            // 6th request should be 429
+            const req = new Request('http://localhost:3001/api/postcards', {
+                method: 'POST',
+                headers: {
+                    'x-forwarded-for': 'security-header-rate-test',
+                    origin: 'http://localhost:5173',
+                },
+                body: JSON.stringify({}),
+            })
+            const res = await handleRequest(req)
+            expect(res.status).toBe(429)
+            expectSecurityHeaders(res)
+            expectCorsHeaders(res)
+        })
+
+        it('echoes request origin in CORS header when origin is allowed', async () => {
+            const req = new Request('http://localhost:3001/api/health', {
+                headers: { origin: 'http://localhost:5173' },
+            })
+            const res = await handleRequest(req)
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173')
+        })
+
+        it('falls back to first allowed origin for unknown origins', async () => {
+            const req = new Request('http://localhost:3001/api/health', {
+                headers: { origin: 'http://evil.example.com' },
+            })
+            const res = await handleRequest(req)
+            // Should fall back to first allowed origin, not echo the unknown one
+            expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173')
+        })
+    })
 })

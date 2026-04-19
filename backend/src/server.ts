@@ -53,11 +53,13 @@ const cleanupTimer = setInterval(runPeriodicCleanup, CLEANUP_INTERVAL_MS)
 // Don't prevent process exit
 if (cleanupTimer.unref) cleanupTimer.unref()
 
-/** Helper: check rate limit and return 429 if exceeded */
+/** Helper: check rate limit and return 429 if exceeded.
+ *  Note: does NOT need to pass `req` to jsonResponse because the global
+ *  withSecurityHeaders() wrapper in handleRequest applies CORS headers. */
 function checkRateLimit(limiter: RateLimiter, req: Request): Response | null {
   const { allowed, retryAfterMs } = limiter.check(getClientIp(req))
   if (!allowed) {
-    return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429, req)
+    return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429)
   }
   return null
 }
@@ -138,38 +140,50 @@ if (config.imap) {
 
 const frontendDistPath = join(import.meta.dir, '../../frontend/dist')
 
+/**
+ * Global response wrapper that guarantees security + CORS headers on every
+ * response, regardless of whether individual route handlers remember to pass
+ * `req` to `jsonResponse()`. This is the single enforcement point referenced
+ * by GitHub issue #34.
+ */
+function withSecurityHeaders(response: Response, req: Request): Response {
+  // applyHeaders is idempotent — calling it on a response that already has
+  // the headers simply overwrites them with the same values.
+  return applyHeaders(response, req)
+}
+
 export async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
   if (req.method === 'OPTIONS') {
-    return createCorsResponse(req)
+    return withSecurityHeaders(createCorsResponse(req), req)
   }
 
   // Auth endpoints — rate limited to prevent brute-force attacks
   if (url.pathname === '/api/auth/login' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
-    return authRoutes.handleAuthLogin(req)
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+    return withSecurityHeaders(await authRoutes.handleAuthLogin(req), req)
   }
 
   if (url.pathname === '/api/auth/callback' && req.method === 'GET') {
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
-    return authRoutes.handleAuthCallback(req)
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+    return withSecurityHeaders(await authRoutes.handleAuthCallback(req), req)
   }
 
   if (url.pathname === '/api/auth/me' && req.method === 'GET') {
-    return authRoutes.handleGetMe(req)
+    return withSecurityHeaders(await authRoutes.handleGetMe(req), req)
   }
 
   if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
-    return authRoutes.handleLogout(req)
+    return withSecurityHeaders(await authRoutes.handleLogout(req), req)
   }
 
   if (url.pathname === '/api/auth/refresh' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
-    return authRoutes.handleAuthRefresh(req)
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+    return withSecurityHeaders(await authRoutes.handleAuthRefresh(req), req)
   }
 
   // Drafts endpoints (all require authentication)
@@ -177,119 +191,119 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (url.pathname === '/api/drafts' && req.method === 'GET') {
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.list(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.list(req, authResult.user!), req)
   }
 
   if (url.pathname === '/api/drafts' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.create(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.create(req, authResult.user!), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'GET') {
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.get(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.get(req, authResult.user!), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'PUT') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.update(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.update(req, authResult.user!), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'DELETE') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.delete(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.delete(req, authResult.user!), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/publish$/) && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.publish(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.publish(req, authResult.user!), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/schedule$/) && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.schedule(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.schedule(req, authResult.user!), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/cancel-schedule$/) && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return draftRoutes.cancelSchedule(req, authResult.user!)
+    return withSecurityHeaders(await draftRoutes.cancelSchedule(req, authResult.user!), req)
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
-    return jsonResponse({ status: 'ok' }, 200, req)
+    return withSecurityHeaders(jsonResponse({ status: 'ok' }, 200), req)
   }
 
   // #29: Debug endpoint only available in development mode
   if (url.pathname === '/api/test' && process.env.NODE_ENV !== 'production') {
-    return jsonResponse({
+    return withSecurityHeaders(jsonResponse({
       message: 'Hello from Fam Mail backend!',
       connected: true,
-    }, 200, req)
+    }, 200), req)
   }
 
   // #30: Postcard creation requires authentication (PostGrid costs real money)
   // #42: Rate limited to prevent financial exposure
   if (url.pathname === '/api/postcards' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(postcardRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return jsonResponse({ error: authResult.error }, 401, req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
     }
-    return handlePostcardCreate(req, authResult.user!, db)
+    return withSecurityHeaders(await handlePostcardCreate(req, authResult.user!, db), req)
   }
 
   // Email webhook endpoints — rate limited (#42)
   if (url.pathname === '/api/webhook/email' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(webhookRateLimiter, req)
-    if (rateLimitResponse) return rateLimitResponse
-    return handleEmailWebhook(req)
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+    return withSecurityHeaders(await handleEmailWebhook(req), req)
   }
 
   if (url.pathname === '/api/webhook/health' && req.method === 'GET') {
-    return handleWebhookHealth(req)
+    return withSecurityHeaders(await handleWebhookHealth(req), req)
   }
 
   if (config.server.nodeEnv === 'production' && !url.pathname.startsWith('/api')) {
@@ -298,19 +312,19 @@ export async function handleRequest(req: Request): Promise<Response> {
 
       const bunFile = file(filePath)
       if (await bunFile.exists()) {
-        return applyHeaders(new Response(bunFile), req)
+        return withSecurityHeaders(new Response(bunFile), req)
       }
 
       const indexFile = file(join(frontendDistPath, 'index.html'))
       if (await indexFile.exists()) {
-        return applyHeaders(new Response(indexFile), req)
+        return withSecurityHeaders(new Response(indexFile), req)
       }
     } catch (error) {
       logger.error('Error serving static file', { error })
     }
   }
 
-  return jsonResponse({ error: 'Not Found' }, 404, req)
+  return withSecurityHeaders(jsonResponse({ error: 'Not Found' }, 404), req)
 }
 
 // Export for testing

@@ -3,7 +3,7 @@ import { JWTService } from '../services/jwtService'
 import { AuthMiddleware } from '../middleware/auth'
 import { Database } from '../database'
 import type { User } from '../models/user'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse, applyHeaders } from '../middleware/headers'
 
 /** TTL-based state store for OIDC PKCE code verifiers.
  *  Entries expire after STATE_TTL_MS (10 min). Cleanup runs lazily on access
@@ -76,7 +76,7 @@ export function setupAuthRoutes(
     oidcStateStore.set(state, { codeVerifier, createdAt: Date.now() })
     evictExpired()
 
-    return jsonResponse({ authUrl, state })
+    return jsonResponse({ authUrl, state }, 200, _req)
   }
 
   // Handle OIDC callback
