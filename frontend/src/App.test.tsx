@@ -528,4 +528,62 @@ describe('App Component', () => {
     })
   })
 
+  describe('Section-level Error Boundaries', () => {
+    it('should render StatusCard wrapped in ErrorBoundary alongside other sections', async () => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>
+      fetchMock.mockResolvedValueOnce(mockHealthResponse)
+
+      render(<App />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-status-card')).toBeInTheDocument()
+      })
+
+      // Verify all sections render independently — each has its own ErrorBoundary
+      expect(screen.getByTestId('mock-header')).toBeInTheDocument()
+      expect(screen.getByText('✏️ Editor')).toBeInTheDocument()
+      expect(screen.getByTestId('mock-postcard-builder')).toBeInTheDocument()
+      expect(screen.getByText('Built with ❤️ for keeping in touch')).toBeInTheDocument()
+    })
+
+    it('should render DraftList wrapped in ErrorBoundary', async () => {
+      const user = userEvent.setup()
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>
+      fetchMock.mockResolvedValueOnce(mockHealthResponse)
+
+      render(<App />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-postcard-builder')).toBeInTheDocument()
+      })
+
+      // Switch to drafts view
+      await user.click(screen.getByText('📋 My Drafts'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-draft-list')).toBeInTheDocument()
+      })
+
+      // Other sections remain in the DOM
+      expect(screen.getByTestId('mock-header')).toBeInTheDocument()
+      expect(screen.getByText('✏️ Editor')).toBeInTheDocument()
+    })
+
+    it('should render PostcardBuilder wrapped in ErrorBoundary', async () => {
+      const fetchMock = global.fetch as ReturnType<typeof vi.fn>
+      fetchMock.mockResolvedValueOnce(mockHealthResponse)
+
+      render(<App />)
+
+      await waitFor(() => {
+        expect(screen.getByTestId('mock-postcard-builder')).toBeInTheDocument()
+      })
+
+      // All sections render independently
+      expect(screen.getByTestId('mock-status-card')).toBeInTheDocument()
+      expect(screen.getByText('✏️ Editor')).toBeInTheDocument()
+      expect(screen.getByText('📋 My Drafts')).toBeInTheDocument()
+    })
+  })
+
 })

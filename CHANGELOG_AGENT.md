@@ -4,6 +4,12 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 11:26] Progress on #47: [P2/Enhancement] No React ErrorBoundary — any component error crashes entire app
+
+Attempt 1. 17 tools, 0 commits. QA: GREEN.
+
+---
+
 ## [2026-04-19 11:21] Closed #48: [P2/Bug] cancelSchedule() passes undefined instead of null — scheduledFor not cleared
 
 There's a CHANGELOG_AGENT.md file that was included. That's a pre-existing untracked file that got staged by `git add -A`. The 3 relevant source files are correct. The commit is fine — the fix is atomic and the changelog file is a documentation artifact.

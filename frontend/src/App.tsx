@@ -1,11 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
 import { PostcardBuilder } from './components/postcard/PostcardBuilder'
 import { DraftList, SaveDraftModal } from './components/drafts'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
 import type { Draft } from './types/postcard'
+
+/** Inline error fallback for section-level boundaries — shows error within the page layout */
+function SectionErrorFallback({ title }: { title: string }): ReactNode {
+  return (
+    <div className="alert alert-error">
+      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <h3 className="font-bold">{title}</h3>
+        <p className="text-sm">Something went wrong. Try refreshing the page.</p>
+      </div>
+    </div>
+  )
+}
 
 interface BackendStatus {
   message?: string
@@ -117,12 +133,14 @@ function App() {
 
       <main className="flex-1 container mx-auto px-4 py-6 lg:py-8">
         <div className="space-y-4 lg:space-y-6">
-          <StatusCard
-            isLoading={isLoading}
-            connected={backendStatus.connected}
-            message={backendStatus.message}
-            error={backendStatus.error}
-          />
+          <ErrorBoundary fallback={<SectionErrorFallback title="Status Check Error" />}>
+            <StatusCard
+              isLoading={isLoading}
+              connected={backendStatus.connected}
+              message={backendStatus.message}
+              error={backendStatus.error}
+            />
+          </ErrorBoundary>
 
           {/* View Tabs */}
           <div role="tablist" className="tabs tabs-boxed justify-center">
@@ -143,21 +161,25 @@ function App() {
           </div>
 
           {activeView === 'drafts' ? (
-            <DraftList
-              onLoadDraft={handleLoadDraft}
-              onDraftsChanged={handleDraftsChanged}
-              refreshTrigger={draftRefreshTrigger}
-            />
+            <ErrorBoundary fallback={<SectionErrorFallback title="Drafts Error" />}>
+              <DraftList
+                onLoadDraft={handleLoadDraft}
+                onDraftsChanged={handleDraftsChanged}
+                refreshTrigger={draftRefreshTrigger}
+              />
+            </ErrorBoundary>
           ) : !submissionSuccess ? (
             <>
-              <PostcardBuilder
-                recipientAddress={recipientAddress}
-                onAddressChange={setRecipientAddress}
-                selectedImage={selectedImage}
-                onImageChange={setSelectedImage}
-                message={message}
-                onMessageChange={setMessage}
-              />
+              <ErrorBoundary fallback={<SectionErrorFallback title="Postcard Builder Error" />}>
+                <PostcardBuilder
+                  recipientAddress={recipientAddress}
+                  onAddressChange={setRecipientAddress}
+                  selectedImage={selectedImage}
+                  onImageChange={setSelectedImage}
+                  message={message}
+                  onMessageChange={setMessage}
+                />
+              </ErrorBoundary>
 
               {/* Action buttons row */}
               <div className="flex flex-wrap gap-3 justify-center">
