@@ -1,4 +1,5 @@
 import type { User } from '../types/auth'
+import { API_BASE_URL } from '../utils/apiConfig'
 
 const TOKEN_KEY = 'fam_mail_token'
 
@@ -24,7 +25,7 @@ export function removeToken(): void {
 }
 
 export async function initiateLogin(): Promise<string> {
-  const response = await fetch('/api/auth/login', {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -44,7 +45,7 @@ export async function initiateLogin(): Promise<string> {
 }
 
 export async function fetchCurrentUser(token: string): Promise<User> {
-  const response = await fetch('/api/auth/me', {
+  const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -64,7 +65,7 @@ export async function fetchCurrentUser(token: string): Promise<User> {
 }
 
 export async function logoutUser(token: string): Promise<void> {
-  const response = await fetch('/api/auth/logout', {
+  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

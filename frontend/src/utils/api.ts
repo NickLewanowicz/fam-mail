@@ -1,6 +1,7 @@
 import type { Address } from '../types/address'
 import { generateFrontHTML } from './postcardTemplate'
 import { getAuthHeaders } from '../services/authApi'
+import { API_BASE_URL } from './apiConfig'
 
 export interface PostcardSubmission {
   to: Address
@@ -56,7 +57,7 @@ export async function submitPostcard(
 
   const headers = getAuthHeaders()
 
-  const response = await fetch('/api/postcards', {
+  const response = await fetch(`${API_BASE_URL}/api/postcards`, {
     method: 'POST',
     headers,
     body: JSON.stringify(submission),

@@ -1,6 +1,7 @@
 import type { Address } from '../types/address'
 import type { Draft } from '../types/postcard'
 import { getAuthHeaders } from '../services/authApi'
+import { API_BASE_URL } from './apiConfig'
 
 // ---- Request/Response types ----
 
@@ -57,7 +58,7 @@ class DraftApiError extends Error {
 
 // ---- API functions ----
 
-const API_BASE = '/api/drafts'
+const API_BASE = `${API_BASE_URL}/api/drafts`
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
