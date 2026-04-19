@@ -3,14 +3,30 @@ import { AuthMiddleware } from '../middleware/auth'
 import type { Draft } from '../models/draft'
 import type { User } from '../models/user'
 import { jsonResponse } from '../utils/response'
+import type { PostGridService } from '../services/postgrid'
+import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
+import { validateAddress, validateMessage, validateSize } from '../utils/validation'
+import { marked } from 'marked'
+import DOMPurify from 'isomorphic-dompurify'
+
+// Map draft size format (e.g. "4x6") to PostGrid size format (e.g. "6x4")
+function draftSizeToPostGridSize(size: string): '6x4' | '9x6' | '11x6' {
+  const parts = size.split('x')
+  if (parts.length === 2) {
+    return `${parts[1]}x${parts[0]}` as '6x4' | '9x6' | '11x6'
+  }
+  return '6x4'
+}
 
 export class DraftRoutes {
   private db: Database
   private auth: AuthMiddleware
+  private postgrid: PostGridService | null
 
-  constructor(db: Database, auth: AuthMiddleware) {
+  constructor(db: Database, auth: AuthMiddleware, postgrid?: PostGridService | null) {
     this.db = db
     this.auth = auth
+    this.postgrid = postgrid ?? null
   }
 
   async list(req: Request, user: User): Promise<Response> {
@@ -29,13 +45,13 @@ export class DraftRoutes {
 
   async create(req: Request, user: User): Promise<Response> {
     const body = await req.json() as {
-      recipientAddress: any
-      senderAddress?: any
+      recipientAddress: Record<string, unknown>
+      senderAddress?: Record<string, unknown>
       message?: string
       frontHTML?: string
       backHTML?: string
       imageData?: string
-      imageMetadata?: any
+      imageMetadata?: Record<string, unknown>
       size?: '4x6' | '6x9' | '11x6'
     }
 
@@ -155,23 +171,156 @@ export class DraftRoutes {
       return jsonResponse({ error: 'Draft is not in draft state' }, 400)
     }
 
-    // Update draft to 'ready'
-    this.db.updateDraft(id, { state: 'ready' })
+    // --- Validate all required fields before sending to PostGrid ---
 
-    // TODO: Send to PostGrid (will be implemented with PostGridService integration)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const postcardRequest = {
-      to: draft.recipientAddress,
-      from: draft.senderAddress,
-      size: draft.size,
-      frontHTML: draft.frontHTML,
-      backHTML: draft.backHTML,
+    const allErrors: Array<{ field: string; message: string }> = []
+
+    // Validate recipient address
+    const addressResult = validateAddress(draft.recipientAddress, 'to')
+    if (!addressResult.valid) {
+      allErrors.push(...addressResult.errors)
     }
 
-    return jsonResponse({
-      success: true,
-      message: 'Draft marked as ready and queued for processing',
-    })
+    // Validate sender address if provided
+    if (draft.senderAddress) {
+      const fromResult = validateAddress(draft.senderAddress, 'from')
+      if (!fromResult.valid) {
+        allErrors.push(...fromResult.errors)
+      }
+    }
+
+    // Must have at least one content field
+    if (!draft.frontHTML && !draft.backHTML && !draft.message) {
+      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, or message is required' })
+    }
+
+    // Validate message if present
+    if (draft.message) {
+      const messageResult = validateMessage(draft.message)
+      if (!messageResult.valid) {
+        allErrors.push(...messageResult.errors)
+      }
+    }
+
+    // Validate size
+    const postGridSize = draftSizeToPostGridSize(draft.size)
+    const sizeResult = validateSize(postGridSize)
+    if (!sizeResult.valid) {
+      allErrors.push(...sizeResult.errors)
+    }
+
+    if (allErrors.length > 0) {
+      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400)
+    }
+
+    // Check PostGrid service is configured
+    if (!this.postgrid) {
+      return jsonResponse({
+        error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.',
+      }, 500)
+    }
+
+    try {
+      // Build backHTML from message if no explicit backHTML
+      let finalBackHTML = draft.backHTML
+      if (!finalBackHTML && draft.message) {
+        const markedHTML = await marked(draft.message)
+        const messageHTML = DOMPurify.sanitize(markedHTML, {
+          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
+          ALLOWED_ATTR: ['class'],
+          FORBID_ATTR: ['onclick', 'onload', 'onerror', 'style'],
+        })
+        finalBackHTML = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                width: 1800px;
+                height: 1200px;
+                overflow: hidden;
+                position: relative;
+                background: white;
+                font-family: Arial, sans-serif;
+                padding: 60px;
+              }
+              .message {
+                position: absolute;
+                left: 60px;
+                top: 60px;
+                width: 840px;
+                height: 1080px;
+                font-size: 24px;
+                line-height: 1.6;
+                color: #333;
+              }
+              .message h1 { font-size: 36px; margin-bottom: 16px; }
+              .message h2 { font-size: 32px; margin-bottom: 14px; }
+              .message h3 { font-size: 28px; margin-bottom: 12px; }
+              .message p { margin-bottom: 12px; }
+              .message strong { font-weight: bold; }
+              .message em { font-style: italic; }
+            </style>
+          </head>
+          <body>
+            <div class="message">
+              ${messageHTML}
+            </div>
+          </body>
+          </html>
+        `.trim()
+      }
+
+      // Call PostGrid API
+      const postcardRequest: PostGridPostcardRequest = {
+        to: draft.recipientAddress,
+        from: draft.senderAddress,
+        size: postGridSize,
+        frontHTML: draft.frontHTML,
+        backHTML: finalBackHTML,
+      }
+
+      const result = await this.postgrid.createPostcard(postcardRequest)
+
+      // Store postcard record in database linked to the draft
+      const postcardId = result.id
+      this.db.insertPostcard({
+        id: postcardId,
+        emailMessageId: `draft-${draft.id}`,
+        senderEmail: user.email,
+        recipientName: `${draft.recipientAddress.firstName} ${draft.recipientAddress.lastName}`,
+        recipientAddress: `${draft.recipientAddress.addressLine1}, ${draft.recipientAddress.city}, ${draft.recipientAddress.provinceOrState} ${draft.recipientAddress.postalOrZip}`,
+        postgridPostcardId: result.id,
+        postgridMode: this.postgrid.getTestMode() ? 'test' : 'live',
+        forcedTestMode: false,
+        status: 'sent',
+        user_id: user.id,
+        draftId: draft.id,
+      })
+
+      // Only update draft state after successful PostGrid call
+      this.db.updateDraft(id, { state: 'ready' })
+
+      return jsonResponse({
+        success: true,
+        message: 'Postcard sent successfully',
+        postcard: {
+          id: result.id,
+          status: result.status,
+          testMode: this.postgrid.getTestMode(),
+        },
+      })
+    } catch (error: unknown) {
+      const pgError = error as PostGridError
+      const status = pgError.status || 500
+      return jsonResponse({
+        success: false,
+        error: pgError.message || 'Failed to create postcard',
+        details: pgError.error,
+      }, status)
+    }
   }
 
   async schedule(req: Request, user: User): Promise<Response> {

@@ -3,6 +3,7 @@ import { Database } from "../database";
 import { DraftRoutes } from "./drafts";
 import type { User } from "../models/user";
 import type { Draft } from "../models/draft";
+import type { PostGridPostcardResponse } from "../types/postgrid";
 import { unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -14,7 +15,7 @@ process.env.OIDC_ISSUER_URL = "https://accounts.google.com";
 process.env.OIDC_CLIENT_ID = "test-client-id";
 process.env.OIDC_CLIENT_SECRET = "test-client-secret";
 process.env.OIDC_REDIRECT_URI = "http://localhost:5173/auth/callback";
-process.env.JWT_SECRET = "test-jwt-secret";
+process.env.JWT_SECRET = "test-jwt-secret-key-16chars";
 process.env.IMAP_HOST = "test.imap.com";
 process.env.IMAP_USER = "test@user.com";
 process.env.IMAP_PASSWORD = "test-password";
@@ -23,11 +24,49 @@ process.env.IMAP_TLS = "true";
 
 const TEST_DB = join(tmpdir(), `test-drafts-${Date.now()}.db`);
 
+// Create a mock PostGrid service for publish tests (defined outside describe for bun:test scoping)
+function createMockPostgrid(overrides: Partial<{
+  createPostcard: () => Promise<PostGridPostcardResponse>;
+  getTestMode: () => boolean;
+}> = {}) {
+  return {
+    createPostcard: overrides.createPostcard || (async () => ({
+      id: 'postgrid-test-id-123',
+      object: 'postcard' as const,
+      live: false,
+      to: {
+        firstName: 'John',
+        lastName: 'Doe',
+        addressLine1: '123 Main St',
+        city: 'Ottawa',
+        provinceOrState: 'ON',
+        postalOrZip: 'K1A 0B1',
+        countryCode: 'CA',
+      },
+      from: {
+        firstName: 'Jane',
+        lastName: 'Smith',
+        addressLine1: '456 Oak Ave',
+        city: 'Toronto',
+        provinceOrState: 'ON',
+        postalOrZip: 'M5V 1A1',
+        countryCode: 'CA',
+      },
+      size: '6x4',
+      status: 'ready' as const,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    })),
+    getTestMode: overrides.getTestMode || (() => true),
+  };
+}
+
 describe("DraftRoutes", () => {
   let db: Database;
   let draftRoutes: DraftRoutes;
   let user1: User;
   let user2: User;
+  let mockPostgrid: any;
 
   beforeEach(() => {
     if (existsSync(TEST_DB)) {
@@ -63,8 +102,9 @@ describe("DraftRoutes", () => {
     db.insertUser(user1);
     db.insertUser(user2);
 
+    mockPostgrid = createMockPostgrid();
     // DraftRoutes needs an AuthMiddleware but we pass user directly, so pass a dummy
-    draftRoutes = new DraftRoutes(db, null as any);
+    draftRoutes = new DraftRoutes(db, null as any, mockPostgrid);
   });
 
   // Helper function to create a test draft
@@ -429,29 +469,159 @@ describe("DraftRoutes", () => {
   });
 
   describe("publish()", () => {
-    it("should publish draft (changes state to 'ready')", async () => {
+    it("should publish draft and send to PostGrid successfully", async () => {
       const draft = createTestDraft(user1.id, "draft");
       db.insertDraft(draft);
 
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
-      const response = await draftRoutes.publish(req, user1);
-      const data = await response.json() as { success?: boolean; message?: string };
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { success?: boolean; message?: string; postcard?: any };
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.message).toBe("Draft marked as ready and queued for processing");
+      expect(data.message).toBe("Postcard sent successfully");
+      expect(data.postcard).toBeDefined();
+      expect(data.postcard.id).toBe("postgrid-test-id-123");
+      expect(data.postcard.status).toBe("ready");
+      expect(data.postcard.testMode).toBe(true);
 
       // Verify draft state is updated
       const updatedDraft = db.getDraft(draft.id);
       expect(updatedDraft?.state).toBe("ready");
     });
 
+    it("should create postcard record in database linked to draft", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { success?: boolean; postcard?: any };
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+
+      // Verify postcard was inserted with draft link
+      // The insertPostcard uses emailMessageId = `draft-${draft.id}`
+      // We can verify by checking the response contains postgrid ID
+      expect(data.postcard.id).toBe("postgrid-test-id-123");
+    });
+
+    it("should return 400 when recipient address is invalid", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      // Remove required address fields
+      draft.recipientAddress = {
+        firstName: "",
+        lastName: "",
+        addressLine1: "",
+        city: "",
+        provinceOrState: "",
+        postalOrZip: "",
+        countryCode: "",
+      };
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: any[] };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      expect(data.errors!.length).toBeGreaterThan(0);
+    });
+
+    it("should return 400 when draft has no content (no frontHTML, backHTML, or message)", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.message = undefined;
+      draft.frontHTML = undefined;
+      draft.backHTML = undefined;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: any[] };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      // Should have exactly one content error
+      const contentErrors = data.errors!.filter((e: any) => e.field === "content");
+      expect(contentErrors.length).toBe(1);
+    });
+
+    it("should return 500 when PostGrid service is not configured", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      db.insertDraft(draft);
+
+      // DraftRoutes with no postgrid service
+      const routes = new DraftRoutes(db, null as any, null);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string };
+
+      expect(response.status).toBe(500);
+      expect(data.error).toContain("PostGrid service not configured");
+    });
+
+    it("should return PostGrid error when API call fails", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      db.insertDraft(draft);
+
+      // Mock PostGrid that throws an error
+      const failingPostgrid = createMockPostgrid({
+        createPostcard: async () => {
+          throw { status: 422, message: 'Invalid address', error: { type: 'validation_error', message: 'Address not found' } };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as any, failingPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { success?: boolean; error?: string };
+
+      expect(response.status).toBe(422);
+      expect(data.success).toBe(false);
+      expect(data.error).toBe("Invalid address");
+
+      // Verify draft state is NOT updated (remains 'draft')
+      const unchangedDraft = db.getDraft(draft.id);
+      expect(unchangedDraft?.state).toBe("draft");
+    });
+
+    it("should not update draft state when PostGrid call fails", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      db.insertDraft(draft);
+
+      // Mock PostGrid that throws a network error
+      const failingPostgrid = createMockPostgrid({
+        createPostcard: async () => {
+          throw { status: 500, message: 'Network error connecting to PostGrid', error: { type: 'network_error', message: 'timeout' } };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as any, failingPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      expect(response.status).toBe(500);
+
+      // Draft should still be in 'draft' state
+      const unchangedDraft = db.getDraft(draft.id);
+      expect(unchangedDraft?.state).toBe("draft");
+    });
+
     it("should return 400 when draft is not in 'draft' state", async () => {
       const draft = createTestDraft(user1.id, "ready");
       db.insertDraft(draft);
 
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
-      const response = await draftRoutes.publish(req, user1);
+      const response = await routes.publish(req, user1);
       const data = await response.json() as { error?: string };
 
       expect(response.status).toBe(400);
@@ -460,12 +630,121 @@ describe("DraftRoutes", () => {
 
     it("should return 404 when not found", async () => {
       const nonExistentId = crypto.randomUUID();
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${nonExistentId}`);
-      const response = await draftRoutes.publish(req, user1);
+      const response = await routes.publish(req, user1);
       const data = await response.json() as { error?: string };
 
       expect(response.status).toBe(404);
       expect(data.error).toBe("Draft not found");
+    });
+
+    it("should return 403 when draft belongs to another user", async () => {
+      const draft = createTestDraft(user2.id, "draft");
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as any, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string };
+
+      expect(response.status).toBe(403);
+      expect(data.error).toBe("Forbidden");
+    });
+
+    it("should build back HTML from message when no backHTML is set", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.backHTML = undefined;
+      draft.message = "Hello **world**!\nThis is a test.";
+      db.insertDraft(draft);
+
+      let capturedRequest: any = null;
+      const spyPostgrid = createMockPostgrid({
+        createPostcard: async (req: any) => {
+          capturedRequest = req;
+          return {
+            id: 'postgrid-spy-id',
+            object: 'postcard' as const,
+            live: false,
+            to: req.to,
+            size: req.size,
+            status: 'ready' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as any, spyPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      expect(response.status).toBe(200);
+      expect(capturedRequest).not.toBeNull();
+      // backHTML should contain the markdown-converted content (bold)
+      expect(capturedRequest.backHTML).toContain("<strong>world</strong>");
+      expect(capturedRequest.backHTML).toContain("This is a test");
+    });
+
+    it("should use explicit backHTML when provided", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.backHTML = "<html><body>Custom back</body></html>";
+      draft.message = "This message should be ignored";
+      db.insertDraft(draft);
+
+      let capturedRequest: any = null;
+      const spyPostgrid = createMockPostgrid({
+        createPostcard: async (req: any) => {
+          capturedRequest = req;
+          return {
+            id: 'postgrid-spy-id',
+            object: 'postcard' as const,
+            live: false,
+            to: req.to,
+            size: req.size,
+            status: 'ready' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as any, spyPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      expect(response.status).toBe(200);
+      expect(capturedRequest.backHTML).toBe("<html><body>Custom back</body></html>");
+    });
+
+    it("should map draft size to PostGrid size format", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.size = "6x9";
+      db.insertDraft(draft);
+
+      let capturedRequest: any = null;
+      const spyPostgrid = createMockPostgrid({
+        createPostcard: async (req: any) => {
+          capturedRequest = req;
+          return {
+            id: 'postgrid-spy-id',
+            object: 'postcard' as const,
+            live: false,
+            to: req.to,
+            size: req.size,
+            status: 'ready' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as any, spyPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      expect(response.status).toBe(200);
+      expect(capturedRequest.size).toBe("9x6");
     });
   });
 
