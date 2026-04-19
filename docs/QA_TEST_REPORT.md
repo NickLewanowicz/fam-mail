@@ -124,7 +124,7 @@ The core functionality is working correctly, but PostGrid API keys need to be co
 - **Action:** Clicked "Send Postcard" button
 - **Expected:** Postcard sent via PostGrid API
 - **Actual:** HTTP 500 error
-- **Error Message:** "PostGrid service not configured. Please set POSTGRID_TEST_KEY or POSTGRID_PROD_KEY environment variable."
+- **Error Message:** "PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable."
 - **Network Request:** POST /api/postcards → 500
 - **Root Cause:** PostGrid API keys not configured in environment
 - **Screenshot:** `qa-screenshots/F-errors/F4-postgrid-error.png`
