@@ -23,7 +23,7 @@ const baseDraft: Draft = {
   recipientAddress: mockAddress,
   message: 'Hello from Toronto!',
   state: 'draft',
-  size: '4x6',
+  size: '6x4',
   createdAt: '2025-01-15T10:00:00Z',
   updatedAt: '2025-01-15T12:00:00Z',
 }
@@ -274,7 +274,7 @@ describe('DraftCard', () => {
         onPublish={vi.fn()}
       />
     )
-    expect(screen.getByText('4x6')).toBeInTheDocument()
+    expect(screen.getByText('6x4')).toBeInTheDocument()
   })
 
   it('should not have aria-labels on buttons', () => {

@@ -138,7 +138,7 @@ describe("DraftRoutes", () => {
       message: "Hello from the test!",
       state,
       scheduledFor,
-      size: "4x6",
+      size: "6x4",
     };
   }
 
@@ -273,7 +273,7 @@ describe("DraftRoutes", () => {
       expect(data.draft.recipientAddress.firstName).toBe("John");
       expect(data.draft.message).toBe("Hello World!");
       expect(data.draft.state).toBe("draft");
-      expect(data.draft.size).toBe("4x6"); // default size
+      expect(data.draft.size).toBe("6x4"); // default size
       expect(data.draft.id).toBeDefined();
     });
 
@@ -290,7 +290,7 @@ describe("DraftRoutes", () => {
       expect(data.error).toBe("recipientAddress is required");
     });
 
-    it("should set default size to '4x6'", async () => {
+    it("should set default size to '6x4'", async () => {
       const body = {
         recipientAddress: {
           firstName: "John",
@@ -307,7 +307,7 @@ describe("DraftRoutes", () => {
       const response = await draftRoutes.create(req, user1);
       const data = await response.json() as { draft: Draft };
 
-      expect(data.draft.size).toBe("4x6");
+      expect(data.draft.size).toBe("6x4");
     });
 
     it("should accept custom size", async () => {
@@ -321,14 +321,14 @@ describe("DraftRoutes", () => {
           postalOrZip: "K1A 0B1",
           countryCode: "CA",
         },
-        size: "6x9" as const,
+        size: "9x6" as const,
       };
 
       const req = createRequest("http://localhost:8484/api/drafts", body);
       const response = await draftRoutes.create(req, user1);
       const data = await response.json() as { draft: Draft };
 
-      expect(data.draft.size).toBe("6x9");
+      expect(data.draft.size).toBe("9x6");
     });
   });
 
@@ -385,7 +385,7 @@ describe("DraftRoutes", () => {
 
       const updateBody = {
         message: "Updated message!",
-        size: "6x9" as const,
+        size: "9x6" as const,
       };
 
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`, updateBody);
@@ -395,7 +395,7 @@ describe("DraftRoutes", () => {
       expect(response.status).toBe(200);
       expect(data.draft.id).toBe(draft.id);
       expect(data.draft.message).toBe("Updated message!");
-      expect(data.draft.size).toBe("6x9");
+      expect(data.draft.size).toBe("9x6");
     });
 
     it("should return 404 when draft not found", async () => {
@@ -720,7 +720,7 @@ describe("DraftRoutes", () => {
 
     it("should map draft size to PostGrid size format", async () => {
       const draft = createTestDraft(user1.id, "draft");
-      draft.size = "6x9";
+      draft.size = "9x6";
       db.insertDraft(draft);
 
       let capturedRequest: Record<string, unknown> = null;

@@ -37,7 +37,7 @@ const mockDraft: Draft = {
   recipientAddress: mockAddress,
   message: 'Hello!',
   state: 'draft',
-  size: '4x6',
+  size: '6x4',
   createdAt: '2025-06-01T10:00:00Z',
   updatedAt: '2025-06-01T10:00:00Z',
 }
@@ -248,7 +248,7 @@ describe('SaveDraftModal', () => {
           expect.objectContaining({
             recipientAddress: mockAddress,
             message: 'Hello!',
-            size: '4x6',
+            size: '6x4',
           })
         )
       })

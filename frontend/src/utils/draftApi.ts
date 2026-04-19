@@ -12,7 +12,7 @@ export interface CreateDraftRequest {
   backHTML?: string
   imageData?: string
   imageMetadata?: unknown
-  size?: '4x6' | '6x9' | '11x6'
+  size?: '6x4' | '9x6' | '11x6'
 }
 
 export interface UpdateDraftRequest {
@@ -23,7 +23,7 @@ export interface UpdateDraftRequest {
   backHTML?: string
   imageData?: string
   imageMetadata?: unknown
-  size?: '4x6' | '6x9' | '11x6'
+  size?: '6x4' | '9x6' | '11x6'
   state?: 'draft' | 'ready'
 }
 

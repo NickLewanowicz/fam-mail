@@ -81,7 +81,7 @@ vi.mock('./utils/api', () => ({
         postalOrZip: 'M5H 2N2',
         countryCode: 'CA',
       },
-      size: '4x6',
+      size: '6x4',
       status: 'ready',
       createdAt: '2025-11-15T00:00:00Z',
       updatedAt: '2025-11-15T00:00:00Z',
@@ -112,7 +112,7 @@ vi.mock('./components/drafts', () => ({
         },
         message: 'Loaded message',
         state: 'draft',
-        size: '4x6',
+        size: '6x4',
         createdAt: '2025-06-01T10:00:00Z',
         updatedAt: '2025-06-01T10:00:00Z',
       })}>Load Draft</button>
@@ -145,7 +145,7 @@ vi.mock('./components/drafts', () => ({
           },
           message: 'Saved!',
           state: 'draft',
-          size: '4x6',
+          size: '6x4',
           createdAt: '2025-06-01T10:00:00Z',
           updatedAt: '2025-06-01T10:00:00Z',
         })

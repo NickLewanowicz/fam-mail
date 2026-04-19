@@ -15,7 +15,7 @@ describe("Email-to-Postcard Integration", () => {
       liveApiKey: "live_key",
       forceTestMode: true,
       webhookSecret: "secret",
-      size: "4x6",
+      size: "6x4",
       senderId: "sender_1",
     });
   });

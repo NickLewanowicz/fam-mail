@@ -63,7 +63,7 @@ export function SaveDraftModal({
           message: message || undefined,
           frontHTML,
           imageData: selectedImage?.preview || undefined,
-          size: '4x6',
+          size: '6x4',
         })
         onSaved(draft)
       }

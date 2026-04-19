@@ -12,7 +12,7 @@ export interface Draft {
   imageMetadata?: ImageMetadata
   state: 'draft' | 'ready'
   scheduledFor?: string
-  size: '4x6' | '6x9' | '11x6'
+  size: '6x4' | '9x6' | '11x6'
   createdAt: string
   updatedAt: string
 }

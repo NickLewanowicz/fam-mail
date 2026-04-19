@@ -6,7 +6,7 @@ export interface PostcardSubmission {
   frontHTML?: string
   backHTML?: string
   message?: string
-  size?: '4x6'
+  size?: '6x4'
 }
 
 export interface PostcardResponse {
@@ -38,7 +38,7 @@ export interface Draft {
   imageMetadata?: unknown
   state: 'draft' | 'ready'
   scheduledFor?: string
-  size: '4x6' | '6x9' | '11x6'
+  size: '6x4' | '9x6' | '11x6'
   createdAt: string
   updatedAt: string
 }

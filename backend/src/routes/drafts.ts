@@ -9,11 +9,11 @@ import { validateAddress, validateMessage, validateSize } from '../utils/validat
 import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 
-// Map draft size format (e.g. "4x6") to PostGrid size format (e.g. "6x4")
+// Draft sizes are already in PostGrid format (6x4, 9x6, 11x6)
 function draftSizeToPostGridSize(size: string): '6x4' | '9x6' | '11x6' {
-  const parts = size.split('x')
-  if (parts.length === 2) {
-    return `${parts[1]}x${parts[0]}` as '6x4' | '9x6' | '11x6'
+  const validSizes: ('6x4' | '9x6' | '11x6')[] = ['6x4', '9x6', '11x6']
+  if (validSizes.includes(size as '6x4' | '9x6' | '11x6')) {
+    return size as '6x4' | '9x6' | '11x6'
   }
   return '6x4'
 }
@@ -52,7 +52,7 @@ export class DraftRoutes {
       backHTML?: string
       imageData?: string
       imageMetadata?: Record<string, unknown>
-      size?: '4x6' | '6x9' | '11x6'
+      size?: '6x4' | '9x6' | '11x6'
     }
 
     if (!body.recipientAddress) {
@@ -70,7 +70,7 @@ export class DraftRoutes {
       imageData: body.imageData,
       imageMetadata: body.imageMetadata,
       state: 'draft',
-      size: body.size || '4x6',
+      size: body.size || '6x4',
       scheduledFor: undefined,
     }
 

@@ -540,7 +540,7 @@ export class Database {
     imageMetadata?: string | Record<string, unknown>;
     state?: 'draft' | 'ready';
     scheduledFor?: string;
-    size?: '4x6' | '6x9' | '11x6';
+    size?: '6x4' | '9x6' | '11x6';
   }): void {
     try {
       // Convert Address objects to JSON strings
@@ -573,7 +573,7 @@ export class Database {
         imageMetadataStr,
         data.state || 'draft',
         data.scheduledFor || null,
-        data.size || '4x6'
+        data.size || '6x4'
       );
     } catch (error) {
       throw new DatabaseError("Failed to insert draft", error);
@@ -608,7 +608,7 @@ export class Database {
     imageMetadata: string | Record<string, unknown>;
     state: 'draft' | 'ready';
     scheduledFor: string;
-    size: '4x6' | '6x9' | '11x6';
+    size: '6x4' | '9x6' | '11x6';
   }>): void {
     try {
       const fields: string[] = [];
@@ -713,7 +713,7 @@ export class Database {
       imageMetadata: row.image_metadata ? JSON.parse(row.image_metadata) : undefined,
       state: row.state as 'draft' | 'ready',
       scheduledFor: row.scheduled_for || undefined,
-      size: row.size as '4x6' | '6x9' | '11x6',
+      size: row.size as '6x4' | '9x6' | '11x6',
       createdAt: row.created_at,
       updatedAt: row.updated_at,
     };

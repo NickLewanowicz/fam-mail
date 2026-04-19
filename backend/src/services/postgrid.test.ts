@@ -86,7 +86,7 @@ describe('PostGridService', () => {
         mode: "live",
         forceTestMode: true,
         webhookSecret: "secret",
-        size: "4x6",
+        size: "6x4",
         senderId: "sender_123",
       })
 
@@ -100,7 +100,7 @@ describe('PostGridService', () => {
         mode: "live",
         forceTestMode: false,
         webhookSecret: "secret",
-        size: "4x6",
+        size: "6x4",
         senderId: "sender_123",
       })
 
@@ -120,7 +120,7 @@ describe('PostGridService', () => {
         mode: "test",
         forceTestMode: false,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -135,7 +135,7 @@ describe('PostGridService', () => {
         mode: "live",
         forceTestMode: false,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -150,7 +150,7 @@ describe('PostGridService', () => {
         mode: "live",
         forceTestMode: true,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -172,7 +172,7 @@ describe('PostGridService', () => {
         mode: "test",
         forceTestMode: false,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -192,7 +192,7 @@ describe('PostGridService', () => {
         mode: "test",
         forceTestMode: false,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -220,7 +220,7 @@ describe('PostGridService', () => {
         liveApiKey: "pg_live_canonical",
         forceTestMode: false,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -235,7 +235,7 @@ describe('PostGridService', () => {
         liveApiKey: "pg_live_canonical",
         forceTestMode: false,
         webhookSecret: "",
-        size: "4x6",
+        size: "6x4",
         senderId: "",
       })
 
@@ -251,7 +251,7 @@ describe('PostGridService', () => {
         liveApiKey: "pg_live_xyz",
         forceTestMode: true,
         webhookSecret: "wh_secret",
-        size: "6x9" as const,
+        size: "9x6" as const,
         senderId: "sender_42",
       }
 

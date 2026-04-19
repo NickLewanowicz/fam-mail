@@ -7,7 +7,7 @@ export interface PostGridConfig {
   liveApiKey: string;
   forceTestMode: boolean;
   webhookSecret: string;
-  size: "4x6" | "6x9";
+  size: "6x4" | "9x6";
   senderId: string;
 }
 
@@ -35,7 +35,7 @@ export class PostGridService {
         liveApiKey: configOrApiKey,
         forceTestMode: false,
         webhookSecret: '',
-        size: '4x6',
+        size: '6x4',
         senderId: '',
       }
     } else {
@@ -154,7 +154,7 @@ try {
       liveApiKey: liveApiKey || '',
       forceTestMode: (process.env.POSTGRID_FORCE_TEST_MODE || 'false') === 'true',
       webhookSecret: process.env.POSTGRID_WEBHOOK_SECRET || '',
-      size: (process.env.POSTCARD_SIZE as '4x6' | '6x9') || '4x6',
+      size: (process.env.POSTCARD_SIZE as '6x4' | '9x6') || '6x4',
       senderId: process.env.POSTCARD_SENDER_ID || '',
     })
   }

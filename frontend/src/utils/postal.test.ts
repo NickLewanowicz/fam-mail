@@ -12,7 +12,7 @@ import {
 
 describe('Postal Utilities', () => {
   describe('POSTAL_CONSTANTS', () => {
-    it('should have correct dimensions for 4x6 postcard', () => {
+    it('should have correct dimensions for 6x4 postcard', () => {
       expect(POSTAL_CONSTANTS.width).toBe(1800); // 6" at 300 DPI
       expect(POSTAL_CONSTANTS.height).toBe(1200); // 4" at 300 DPI
       expect(POSTAL_CONSTANTS.messageAreaWidth).toBe(1080); // 60% of width

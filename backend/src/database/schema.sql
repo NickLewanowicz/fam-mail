@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS drafts (
   image_metadata TEXT,
   state TEXT NOT NULL DEFAULT 'draft' CHECK(state IN ('draft', 'ready')),
   scheduled_for TEXT,
-  size TEXT DEFAULT '6x4' CHECK(size IN ('4x6', '6x9', '11x6')),
+  size TEXT DEFAULT '6x4' CHECK(size IN ('6x4', '9x6', '11x6')),
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

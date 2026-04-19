@@ -8,7 +8,7 @@ export interface Config {
     liveApiKey: string;
     forceTestMode: boolean;
     webhookSecret: string;
-    size: "4x6" | "6x9";
+    size: "6x4" | "9x6";
     senderId: string;
   };
   oidc: {
@@ -123,7 +123,7 @@ export function getConfig(): Config {
       liveApiKey: getEnvRequired("POSTGRID_LIVE_API_KEY"),
       forceTestMode: getEnvBool("POSTGRID_FORCE_TEST_MODE", false),
       webhookSecret: getEnv("POSTGRID_WEBHOOK_SECRET", ""),
-      size: getEnvEnum("POSTCARD_SIZE", "4x6", ["4x6", "6x9"] as const),
+      size: getEnvEnum("POSTCARD_SIZE", "6x4", ["6x4", "9x6"] as const),
       senderId: getEnv("POSTCARD_SENDER_ID", ""),
     },
     oidc: {
