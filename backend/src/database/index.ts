@@ -406,7 +406,7 @@ export class Database {
         fields.push("updated_at = datetime('now')");
       }
 
-      values.push(userId);
+      values.push(user_id);
 
       const stmt = this.db.prepare(`
         UPDATE users
