@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseLocalStorageDraftOptions<T> {
   key: string
@@ -23,6 +23,9 @@ export function useLocalStorageDraft<T>({
   const [isDirty, setIsDirty] = useState(false)
   const debounceTimerRef = useRef<NodeJS.Timeout>()
   const isMountedRef = useRef(true)
+  // Ref to always hold the latest value, avoiding stale closures in callbacks
+  const valueRef = useRef<T>(value)
+  valueRef.current = value
 
   // Load value from localStorage on mount
   useEffect(() => {
@@ -47,7 +50,7 @@ export function useLocalStorageDraft<T>({
   }, [key, deserialize, onError])
 
   // Save value to localStorage with debouncing
-  const saveValue = useRef((newValue: T) => {
+  const saveValue = useCallback((newValue: T) => {
     clearTimeout(debounceTimerRef.current)
     setIsDirty(true)
 
@@ -70,22 +73,27 @@ export function useLocalStorageDraft<T>({
         }
       }
     }, debounceMs)
-  }).current
+  }, [key, debounceMs, serialize, onError])
 
   // Update value and trigger save
-  const updateValue = useRef((newValue: T | ((prev: T) => T)) => {
-    const updatedValue = typeof newValue === 'function'
-      ? (newValue as (prev: T) => T)(value)
-      : newValue
+  const updateValue = useCallback((newValue: T | ((prev: T) => T)) => {
+    let resolvedValue: T
+
+    if (typeof newValue === 'function') {
+      // Use the ref to get the latest value, avoiding stale closure over state
+      resolvedValue = (newValue as (prev: T) => T)(valueRef.current)
+    } else {
+      resolvedValue = newValue
+    }
 
     if (isMountedRef.current) {
-      setValue(updatedValue)
-      saveValue(updatedValue)
+      setValue(resolvedValue)
+      saveValue(resolvedValue)
     }
-  }).current
+  }, [saveValue])
 
   // Clear the draft
-  const clearDraft = useRef(() => {
+  const clearDraft = useCallback(() => {
     try {
       localStorage.removeItem(key)
       if (isMountedRef.current) {
@@ -98,24 +106,23 @@ export function useLocalStorageDraft<T>({
       const errorInstance = error instanceof Error ? error : new Error(String(error))
       onError?.(errorInstance)
     }
-  }).current
+  }, [key, defaultValue, onError])
 
-  // Force immediate save
-  const forceSave = useRef(() => {
+  // Force immediate save — reads current value via ref to avoid stale closure
+  const forceSave = useCallback(() => {
     clearTimeout(debounceTimerRef.current)
     try {
-      const serializedValue = serialize(value)
+      const serializedValue = serialize(valueRef.current)
       localStorage.setItem(key, serializedValue)
       if (isMountedRef.current) {
         setLastSaved(new Date())
         setIsDirty(false)
       }
     } catch (error) {
-      // Properly handle unknown errors by converting them to Error instances
       const errorInstance = error instanceof Error ? error : new Error(String(error))
       onError?.(errorInstance)
     }
-  }).current
+  }, [key, serialize, onError])
 
   // Cleanup on unmount
   useEffect(() => {

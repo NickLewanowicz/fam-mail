@@ -4,6 +4,42 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 07:51] Progress on #16: [Bug]: CI pipeline failing on main - last 4 runs failed
+
+Attempt 3. 43 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 07:44] Progress on #16: [Bug]: CI pipeline failing on main - last 4 runs failed
+
+Attempt 2. 42 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 07:37] Progress on #16: [Bug]: CI pipeline failing on main - last 4 runs failed
+
+Attempt 1. 69 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 07:27] Progress on #17: [Bug]: PostGrid env var naming mismatch breaks postcard sending
+
+Attempt 3. 64 tools, 1 commits. QA: RED.
+
+---
+
+## [2026-04-19 07:14] Progress on #17: [Bug]: PostGrid env var naming mismatch breaks postcard sending
+
+Attempt 2. 26 tools, 1 commits. QA: RED.
+
+---
+
+## [2026-04-19 07:10] Progress on #17: [Bug]: PostGrid env var naming mismatch breaks postcard sending
+
+Attempt 1. 33 tools, 1 commits. QA: RED.
+
+---
+
 ## [2026-04-19 07:04] Progress on #22: [Task]: Add comprehensive postcard input validation test suite
 
 Attempt 3. 47 tools, 1 commits. QA: RED.
