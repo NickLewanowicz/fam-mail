@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { SaveDraftModal } from './SaveDraftModal'
 import type { Address } from '../../types/address'
@@ -284,8 +284,11 @@ describe('SaveDraftModal', () => {
         expect(screen.getByText('Cancel').closest('button')).toBeDisabled()
       })
 
-      // Resolve to clean up
-      resolveCreate!(mockDraft)
+      // Resolve to clean up — wrap in act to handle the async state update
+      await act(async () => {
+        resolveCreate!(mockDraft)
+        await createPromise
+      })
     })
   })
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PostcardBuilder } from './PostcardBuilder'
 import type { Address } from '../../types/address'
@@ -334,7 +334,9 @@ describe('PostcardBuilder', () => {
       const fileInput = document.getElementById('postcard-front-image') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
 
-      fireEvent.change(fileInput, { target: { files: [file] } })
+      await act(() => {
+        fireEvent.change(fileInput, { target: { files: [file] } })
+      })
 
       await waitFor(() => {
         expect(mockOnImageChange).toHaveBeenCalledWith({
@@ -350,11 +352,15 @@ describe('PostcardBuilder', () => {
       const dropArea = screen.getByText(/Click to upload/).closest('div')
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
 
-      fireEvent.dragOver(dropArea!)
-      fireEvent.drop(dropArea!, {
-        dataTransfer: {
-          files: [file]
-        }
+      await act(() => {
+        fireEvent.dragOver(dropArea!)
+      })
+      await act(() => {
+        fireEvent.drop(dropArea!, {
+          dataTransfer: {
+            files: [file]
+          }
+        })
       })
 
       await waitFor(() => {
@@ -389,7 +395,9 @@ describe('PostcardBuilder', () => {
       const fileInput = document.getElementById('postcard-front-image') as HTMLInputElement
       const file = new File(['test'], 'test.txt', { type: 'text/plain' })
 
-      fireEvent.change(fileInput, { target: { files: [file] } })
+      await act(() => {
+        fireEvent.change(fileInput, { target: { files: [file] } })
+      })
 
       await waitFor(() => {
         expect(screen.getByText(/Invalid file type/)).toBeInTheDocument()
@@ -404,7 +412,9 @@ describe('PostcardBuilder', () => {
       const file = new File(['test'], 'large.jpg', { type: 'image/jpeg' })
       Object.defineProperty(file, 'size', { value: 11 * 1024 * 1024 })
 
-      fireEvent.change(fileInput, { target: { files: [file] } })
+      await act(() => {
+        fireEvent.change(fileInput, { target: { files: [file] } })
+      })
 
       await waitFor(() => {
         expect(screen.getByText(/File size must be less than 10MB/)).toBeInTheDocument()
@@ -419,7 +429,9 @@ describe('PostcardBuilder', () => {
       const fileInput = document.getElementById('postcard-front-image') as HTMLInputElement
       const invalidFile = new File(['test'], 'test.txt', { type: 'text/plain' })
 
-      fireEvent.change(fileInput, { target: { files: [invalidFile] } })
+      await act(() => {
+        fireEvent.change(fileInput, { target: { files: [invalidFile] } })
+      })
 
       await waitFor(() => {
         expect(screen.getByText(/Invalid file type/)).toBeInTheDocument()
@@ -427,7 +439,9 @@ describe('PostcardBuilder', () => {
 
       // Upload a valid file to clear error
       const validFile = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
-      fireEvent.change(fileInput, { target: { files: [validFile] } })
+      await act(() => {
+        fireEvent.change(fileInput, { target: { files: [validFile] } })
+      })
 
       await waitFor(() => {
         expect(screen.queryByText(/Invalid file type/)).not.toBeInTheDocument()
@@ -514,9 +528,11 @@ describe('PostcardBuilder', () => {
         onerror: ((event: unknown) => void) | null = null
         readAsDataURL() {
           const handler = this.onerror
-          queueMicrotask(() => {
+          // Use setTimeout(0) instead of queueMicrotask so act() can flush
+          // the resulting state update before the test assertion
+          setTimeout(() => {
             handler?.({})
-          })
+          }, 0)
         }
       }
       global.FileReader = MockFileReaderError as unknown as typeof FileReader
@@ -526,7 +542,9 @@ describe('PostcardBuilder', () => {
       const fileInput = document.getElementById('postcard-front-image') as HTMLInputElement
       const file = new File(['test'], 'test.jpg', { type: 'image/jpeg' })
 
-      fireEvent.change(fileInput, { target: { files: [file] } })
+      await act(() => {
+        fireEvent.change(fileInput, { target: { files: [file] } })
+      })
 
       await waitFor(() => {
         expect(screen.getByText('Failed to read file')).toBeInTheDocument()
@@ -584,20 +602,24 @@ describe('PostcardBuilder', () => {
       expect(textarea).toHaveValue('')
     })
 
-    it('should handle rapid prop changes', () => {
+    it('should handle rapid prop changes', async () => {
       const { rerender } = render(<PostcardBuilder {...defaultProps} />)
 
       const props1 = {
         ...defaultProps,
         message: 'Message 1'
       }
-      rerender(<PostcardBuilder {...props1} />)
+      await act(() => {
+        rerender(<PostcardBuilder {...props1} />)
+      })
 
       const props2 = {
         ...defaultProps,
         message: 'Message 2'
       }
-      rerender(<PostcardBuilder {...props2} />)
+      await act(() => {
+        rerender(<PostcardBuilder {...props2} />)
+      })
 
       expect(screen.getByTestId('md-textarea')).toHaveValue('Message 2')
     })

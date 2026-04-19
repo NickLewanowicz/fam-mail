@@ -445,32 +445,40 @@ describe('AddressForm', () => {
       expect(screen.getByDisplayValue('United States')).toBeInTheDocument()
     })
 
-    it('should handle very long input values', () => {
+    it('should handle very long input values', async () => {
       render(<AddressForm onSubmit={mockOnSubmit} initialAddress={defaultInitialAddress} />)
 
       const longText = 'a'.repeat(200)
       const addressInput = screen.getByPlaceholderText('123 Main Street')
       fireEvent.change(addressInput, { target: { value: longText } })
 
-      expect(screen.getByDisplayValue(longText)).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByDisplayValue(longText)).toBeInTheDocument()
+      })
     })
 
-    it('should handle rapid form interactions', () => {
+    it('should handle rapid form interactions', async () => {
       render(<AddressForm onSubmit={mockOnSubmit} initialAddress={defaultInitialAddress} />)
 
       const firstNameInput = screen.getByPlaceholderText('John')
 
       // Type text and verify
       fireEvent.change(firstNameInput, { target: { value: 'test' } })
-      expect(firstNameInput).toHaveValue('test')
+      await waitFor(() => {
+        expect(firstNameInput).toHaveValue('test')
+      })
 
       // Clear and verify
       fireEvent.change(firstNameInput, { target: { value: '' } })
-      expect(firstNameInput).toHaveValue('')
+      await waitFor(() => {
+        expect(firstNameInput).toHaveValue('')
+      })
 
       // Type again and verify
       fireEvent.change(firstNameInput, { target: { value: 'John' } })
-      expect(firstNameInput).toHaveValue('John')
+      await waitFor(() => {
+        expect(firstNameInput).toHaveValue('John')
+      })
 
       // Form should still be functional
       expect(firstNameInput).toBeInTheDocument()

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, waitFor } from '@testing-library/react'
+import { render, waitFor, act } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from './AuthProvider'
 import { AuthContext } from './AuthContext'
@@ -194,7 +194,9 @@ describe('AuthProvider', () => {
       expect(contextValue!.isAuthenticated).toBe(true)
     })
 
-    await contextValue!.logout()
+    await act(async () => {
+      await contextValue!.logout()
+    })
 
     expect(logoutUser).toHaveBeenCalledWith('valid-token')
     expect(removeToken).toHaveBeenCalled()
@@ -239,7 +241,9 @@ describe('AuthProvider', () => {
       expect(contextValue!.isAuthenticated).toBe(true)
     })
 
-    await contextValue!.logout()
+    await act(async () => {
+      await contextValue!.logout()
+    })
 
     expect(removeToken).toHaveBeenCalled()
 
@@ -281,7 +285,9 @@ describe('AuthProvider', () => {
       expect(contextValue).not.toBeNull()
     })
 
-    contextValue!.handleCallbackToken('new-callback-token')
+    await act(async () => {
+      contextValue!.handleCallbackToken('new-callback-token')
+    })
 
     await waitFor(() => {
       expect(contextValue!.isAuthenticated).toBe(true)

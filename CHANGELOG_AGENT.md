@@ -4,6 +4,36 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 12:35] Progress on #32: [P2/Bug] act() warnings in PostcardBuilder tests
+
+Attempt 2. 8 tools, 0 commits. QA: GREEN.
+
+---
+
+## [2026-04-19 12:29] Progress on #32: [P2/Bug] act() warnings in PostcardBuilder tests
+
+Attempt 1. 37 tools, 0 commits. QA: GREEN.
+
+---
+
+## [2026-04-19 12:12] Closed #34: [P2/Security] CORS and security headers duplicated inconsistently across routes
+
+y response
+- Converted `utils/response.ts` to a backward-compatible re-export shim
+- Added 220 lines of unit tests + 13 integration tests
+
+### Commit 2: `e881e8a` — Per-request CORS in all route handlers
+- Updated all `jsonResponse()` calls in `auth.ts`, `drafts.ts`, `server.ts`, and `middleware/auth.ts` to pass `req` as the third argument
+- This ensures CORS headers are computed **per-request** (
+
+**Issues closed:** #34
+
+**Files changed:** 1
+
+**Tests:** All passing (GREEN)
+
+---
+
 ## [2026-04-19 12:06] Progress on #34: [P2/Security] CORS and security headers duplicated inconsistently across routes
 
 Attempt 2. 40 tools, 1 commits. QA: RED.
