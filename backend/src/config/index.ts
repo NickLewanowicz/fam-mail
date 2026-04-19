@@ -35,7 +35,7 @@ export interface Config {
     initialSyncDays: number;
     catchUpMode: "none" | "process" | "dry-run";
     requireImageAttachment: boolean;
-  };
+  } | null;
   llm: {
     provider: "openrouter" | "ollama" | "custom";
     apiKey?: string;
@@ -138,19 +138,21 @@ export function getConfig(): Config {
       expiresIn: getEnv("JWT_EXPIRES_IN", "7d"),
       refreshExpiresIn: getEnv("JWT_REFRESH_EXPIRES_IN", "30d"),
     },
-    imap: {
-      host: getEnvRequired("IMAP_HOST"),
-      port: getEnvInt("IMAP_PORT", 993),
-      user: getEnvRequired("IMAP_USER"),
-      password: getEnvRequired("IMAP_PASSWORD"),
-      tls: getEnvBool("IMAP_TLS", true),
-      inbox: getEnv("IMAP_INBOX", "INBOX"),
-      subjectFilter: getEnv("SUBJECT_FILTER", "Fammail Postcard"),
-      pollIntervalSeconds: getEnvInt("POLL_INTERVAL_SECONDS", 30),
-      initialSyncDays: getEnvInt("INITIAL_SYNC_DAYS", 0),
-      catchUpMode: getEnvEnum("CATCH_UP_MODE", "none", ["none", "process", "dry-run"] as const),
-      requireImageAttachment: getEnvBool("REQUIRE_IMAGE_ATTACHMENT", true),
-    },
+    imap: process.env.IMAP_HOST
+      ? {
+          host: getEnvRequired("IMAP_HOST"),
+          port: getEnvInt("IMAP_PORT", 993),
+          user: getEnvRequired("IMAP_USER"),
+          password: getEnvRequired("IMAP_PASSWORD"),
+          tls: getEnvBool("IMAP_TLS", true),
+          inbox: getEnv("IMAP_INBOX", "INBOX"),
+          subjectFilter: getEnv("SUBJECT_FILTER", "Fammail Postcard"),
+          pollIntervalSeconds: getEnvInt("POLL_INTERVAL_SECONDS", 30),
+          initialSyncDays: getEnvInt("INITIAL_SYNC_DAYS", 0),
+          catchUpMode: getEnvEnum("CATCH_UP_MODE", "none", ["none", "process", "dry-run"] as const),
+          requireImageAttachment: getEnvBool("REQUIRE_IMAGE_ATTACHMENT", true),
+        }
+      : null,
     llm: {
       provider: getEnvEnum("LLM_PROVIDER", "openrouter", ["openrouter", "ollama", "custom"] as const),
       apiKey: getEnv("LLM_API_KEY", ""),

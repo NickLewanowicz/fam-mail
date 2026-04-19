@@ -10,11 +10,12 @@ import { NotificationService } from './services/notifications'
 import { OIDCService } from './services/oidcService'
 import { JWTService } from './services/jwtService'
 import { AuthMiddleware } from './middleware/auth'
-import { RateLimiter, rateLimited, getClientIp } from './middleware/rateLimit'
-import { jsonResponse, createCorsResponse } from './middleware/headers'
+import { RateLimiter, getClientIp } from './middleware/rateLimit'
+import { jsonResponse, createCorsResponse } from './utils/response'
 import { setupAuthRoutes } from './routes/auth'
 import { DraftRoutes } from './routes/drafts'
 import type { LLMConfig } from './services/llm'
+import { logger } from './utils/logger'
 
 // Rate limiter for auth endpoints: 10 requests per minute per IP
 const authRateLimiter = new RateLimiter(10, 60_000)
@@ -90,7 +91,7 @@ if (config.imap) {
   )
 
   // Start IMAP polling on server start
-  imap.start().catch(console.error)
+  imap.start().catch((error) => logger.error('IMAP service error', { error }))
 }
 
 const frontendDistPath = join(import.meta.dir, '../../frontend/dist')
@@ -249,7 +250,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         return new Response(indexFile)
       }
     } catch (error) {
-      console.error('Error serving static file:', error)
+      logger.error('Error serving static file', { error })
     }
   }
 
