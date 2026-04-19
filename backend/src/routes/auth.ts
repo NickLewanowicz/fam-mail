@@ -86,14 +86,14 @@ export function setupAuthRoutes(
     const state = url.searchParams.get('state')
 
     if (!code || !state) {
-      return jsonResponse({ error: 'Missing code or state' }, 400)
+      return jsonResponse({ error: 'Missing code or state' }, 400, req)
     }
 
     evictExpired()
     const entry = oidcStateStore.get(state)
 
     if (!entry) {
-      return jsonResponse({ error: 'Invalid or expired state' }, 400)
+      return jsonResponse({ error: 'Invalid or expired state' }, 400, req)
     }
 
     try {
@@ -113,16 +113,16 @@ export function setupAuthRoutes(
       oidcStateStore.delete(state)
 
       const redirectUrl = `${new URL(req.url).origin}/auth/callback?token=${accessToken}`
-      return Response.redirect(redirectUrl)
+      return applyHeaders(Response.redirect(redirectUrl), req)
     } catch (error) {
       console.error('OIDC callback error:', error)
-      return jsonResponse({ error: 'Authentication failed' }, 500)
+      return jsonResponse({ error: 'Authentication failed' }, 500, req)
     }
   }
 
   // Get current user
   async function handleGetMe(req: Request, user: User): Promise<Response> {
-    return jsonResponse({ user })
+    return jsonResponse({ user }, 200, req)
   }
 
   // Logout
@@ -134,7 +134,7 @@ export function setupAuthRoutes(
       db.deleteSession(token)
     }
 
-    return jsonResponse({ message: 'Logged out successfully' })
+    return jsonResponse({ message: 'Logged out successfully' }, 200, req)
   }
 
   // Refresh access token using refresh token
@@ -144,7 +144,7 @@ export function setupAuthRoutes(
       const { refreshToken } = body
 
       if (!refreshToken) {
-        return jsonResponse({ error: 'Missing refresh token' }, 400)
+        return jsonResponse({ error: 'Missing refresh token' }, 400, req)
       }
 
       // Verify the refresh token is valid and is actually a refresh token
@@ -152,29 +152,29 @@ export function setupAuthRoutes(
       try {
         payload = await jwtService.verifyRefreshToken(refreshToken)
       } catch {
-        return jsonResponse({ error: 'Invalid or expired refresh token' }, 401)
+        return jsonResponse({ error: 'Invalid or expired refresh token' }, 401, req)
       }
 
       const userId = payload.sub as string
       if (!userId) {
-        return jsonResponse({ error: 'Invalid refresh token' }, 401)
+        return jsonResponse({ error: 'Invalid refresh token' }, 401, req)
       }
 
       // Look up the session by refresh token to ensure it exists
       const session = db.getSessionByRefreshToken(refreshToken)
       if (!session) {
-        return jsonResponse({ error: 'Refresh token not found' }, 401)
+        return jsonResponse({ error: 'Refresh token not found' }, 401, req)
       }
 
       // Verify the token belongs to the same user
       if (session.userId !== userId) {
-        return jsonResponse({ error: 'Token mismatch' }, 401)
+        return jsonResponse({ error: 'Token mismatch' }, 401, req)
       }
 
       // Look up the user
       const user = db.getUserById(userId)
       if (!user) {
-        return jsonResponse({ error: 'User not found' }, 401)
+        return jsonResponse({ error: 'User not found' }, 401, req)
       }
 
       // Delete the old session (refresh token rotation)
@@ -199,10 +199,10 @@ export function setupAuthRoutes(
       return jsonResponse({
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-      })
+      }, 200, req)
     } catch (error) {
       console.error('Token refresh error:', error)
-      return jsonResponse({ error: 'Invalid request body' }, 400)
+      return jsonResponse({ error: 'Invalid request body' }, 400, req)
     }
   }
 

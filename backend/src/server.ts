@@ -53,13 +53,11 @@ const cleanupTimer = setInterval(runPeriodicCleanup, CLEANUP_INTERVAL_MS)
 // Don't prevent process exit
 if (cleanupTimer.unref) cleanupTimer.unref()
 
-/** Helper: check rate limit and return 429 if exceeded.
- *  Note: does NOT need to pass `req` to jsonResponse because the global
- *  withSecurityHeaders() wrapper in handleRequest applies CORS headers. */
+/** Helper: check rate limit and return 429 if exceeded. */
 function checkRateLimit(limiter: RateLimiter, req: Request): Response | null {
   const { allowed, retryAfterMs } = limiter.check(getClientIp(req))
   if (!allowed) {
-    return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429)
+    return jsonResponse({ error: 'Too many requests', retryAfter: retryAfterMs }, 429, req)
   }
   return null
 }
@@ -142,9 +140,12 @@ const frontendDistPath = join(import.meta.dir, '../../frontend/dist')
 
 /**
  * Global response wrapper that guarantees security + CORS headers on every
- * response, regardless of whether individual route handlers remember to pass
- * `req` to `jsonResponse()`. This is the single enforcement point referenced
- * by GitHub issue #34.
+ * response. Acts as a safety net — route handlers now pass `req` to
+ * `jsonResponse()` directly, so headers are applied consistently at the
+ * point of creation. This wrapper ensures even edge cases (raw Response
+ * objects, redirects) get the full header treatment.
+ *
+ * @see GitHub issue #34
  */
 function withSecurityHeaders(response: Response, req: Request): Response {
   // applyHeaders is idempotent — calling it on a response that already has
@@ -191,7 +192,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (url.pathname === '/api/drafts' && req.method === 'GET') {
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.list(req, authResult.user!), req)
   }
@@ -202,7 +203,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.create(req, authResult.user!), req)
   }
@@ -210,7 +211,7 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'GET') {
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.get(req, authResult.user!), req)
   }
@@ -221,7 +222,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.update(req, authResult.user!), req)
   }
@@ -232,7 +233,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.delete(req, authResult.user!), req)
   }
@@ -243,7 +244,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.publish(req, authResult.user!), req)
   }
@@ -254,7 +255,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.schedule(req, authResult.user!), req)
   }
@@ -265,13 +266,13 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await draftRoutes.cancelSchedule(req, authResult.user!), req)
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
-    return withSecurityHeaders(jsonResponse({ status: 'ok' }, 200), req)
+    return withSecurityHeaders(jsonResponse({ status: 'ok' }, 200, req), req)
   }
 
   // #29: Debug endpoint only available in development mode
@@ -279,7 +280,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     return withSecurityHeaders(jsonResponse({
       message: 'Hello from Fam Mail backend!',
       connected: true,
-    }, 200), req)
+    }, 200, req), req)
   }
 
   // #30: Postcard creation requires authentication (PostGrid costs real money)
@@ -290,7 +291,7 @@ export async function handleRequest(req: Request): Promise<Response> {
 
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401), req)
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
     return withSecurityHeaders(await handlePostcardCreate(req, authResult.user!, db), req)
   }
@@ -324,7 +325,7 @@ export async function handleRequest(req: Request): Promise<Response> {
     }
   }
 
-  return withSecurityHeaders(jsonResponse({ error: 'Not Found' }, 404), req)
+  return withSecurityHeaders(jsonResponse({ error: 'Not Found' }, 404, req), req)
 }
 
 // Export for testing

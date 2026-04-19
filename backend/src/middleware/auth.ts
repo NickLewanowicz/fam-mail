@@ -1,7 +1,7 @@
 import { JWTService } from '../services/jwtService'
 import { Database } from '../database'
 import type { User } from '../models/user'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse } from '../middleware/headers'
 
 export class AuthMiddleware {
   private jwtService: JWTService
@@ -41,11 +41,11 @@ export class AuthMiddleware {
       const { user, error } = await this.authenticate(req)
 
       if (error) {
-        return jsonResponse({ error }, 401)
+        return jsonResponse({ error }, 401, req)
       }
 
       if (!user) {
-        return jsonResponse({ error: 'User not found' }, 401)
+        return jsonResponse({ error: 'User not found' }, 401, req)
       }
 
       return handler(req, user)

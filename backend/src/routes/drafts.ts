@@ -2,7 +2,7 @@ import { Database } from '../database'
 import { AuthMiddleware } from '../middleware/auth'
 import type { Draft } from '../models/draft'
 import type { User } from '../models/user'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
 import { validateAddress, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
@@ -40,7 +40,7 @@ export class DraftRoutes {
       drafts = this.db.getDraftsByUserId(user.id)
     }
 
-    return jsonResponse({ drafts })
+    return jsonResponse({ drafts }, 200, req)
   }
 
   async create(req: Request, user: User): Promise<Response> {
@@ -56,7 +56,7 @@ export class DraftRoutes {
     }
 
     if (!body.recipientAddress) {
-      return jsonResponse({ error: 'recipientAddress is required' }, 400)
+      return jsonResponse({ error: 'recipientAddress is required' }, 400, req)
     }
 
     const draft: Omit<Draft, 'createdAt' | 'updatedAt'> = {
@@ -76,7 +76,7 @@ export class DraftRoutes {
 
     this.db.insertDraft(draft)
 
-    return jsonResponse({ draft }, 201)
+    return jsonResponse({ draft }, 201, req)
   }
 
   async get(req: Request, user: User): Promise<Response> {
@@ -84,20 +84,20 @@ export class DraftRoutes {
     const id = url.pathname.split('/').pop()
 
     if (!id) {
-      return jsonResponse({ error: 'Draft ID is required' }, 400)
+      return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
     const draft = this.db.getDraft(id!)
 
     if (!draft) {
-      return jsonResponse({ error: 'Draft not found' }, 404)
+      return jsonResponse({ error: 'Draft not found' }, 404, req)
     }
 
     if (draft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403)
+      return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
-    return jsonResponse({ draft })
+    return jsonResponse({ draft }, 200, req)
   }
 
   async update(req: Request, user: User): Promise<Response> {
@@ -106,24 +106,24 @@ export class DraftRoutes {
     const body = await req.json() as Partial<Draft>
 
     if (!id) {
-      return jsonResponse({ error: 'Draft ID is required' }, 400)
+      return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
     const existingDraft = this.db.getDraft(id!)
 
     if (!existingDraft) {
-      return jsonResponse({ error: 'Draft not found' }, 404)
+      return jsonResponse({ error: 'Draft not found' }, 404, req)
     }
 
     if (existingDraft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403)
+      return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
     this.db.updateDraft(id, body)
 
     const updatedDraft = this.db.getDraft(id!)
 
-    return jsonResponse({ draft: updatedDraft })
+    return jsonResponse({ draft: updatedDraft }, 200, req)
   }
 
   async delete(req: Request, user: User): Promise<Response> {
@@ -131,22 +131,22 @@ export class DraftRoutes {
     const id = url.pathname.split('/').pop()
 
     if (!id) {
-      return jsonResponse({ error: 'Draft ID is required' }, 400)
+      return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
     const existingDraft = this.db.getDraft(id!)
 
     if (!existingDraft) {
-      return jsonResponse({ error: 'Draft not found' }, 404)
+      return jsonResponse({ error: 'Draft not found' }, 404, req)
     }
 
     if (existingDraft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403)
+      return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
     this.db.deleteDraft(id)
 
-    return jsonResponse({ message: 'Draft deleted' })
+    return jsonResponse({ message: 'Draft deleted' }, 200, req)
   }
 
   async publish(req: Request, user: User): Promise<Response> {
@@ -154,21 +154,21 @@ export class DraftRoutes {
     const id = url.pathname.split('/').pop()
 
     if (!id) {
-      return jsonResponse({ error: 'Draft ID is required' }, 400)
+      return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
     const draft = this.db.getDraft(id!)
 
     if (!draft) {
-      return jsonResponse({ error: 'Draft not found' }, 404)
+      return jsonResponse({ error: 'Draft not found' }, 404, req)
     }
 
     if (draft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403)
+      return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
     if (draft.state !== 'draft') {
-      return jsonResponse({ error: 'Draft is not in draft state' }, 400)
+      return jsonResponse({ error: 'Draft is not in draft state' }, 400, req)
     }
 
     // --- Validate all required fields before sending to PostGrid ---
@@ -210,14 +210,14 @@ export class DraftRoutes {
     }
 
     if (allErrors.length > 0) {
-      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400)
+      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400, req)
     }
 
     // Check PostGrid service is configured
     if (!this.postgrid) {
       return jsonResponse({
         error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.',
-      }, 500)
+      }, 500, req)
     }
 
     try {
@@ -311,7 +311,7 @@ export class DraftRoutes {
           status: result.status,
           testMode: this.postgrid.getTestMode(),
         },
-      })
+      }, 200, req)
     } catch (error: unknown) {
       const pgError = error as PostGridError
       const status = pgError.status || 500
@@ -319,7 +319,7 @@ export class DraftRoutes {
         success: false,
         error: pgError.message || 'Failed to create postcard',
         details: pgError.error,
-      }, status)
+      }, status, req)
     }
   }
 
@@ -329,27 +329,27 @@ export class DraftRoutes {
     const body = await req.json() as { scheduledFor: string }
 
     if (!id) {
-      return jsonResponse({ error: 'Draft ID is required' }, 400)
+      return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
     const existingDraft = this.db.getDraft(id!)
 
     if (!existingDraft) {
-      return jsonResponse({ error: 'Draft not found' }, 404)
+      return jsonResponse({ error: 'Draft not found' }, 404, req)
     }
 
     if (existingDraft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403)
+      return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
     if (!body.scheduledFor) {
-      return jsonResponse({ error: 'scheduledFor is required' }, 400)
+      return jsonResponse({ error: 'scheduledFor is required' }, 400, req)
     }
 
     const scheduledDate = new Date(body.scheduledFor)
 
     if (scheduledDate <= new Date()) {
-      return jsonResponse({ error: 'scheduledFor must be in future' }, 400)
+      return jsonResponse({ error: 'scheduledFor must be in future' }, 400, req)
     }
 
     // Update draft to 'ready' with scheduled time
@@ -358,7 +358,7 @@ export class DraftRoutes {
       scheduledFor: body.scheduledFor,
     })
 
-    return jsonResponse({ message: 'Draft scheduled for ' + scheduledDate.toISOString() })
+    return jsonResponse({ message: 'Draft scheduled for ' + scheduledDate.toISOString() }, 200, req)
   }
 
   async cancelSchedule(req: Request, user: User): Promise<Response> {
@@ -366,21 +366,21 @@ export class DraftRoutes {
     const id = url.pathname.split('/').pop()
 
     if (!id) {
-      return jsonResponse({ error: 'Draft ID is required' }, 400)
+      return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
     const existingDraft = this.db.getDraft(id!)
 
     if (!existingDraft) {
-      return jsonResponse({ error: 'Draft not found' }, 404)
+      return jsonResponse({ error: 'Draft not found' }, 404, req)
     }
 
     if (existingDraft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403)
+      return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
     if (!existingDraft.scheduledFor) {
-      return jsonResponse({ error: 'Draft is not scheduled' }, 400)
+      return jsonResponse({ error: 'Draft is not scheduled' }, 400, req)
     }
 
     // Revert to draft state
@@ -389,6 +389,6 @@ export class DraftRoutes {
       scheduledFor: null,
     })
 
-    return jsonResponse({ message: 'Schedule cancelled' })
+    return jsonResponse({ message: 'Schedule cancelled' }, 200, req)
   }
 }
