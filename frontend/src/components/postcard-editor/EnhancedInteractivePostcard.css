@@ -38,7 +38,7 @@
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
-  background: white;
+  background: var(--b1);
 }
 
 /* Backface visibility for different browsers */
@@ -73,12 +73,12 @@
 }
 
 .progress {
-  background-color: #e5e7eb;
+  background-color: var(--b3);
   overflow: hidden;
 }
 
 .progress-bar {
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  background: var(--p);
   transition: width 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
 }
 
@@ -99,9 +99,9 @@
   margin: 0 2px;
   font-size: 0.75rem;
   line-height: 1;
-  color: #444;
-  background-color: #f8f8f8;
-  border: 1px solid #ccc;
+  color: var(--bc);
+  background-color: var(--b2);
+  border: 1px solid oklch(from var(--bc) l c h / 0.2);
   border-radius: 3px;
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
 }
@@ -119,23 +119,23 @@
 }
 
 [role="tablist"] [role="tab"]:hover:not([aria-selected="true"]) {
-  background-color: #e5e7eb;
+  background-color: var(--b3);
 }
 
 /* Focus Management */
 .enhanced-postcard-wrapper *:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--p);
   outline-offset: 2px;
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .postcard-face {
-    border: 2px solid #000;
+    border: 2px solid var(--bc);
   }
 
   .enhanced-postcard-wrapper *:focus {
-    outline: 3px solid #000;
+    outline: 3px solid var(--bc);
     outline-offset: 2px;
   }
 }
@@ -251,7 +251,7 @@
     transform: none !important;
     margin-bottom: 1rem;
     box-shadow: none;
-    border: 1px solid #ccc;
+    border: 1px solid oklch(from var(--bc) l c h / 0.2);
   }
 }
 
