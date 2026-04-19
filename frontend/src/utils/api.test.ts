@@ -17,6 +17,14 @@ describe('submitPostcard', () => {
 
   beforeEach(() => {
     global.fetch = vi.fn()
+    global.localStorage = {
+      getItem: vi.fn(() => null),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(() => null),
+    }
 
     const mockFileReader = {
       result: null as string | ArrayBuffer | null,

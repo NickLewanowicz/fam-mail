@@ -1,0 +1,29 @@
+model:
+  providerID: zai-coding-plan
+  modelID: glm-5.1
+agent: build
+
+opencode_port: 4096
+quota_reset_backoff_min: 2
+max_session_wait_sec: 900
+poll_interval_sec: 10
+max_attempts_per_issue: 3
+no_activity_timeout_sec: 120
+stuck_tool_timeout_sec: 300
+
+qa_checks:
+  - name: backend_tests
+    command: "cd backend && pnpm test 2>&1"
+    timeout: 60
+  - name: frontend_tests
+    command: "cd frontend && gtimeout 45 npx vitest --run --reporter=verbose 2>&1"
+    timeout: 60
+  - name: backend_lint
+    command: "cd backend && pnpm lint 2>&1"
+    timeout: 30
+  - name: frontend_lint
+    command: "cd frontend && pnpm lint 2>&1"
+    timeout: 30
+  - name: frontend_build
+    command: "cd frontend && pnpm build 2>&1"
+    timeout: 60

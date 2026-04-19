@@ -40,7 +40,7 @@ OPENCODE_PORT = 4096
 OPENCODE_URL = f"http://127.0.0.1:{OPENCODE_PORT}"
 
 QUOTA_RESET_BACKOFF_MIN = 2  # Start small — concurrency limits need short retries
-MAX_SESSION_WAIT_SEC = 600  # 10 min per implementation session
+MAX_SESSION_WAIT_SEC = 900  # 15 min per session — GLM 5.1 is slow but productive
 POLL_INTERVAL_SEC = 10
 MAX_ATTEMPTS_PER_ISSUE = 3
 
@@ -265,22 +265,37 @@ class OpenCodeAPI:
         start = time.time()
         prev_tools = -1
         stall_ticks = 0
+        active_stuck_ticks = 0
         saw_assistant = False
+        no_activity_ticks = 0
 
         # Initial delay — GLM 5.1 needs time to start generating
         log_verbose("Waiting for model to begin...")
         time.sleep(15)
 
         while time.time() - start < max_wait:
-            status = self.session_status(session_id)
+            try:
+                status = self.session_status(session_id)
+            except Exception as e:
+                log(f"Error polling session: {e}", "WARN")
+                time.sleep(POLL_INTERVAL_SEC)
+                continue
 
             if status["quota_hit"]:
                 log("QUOTA HIT detected in session", "WARN")
                 return {**status, "outcome": "quota_hit"}
 
-            # Only consider "done" after we've seen assistant activity
             if status["tools"] > 0 or status["tokens"] > 0:
                 saw_assistant = True
+                no_activity_ticks = 0
+            else:
+                no_activity_ticks += 1
+
+            # Model never started — likely silent rate limit or queue starvation
+            if no_activity_ticks >= 12:  # 2 min with zero activity
+                log(f"Model never started after {no_activity_ticks * POLL_INTERVAL_SEC}s — treating as quota backoff", "WARN")
+                self.abort_session(session_id)
+                return {**status, "outcome": "quota_hit"}
 
             if saw_assistant and status["done"] and not status["active"]:
                 elapsed = int(time.time() - start)
@@ -289,12 +304,23 @@ class OpenCodeAPI:
 
             if saw_assistant and status["tools"] == prev_tools:
                 stall_ticks += 1
+                if status["active"]:
+                    active_stuck_ticks += 1
             else:
                 stall_ticks = 0
+                active_stuck_ticks = 0
                 prev_tools = status["tools"]
 
-            if stall_ticks >= 12:  # 2 min of no progress
+            # Abort if tool count hasn't changed for 2 min (no progress)
+            if stall_ticks >= 12 and not status["active"]:
                 log(f"Session stalled for {stall_ticks * POLL_INTERVAL_SEC}s — aborting", "WARN")
+                self.abort_session(session_id)
+                time.sleep(3)
+                return {**self.session_status(session_id), "outcome": "stalled"}
+
+            # Abort if a single tool has been "running" for 5 min (e.g. hung pnpm test)
+            if active_stuck_ticks >= 30:
+                log(f"Tool stuck running for {active_stuck_ticks * POLL_INTERVAL_SEC}s — aborting", "WARN")
                 self.abort_session(session_id)
                 time.sleep(3)
                 return {**self.session_status(session_id), "outcome": "stalled"}
@@ -377,6 +403,13 @@ class QuotaManager:
         self.state["backoff_until"] = until.isoformat()
         self._save()
         log(f"Quota hit #{self.state['hit_count']}. Backoff {backoff_min}m until {until.strftime('%H:%M')}", "WARN")
+
+    def record_success(self):
+        """Reset hit count when a session successfully runs."""
+        if self.state.get("hit_count", 0) > 0:
+            self.state["hit_count"] = 0
+            self.state["backoff_until"] = None
+            self._save()
 
     def should_wait(self) -> tuple[bool, int]:
         if self.state.get("backoff_until"):
@@ -503,7 +536,7 @@ def run_qa() -> dict:
     results = {}
     checks = [
         ("backend_tests", "cd backend && pnpm test 2>&1", 60),
-        ("frontend_tests", "cd frontend && npx vitest --run --reporter=verbose 2>&1", 45),
+        ("frontend_tests", "cd frontend && gtimeout 45 npx vitest --run --reporter=verbose 2>&1", 60),
         ("backend_lint", "cd backend && pnpm lint 2>&1", 30),
         ("frontend_lint", "cd frontend && pnpm lint 2>&1", 30),
         ("frontend_build", "cd frontend && pnpm build 2>&1", 60),
@@ -534,17 +567,19 @@ def implement_prompt(issue: dict) -> str:
 ## Workflow
 1. Read the relevant source files
 2. Implement the fix — focused, atomic changes only
-3. Run tests: `cd /Users/nick/Documents/Projects/fam-mail/backend && pnpm test`
-4. Run tests: `cd /Users/nick/Documents/Projects/fam-mail/frontend && pnpm test -- --run`
+3. Run backend tests: `cd /Users/nick/Documents/Projects/fam-mail/backend && pnpm test`
+4. Run frontend tests: `cd /Users/nick/Documents/Projects/fam-mail/frontend && gtimeout 60 npx vitest --run --reporter=verbose 2>&1 || true`
+   IMPORTANT: Do NOT use `pnpm test -- --run` for frontend — Vitest hangs due to jsdom timer leaks. Always use `gtimeout 60 npx vitest --run` instead.
 5. Run lint: `cd /Users/nick/Documents/Projects/fam-mail/backend && pnpm lint`
 6. Run lint: `cd /Users/nick/Documents/Projects/fam-mail/frontend && pnpm lint`
 7. Fix any failures before finishing
 8. Commit with: `git add -A && git commit -m "fix: <description> (#{n})"`
 
 ## Rules
-- Use pnpm (not npm/yarn)
+- Use pnpm (not npm/yarn) for installs, but `gtimeout 60 npx vitest --run` for frontend tests
 - Use absolute paths in all bash commands
 - Do NOT start dev servers
+- Do NOT run commands that could hang indefinitely — always use gtimeout
 - After committing, output exactly: IMPLEMENTATION_COMPLETE
 """
 
@@ -552,7 +587,7 @@ def triage_prompt() -> str:
     return """Scan the fam-mail codebase for issues not yet tracked on GitHub.
 
 1. Run: `cd /Users/nick/Documents/Projects/fam-mail/backend && pnpm test`
-2. Run: `cd /Users/nick/Documents/Projects/fam-mail/frontend && pnpm test -- --run`
+2. Run: `cd /Users/nick/Documents/Projects/fam-mail/frontend && gtimeout 60 npx vitest --run --reporter=verbose 2>&1 || true`
 3. Run: `cd /Users/nick/Documents/Projects/fam-mail/backend && pnpm lint`
 4. Run: `cd /Users/nick/Documents/Projects/fam-mail/frontend && pnpm lint`
 5. Check: `gh issue list --state open --limit 50 --json number,title`
@@ -633,6 +668,9 @@ class Orchestrator:
         has_commit = any(f"#{n}" in c["message"] or f"({n})" in c["message"]
                         for c in new_commits)
         made_progress = result.get("tools", 0) >= 3 or has_commit
+
+        if made_progress:
+            self.quota.record_success()
 
         if not made_progress:
             log(f"No meaningful progress on #{n}")
@@ -762,9 +800,10 @@ class Orchestrator:
 
                 # Quota check
                 waiting, wait_s = self.quota.should_wait()
-                if waiting:
-                    log(f"Quota backoff: {wait_s}s remaining. Sleeping 60s...")
-                    time.sleep(min(wait_s, 60))
+                if waiting and wait_s > 0:
+                    sleep_for = min(wait_s, 60)
+                    log(f"Quota backoff: {wait_s}s remaining. Sleeping {sleep_for}s...")
+                    time.sleep(sleep_for)
                     continue
 
                 # Server check

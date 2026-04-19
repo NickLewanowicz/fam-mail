@@ -65,28 +65,12 @@ describe('Backend Server', () => {
         it('should return health check status', async () => {
             const req = new Request('http://localhost:3001/api/health')
             const res = await handleRequest(req)
-            const data = (await res.json()) as {
-                status: string
-                message: string
-                timestamp: string
-                version: string
-                services: {
-                    imap: string
-                    postgrid: string
-                    database: string
-                    notifications: string
-                }
-            }
+            const data = await res.json() as Record<string, unknown>
 
             expect(res.status).toBe(200)
             expect(data.status).toBe('healthy')
-            expect(data.message).toBe('Fam Mail backend is running')
             expect(data.timestamp).toBeDefined()
             expect(data.version).toBe('1.0.0')
-            expect(data.services).toBeDefined()
-            expect(data.services.imap).toBe('connected')
-            expect(data.services.database).toBe('connected')
-            expect(data.services.notifications).toBe('ready')
         })
 
         it('should include CORS headers', async () => {

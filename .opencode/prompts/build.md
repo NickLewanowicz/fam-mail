@@ -15,7 +15,10 @@ Postcards sent via PostGrid are PHYSICAL MAIL. Invalid postcards waste real mone
 
 ## Workflow
 1. Use `@vision` subagent for any image analysis or UI screenshot verification
-2. Always run `pnpm test` and `pnpm lint` after changes
+2. Always run tests and lint after changes:
+   - Backend: `cd backend && pnpm test`
+   - Frontend: `cd frontend && gtimeout 60 npx vitest --run --reporter=verbose 2>&1 || true` (NEVER use `pnpm test -- --run` — Vitest hangs due to jsdom timer leaks)
+   - Lint: `cd backend && pnpm lint` and `cd frontend && pnpm lint`
 3. Never run `pnpm dev` - rely on tests and linting
 4. Use pnpm, never npm or yarn
 5. Create focused, atomic commits

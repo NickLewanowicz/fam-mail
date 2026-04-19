@@ -3,7 +3,6 @@ import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
 import { PostcardBuilder } from './components/postcard/PostcardBuilder'
 import { DraftList, SaveDraftModal } from './components/drafts'
-import { ModalTestPage } from './ModalTestPage'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
 import type { Draft } from './types/postcard'
@@ -26,7 +25,6 @@ function App() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submissionError, setSubmissionError] = useState<string | null>(null)
   const [submissionSuccess, setSubmissionSuccess] = useState<PostcardResponse | null>(null)
-  const [showModalTest, setShowModalTest] = useState(false)
 
   // Drafts UI state
   const [activeView, setActiveView] = useState<ViewMode>('editor')
@@ -72,10 +70,24 @@ function App() {
     setActiveDraftId(null)
   }
 
-  const handleLoadDraft = (draft: Draft) => {
+  const handleLoadDraft = async (draft: Draft) => {
     setRecipientAddress(draft.recipientAddress ?? null)
     setMessage(draft.message ?? '')
     setActiveDraftId(draft.id)
+
+    if (draft.imageData) {
+      try {
+        const res = await fetch(draft.imageData)
+        const blob = await res.blob()
+        const file = new File([blob], 'draft-image.jpg', { type: blob.type || 'image/jpeg' })
+        setSelectedImage({ file, preview: draft.imageData })
+      } catch {
+        setSelectedImage(null)
+      }
+    } else {
+      setSelectedImage(null)
+    }
+
     setActiveView('editor')
   }
 
@@ -130,20 +142,7 @@ function App() {
             </button>
           </div>
 
-          {/* Modal Test Toggle */}
-          <div className="flex justify-center">
-            <button
-              className={`btn ${showModalTest ? 'btn-primary' : 'btn-outline'}`}
-              onClick={() => setShowModalTest(!showModalTest)}
-            >
-              {showModalTest ? 'Hide Modal Test Page' : 'Show Modal Test Page'}
-            </button>
-          </div>
-
-          {/* Show Modal Test Page or View-based content */}
-          {showModalTest ? (
-            <ModalTestPage />
-          ) : activeView === 'drafts' ? (
+          {activeView === 'drafts' ? (
             <DraftList
               onLoadDraft={handleLoadDraft}
               onDraftsChanged={handleDraftsChanged}

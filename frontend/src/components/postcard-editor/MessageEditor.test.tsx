@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import React, { useState } from 'react';
@@ -104,11 +104,12 @@ describe('MessageEditor', () => {
     const editor = screen.getByTestId('md-editor');
     const longMessage = 'a'.repeat(600); // Exceeds max limit of 500
 
-    await user.type(editor, longMessage);
+    // Use fireEvent.change to set value directly (user.type with 600 chars is too slow)
+    fireEvent.change(editor, { target: { value: longMessage } });
 
     // Should not call onChange with message exceeding limit
     expect(mockOnChange).not.toHaveBeenCalledWith(expect.stringMatching(/^a{501,}$/));
-  });
+  }, 15000);
 
   it('exits edit mode when ESC key is pressed', async () => {
     const user = userEvent.setup();
@@ -182,14 +183,18 @@ describe('MessageEditor', () => {
     expect(screen.getByText('Custom placeholder text')).toBeInTheDocument();
   });
 
-  it('handles autoSave being disabled', async () => {
-    const user = userEvent.setup();
+  it('handles autoSave being disabled', () => {
     render(<MessageEditorWithState autoSave={false} />);
 
-    await user.click(screen.getByText('Click to add your message...'));
+    // Click to enter edit mode
+    const messageArea = screen.getByText('Click to add your message...');
+    fireEvent.click(messageArea);
 
     const editor = screen.getByTestId('md-editor');
-    await user.type(editor, 'Hello');
+    // Use fireEvent.change to set value directly (avoids user.type garbling)
+    act(() => {
+      fireEvent.change(editor, { target: { value: 'Hello' } });
+    });
 
     // Should update value immediately when autoSave is false
     expect(editor).toHaveValue('Hello');

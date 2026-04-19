@@ -53,11 +53,17 @@ export async function submitPostcard(
     submission.message = message
   }
 
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  const token = localStorage.getItem('fam_mail_token')
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+
   const response = await fetch('/api/postcards', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(submission),
   })
 

@@ -155,9 +155,6 @@ vi.mock('./components/drafts', () => ({
   ) : null,
 }))
 
-vi.mock('./ModalTestPage', () => ({
-  ModalTestPage: () => <div data-testid="mock-modal-test-page">Modal Test Page</div>,
-}))
 
 const mockHealthResponse = {
   json: async () => ({ status: 'ok', message: 'Test', testMode: false }),
@@ -531,32 +528,4 @@ describe('App Component', () => {
     })
   })
 
-  describe('Modal Test Page Toggle', () => {
-    it('should toggle modal test page', async () => {
-      const user = userEvent.setup()
-      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockHealthResponse)
-
-      render(<App />)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-postcard-builder')).toBeInTheDocument()
-      })
-
-      // Show modal test — button text split across text nodes, use regex
-      await user.click(screen.getByText(/Show Modal Test Page/))
-
-      await waitFor(() => {
-        expect(screen.getByTestId('mock-modal-test-page')).toBeInTheDocument()
-        expect(screen.queryByTestId('mock-postcard-builder')).not.toBeInTheDocument()
-      })
-
-      // Hide modal test — button text split across text nodes, use regex
-      await user.click(screen.getByText(/Hide Modal Test Page/))
-
-      await waitFor(() => {
-        expect(screen.queryByTestId('mock-modal-test-page')).not.toBeInTheDocument()
-        expect(screen.getByTestId('mock-postcard-builder')).toBeInTheDocument()
-      })
-    })
-  })
 })

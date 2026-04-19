@@ -33,6 +33,22 @@ describe('useLocalStorageDraft', () => {
     vi.unstubAllGlobals()
   })
 
+  it('starts with isLoading true', () => {
+    let initialIsLoading: boolean | null = null
+
+    renderHook(() => {
+      const hookResult = useLocalStorageDraft({ key: 'test0', defaultValue: { name: 'initial' } })
+      // Capture the initial state before any effects run
+      if (initialIsLoading === null) {
+        initialIsLoading = hookResult.isLoading
+      }
+      return hookResult
+    })
+
+    // The hook initializes isLoading to true in useState
+    expect(initialIsLoading).toBe(true)
+  })
+
   it('finishes loading after mount', () => {
     const { result } = renderHook(() =>
       useLocalStorageDraft({ key: 'test1', defaultValue: { name: 'initial' } })

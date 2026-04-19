@@ -1,7 +1,28 @@
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../ui/Modal'
 import MDEditor from '@uiw/react-md-editor'
-import { useCallback, useEffect, useState } from 'react'
-import { debounce } from 'lodash'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+/** Lightweight debounce with cancel support — replaces lodash dependency */
+function debounce<T extends (...args: unknown[]) => void>(
+  fn: T,
+  ms: number
+): T & { cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  const debounced = ((...args: unknown[]) => {
+    if (timer !== null) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = null
+      fn(...args)
+    }, ms)
+  }) as T & { cancel: () => void }
+  debounced.cancel = () => {
+    if (timer !== null) {
+      clearTimeout(timer)
+      timer = null
+    }
+  }
+  return debounced
+}
 
 interface MessageEditModalProps {
   isOpen: boolean
@@ -19,34 +40,41 @@ export const MessageEditModal: React.FC<MessageEditModalProps> = ({
   const [message, setMessage] = useState(initialMessage)
   const [isDirty, setIsDirty] = useState(false)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSave = useCallback(
+  // Stable ref to latest callbacks so the debounced fn always sees current values
+  const onSaveRef = useRef(onSave)
+  const initialMessageRef = useRef(initialMessage)
+  onSaveRef.current = onSave
+  initialMessageRef.current = initialMessage
+
+  // Create a single stable debounced function
+  const debouncedSaveRef = useRef(
     debounce((value: string) => {
-      if (value !== initialMessage) {
-        onSave(value)
+      if (value !== initialMessageRef.current) {
+        onSaveRef.current(value)
         setIsDirty(false)
       }
-    }, 500),
-    [onSave, initialMessage]
+    }, 500)
   )
+
+  // Cancel pending debounce on unmount
+  useEffect(() => {
+    const ref = debouncedSaveRef
+    return () => {
+      ref.current.cancel()
+    }
+  }, [])
 
   useEffect(() => {
     setMessage(initialMessage)
     setIsDirty(false)
   }, [initialMessage, isOpen])
 
-  useEffect(() => {
-    return () => {
-      debouncedSave.cancel()
-    }
-  }, [debouncedSave])
-
   const handleChange = useCallback((value: string | undefined) => {
     const stringValue = value || ''
     setMessage(stringValue)
     setIsDirty(stringValue !== initialMessage)
-    debouncedSave(stringValue)
-  }, [debouncedSave, initialMessage])
+    debouncedSaveRef.current(stringValue)
+  }, [initialMessage])
 
   const handleSave = useCallback(() => {
     onSave(message)

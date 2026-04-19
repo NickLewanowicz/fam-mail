@@ -1,32 +1,40 @@
 # Fam Mail
 
-Email-to-postcard conversion service. Monitor an email inbox, detect postcard requests via subject line filtering, use LLM to parse email content, and send physical postcards via USPS through PostGrid.
+Send physical postcards to your loved ones through a beautiful web interface or automated email-to-postcard pipeline. Powered by PostGrid for USPS delivery.
 
 ## What is Fam Mail?
 
-Fam Mail is an automated email-to-postcard conversion service. It monitors an IMAP inbox for emails with specific subject lines, uses LLM-powered parsing to extract recipient details, messages, and images, then sends physical postcards via USPS through PostGrid. Perfect for automated birthday cards, special events, or staying in touch through email-to-mail conversion.
+Fam Mail is a full-stack postcard-sending application with two modes of operation:
 
-**What is PostGrid?** PostGrid is a service that provides APIs for sending physical mail programmatically. Learn more at [postgrid.com](https://www.postgrid.com/).
+1. **Web UI** — A polished React app where users compose postcards with addresses, images, and messages, save drafts, and send physical mail via PostGrid.
+2. **Email-to-Postcard** — An automated pipeline that monitors an IMAP inbox for postcard requests, parses content with an LLM, and sends the postcard without manual intervention.
+
+**What is PostGrid?** PostGrid provides APIs for sending physical mail programmatically. Postcards are printed, addressed, and delivered via USPS. Learn more at [postgrid.com](https://www.postgrid.com/).
 
 ## Features
 
-- 📧 IMAP email polling with configurable subject filtering
-- 🤖 LLM-powered email parsing (OpenRouter, Ollama, custom endpoints)
-- 📮 PostGrid API integration with test/live modes
-- ✉️ Email notifications for success/failure
-- 🔒 Force-test mode safety feature
-- 💾 SQLite database for tracking processed emails
-- 🐳 Docker container for easy deployment
-- 🔒 Environment-based configuration (30+ configurable options)
-- 💪 Fully type-safe with TypeScript
-- 🚀 Fast development with Bun and Vite
+- **Web Postcard Builder** — Upload images, compose messages in Markdown, enter US/CA addresses, preview front and back
+- **Draft System** — Save, edit, schedule, and publish drafts
+- **OIDC Authentication** — Google OAuth (or any OIDC provider) with JWT sessions
+- **Email-to-Postcard Pipeline** — IMAP polling, LLM-powered email parsing, automatic postcard creation
+- **Comprehensive Validation** — Address format (US/CA postal codes), image type/size, message length, return address
+- **PostGrid Integration** — Test mode for development, live mode for real mail, force-test safety switch
+- **Rate Limiting** — Per-IP rate limiting on auth endpoints to prevent abuse
+- **SQLite Database** — Track users, drafts, sessions, and processed emails
+- **Docker Deployment** — Single-container deployment with Docker Compose
+- **Full Test Suite** — 560+ backend tests, 70+ frontend tests, lint, build checks
 
 ## Tech Stack
 
-- **Backend**: Bun runtime with TypeScript
-- **Frontend**: Vite + React + TypeScript
-- **Deployment**: Docker container for easy self-hosting
-- **Package Manager**: pnpm
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Bun + TypeScript, manual HTTP routing, SQLite |
+| **Frontend** | Vite + React 18 + TypeScript, Tailwind CSS + DaisyUI |
+| **Auth** | OIDC (Google) + JWT access/refresh tokens |
+| **Mail** | PostGrid API (USPS postcards) |
+| **Email Parsing** | IMAP + LLM (OpenRouter / Ollama / custom) |
+| **Package Manager** | pnpm workspaces |
+| **CI** | GitHub Actions |
 
 ## Quick Start
 
@@ -34,8 +42,7 @@ Fam Mail is an automated email-to-postcard conversion service. It monitors an IM
 
 - [Bun](https://bun.sh/) (v1.0+)
 - [pnpm](https://pnpm.io/) (v8+)
-- [PostGrid API Key](https://www.postgrid.com/)
-- IMAP email account with app-specific password
+- [PostGrid API Key](https://www.postgrid.com/) (free test key available)
 
 ### 1. Install Dependencies
 
@@ -45,99 +52,135 @@ pnpm install
 
 ### 2. Configure Environment
 
-Copy `.env.example` to `backend/.env` and fill in your values:
-
 ```bash
 cp .env.example backend/.env
-# Edit backend/.env with your configuration
 ```
 
-Required configuration includes:
-- PostGrid API keys (test and live)
-- IMAP email credentials
-- LLM provider settings (OpenRouter, Ollama, or custom endpoint)
-- SMTP settings for email notifications (optional)
+Edit `backend/.env` with your configuration. At minimum you need:
 
-### 3. Start Development Servers
+```env
+# PostGrid (required)
+POSTGRID_MODE=test
+POSTGRID_TEST_API_KEY=your_test_key
+POSTGRID_LIVE_API_KEY=your_live_key
+
+# Auth (required for web UI)
+OIDC_ISSUER_URL=https://accounts.google.com/.well-known/openid-configuration
+OIDC_CLIENT_ID=your_google_client_id
+OIDC_CLIENT_SECRET=your_google_client_secret
+OIDC_REDIRECT_URI=http://localhost:8484/api/auth/callback
+JWT_SECRET=your-secret-at-least-32-characters-long
+
+# LLM (required for email-to-postcard)
+LLM_PROVIDER=openrouter
+LLM_API_KEY=your_openrouter_key
+LLM_MODEL=openai/gpt-4o
+```
+
+### 3. Start Development
 
 ```bash
 pnpm dev
 ```
 
-The frontend will be at `http://localhost:5173` and backend at `http://localhost:8484`.
+Frontend: `http://localhost:5173` | Backend: `http://localhost:8484`
+
+## API Reference
+
+All endpoints return JSON. Authentication uses `Authorization: Bearer <jwt>` header.
+
+### Public Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/health` | Health check (status, version, timestamp) |
+| `POST` | `/api/auth/login` | Initiate OIDC login flow (rate-limited) |
+| `GET` | `/api/auth/callback` | OIDC callback handler (rate-limited) |
+
+### Authenticated Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/auth/me` | Get current user profile |
+| `POST` | `/api/auth/logout` | End session |
+| `POST` | `/api/postcards` | Create and send a postcard |
+| `GET` | `/api/drafts` | List user's drafts |
+| `POST` | `/api/drafts` | Create a draft |
+| `GET` | `/api/drafts/:id` | Get a specific draft |
+| `PUT` | `/api/drafts/:id` | Update a draft |
+| `DELETE` | `/api/drafts/:id` | Delete a draft |
+| `POST` | `/api/drafts/:id/publish` | Send draft as postcard via PostGrid |
+| `POST` | `/api/drafts/:id/schedule` | Schedule draft for future sending |
+| `POST` | `/api/drafts/:id/cancel-schedule` | Cancel scheduled send |
+
+### Webhook Endpoints
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| `POST` | `/api/webhook/email` | `WEBHOOK_SECRET` | Receive inbound email webhooks (SendGrid, Mailgun, generic) |
+| `GET` | `/api/webhook/health` | None | Webhook service health |
 
 ## Commands
 
 ```bash
-pnpm dev                 # Start both frontend and backend
+pnpm dev                 # Start frontend + backend in dev mode
 pnpm build               # Build for production
-pnpm start               # Run production build
-pnpm test                # Run all tests
-pnpm lint                # Check for linting errors
-./scripts/ci-local.sh    # Run full CI checks locally before pushing
-```
+pnpm test                # Run all tests (backend + frontend)
+pnpm lint                # Lint all code
 
-## Docker Quick Start
-
-```bash
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your configuration
-
-# Start with Docker Compose
-docker-compose up -d
-
-# Backend runs on port 8484
+# Individual packages
+cd backend && pnpm test  # Backend tests only (Bun test)
+cd frontend && pnpm test # Frontend tests only (Vitest)
 ```
 
 ## Project Structure
 
 ```
 fam-mail/
-├── backend/          # Bun backend service
+├── backend/
 │   └── src/
-│       ├── services/ # IMAP, LLM, PostGrid, notifications
-│       ├── config/   # Configuration schema
-│       └── database/ # SQLite database operations
-├── frontend/         # Vite + React + TypeScript frontend
-├── docs/             # Documentation
+│       ├── config/          # Environment config schema
+│       ├── database/        # SQLite operations
+│       ├── middleware/       # Auth, CORS, rate limiting, headers
+│       ├── models/          # User, Draft, Session models
+│       ├── routes/          # HTTP route handlers
+│       ├── services/        # PostGrid, IMAP, LLM, notifications
+│       ├── utils/           # Validation, logging, responses
+│       └── validation/      # Postcard request validation
+├── frontend/
+│   └── src/
+│       ├── components/      # React components (postcard, drafts, auth, UI)
+│       ├── hooks/           # Custom hooks (draft persistence, etc.)
+│       ├── services/        # API clients
+│       ├── types/           # TypeScript type definitions
+│       └── utils/           # Postal validation, image processing
+├── docs/                    # Architecture, deployment, plans
 ├── docker-compose.yml
 ├── Dockerfile
 └── pnpm-workspace.yaml
 ```
 
-## Documentation
+## Docker Deployment
 
-- **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment, Docker, and self-hosting
-- **[Contributing Guide](docs/CONTRIBUTING.md)** - Guidelines for contributors
+```bash
+cp .env.example .env
+# Edit .env with production values
+
+docker-compose up -d
+# App available on port 8484
+```
 
 ## Environment Variables
 
-Fam Mail uses extensive configuration through environment variables. See `.env.example` for the complete list with 30+ configurable options.
+See `.env.example` for the complete list. Key categories:
 
-### Key Variables
-
-| Category | Variable | Description | Required |
-| ---------- | --------- | ----------- | -------- |
-| **PostGrid** | `POSTGRID_MODE` | Test or live mode | Yes |
-| | `POSTGRID_TEST_API_KEY` | Test API key | Yes |
-| | `POSTGRID_LIVE_API_KEY` | Live API key | Yes |
-| | `POSTGRID_FORCE_TEST_MODE` | Force test mode for safety | No |
-| **IMAP** | `IMAP_HOST` | IMAP server hostname | Yes |
-| | `IMAP_USER` | IMAP username | Yes |
-| | `IMAP_PASSWORD` | IMAP password/app-specific | Yes |
-| | `SUBJECT_FILTER` | Email subject filter | Yes |
-| | `POLL_INTERVAL_SECONDS` | Polling frequency | No |
-| **LLM** | `LLM_PROVIDER` | openrouter, ollama, or custom | Yes |
-| | `LLM_API_KEY` | LLM API key | Depends |
-| | `LLM_MODEL` | Model name | Yes |
-| **Database** | `DATABASE_PATH` | SQLite database path | No |
-| **Server** | `PORT` | Backend server port | No (8484) |
-| | `LOG_LEVEL` | debug, info, warn, error | No |
-| **SMTP** | `SMTP_HOST` | SMTP server for notifications | No |
-| | `SMTP_USER` | SMTP username | No |
-
-See `.env.example` for all available options and defaults.
+| Category | Variables | Required |
+|----------|----------|----------|
+| **PostGrid** | `POSTGRID_MODE`, `POSTGRID_TEST_API_KEY`, `POSTGRID_LIVE_API_KEY` | Yes |
+| **Auth** | `OIDC_ISSUER_URL`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET`, `JWT_SECRET` | Yes (web UI) |
+| **IMAP** | `IMAP_HOST`, `IMAP_USER`, `IMAP_PASSWORD`, `SUBJECT_FILTER` | Yes (email mode) |
+| **LLM** | `LLM_PROVIDER`, `LLM_API_KEY`, `LLM_MODEL` | Yes (email mode) |
+| **Server** | `PORT` (default 8484), `DATABASE_PATH`, `LOG_LEVEL` | No |
 
 ## Contributing
 
@@ -146,9 +189,3 @@ Contributions are welcome! Please see [CONTRIBUTING.md](docs/CONTRIBUTING.md) fo
 ## License
 
 MIT - see [LICENSE](LICENSE) for details.
-
-## Acknowledgments
-
-- [PostGrid](https://www.postgrid.com/) for their excellent API
-- [Bun](https://bun.sh/) for the blazing-fast runtime
-- [Vite](https://vitejs.dev/) for the amazing build tool

@@ -194,20 +194,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     return draftRoutes.cancelSchedule(req, authResult.user!)
   }
 
-  if (url.pathname === '/api/health') {
+  if (url.pathname === '/api/health' && req.method === 'GET') {
     return jsonResponse({
       status: 'healthy',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
-      message: 'Fam Mail backend is running',
-      services: {
-        imap: config.imap ? 'connected' : 'not configured',
-        postgrid: config.postgrid.forceTestMode ? 'test (forced)' : config.postgrid.mode,
-        database: 'connected',
-        notifications: 'ready',
-        oidc: 'configured',
-        jwt: 'configured',
-      },
     }, 200, req)
   }
 

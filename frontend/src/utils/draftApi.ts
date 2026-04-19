@@ -69,18 +69,9 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json()
 }
 
-/** Get auth token from localStorage */
+/** Get auth token from localStorage — uses same key as authApi */
 function getAuthToken(): string | null {
-  try {
-    const session = localStorage.getItem('fam-mail-session')
-    if (session) {
-      const parsed = JSON.parse(session)
-      return parsed.token || null
-    }
-  } catch {
-    // Session not found or invalid JSON
-  }
-  return null
+  return localStorage.getItem('fam_mail_token')
 }
 
 /** Build headers with auth token */

@@ -20,9 +20,28 @@ Thank you for your interest in contributing to Fam Mail! This document provides 
 1. Create a feature branch: `git checkout -b feature/your-feature`
 2. Make your changes (keep them focused)
 3. Write tests (aim for 80% coverage)
-4. Run linting: `pnpm lint`
-5. Commit with conventional commits: `feat:`, `fix:`, `docs:`, etc.
-6. Push and create a PR
+4. Run tests: `pnpm test`
+5. Run linting: `pnpm lint`
+6. Build: `pnpm build`
+7. Commit with conventional commits: `feat:`, `fix:`, `docs:`, etc.
+8. Push and create a PR
+
+## Running Tests
+
+```bash
+# All tests
+pnpm test
+
+# Backend only
+cd backend && pnpm test
+
+# Frontend only (uses Vitest)
+cd frontend && npx vitest --run
+
+# Lint
+cd backend && pnpm lint
+cd frontend && pnpm lint
+```
 
 ## Code Style
 

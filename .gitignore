@@ -68,3 +68,8 @@ test-postcard-api.sh
 
 # Dev artifacts
 GIT_HISTORY_REWRITE_REPORT.md
+
+# Orchestrator artifacts
+logs/
+agent-progress.json
+CHANGELOG_AGENT.md

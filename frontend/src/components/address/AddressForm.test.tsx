@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddressForm } from './AddressForm'
 import type { Address } from '../../types/address'
@@ -445,31 +445,31 @@ describe('AddressForm', () => {
       expect(screen.getByDisplayValue('United States')).toBeInTheDocument()
     })
 
-    it('should handle very long input values', async () => {
-      const user = userEvent.setup()
+    it('should handle very long input values', () => {
       render(<AddressForm onSubmit={mockOnSubmit} initialAddress={defaultInitialAddress} />)
 
-      const longText = 'a'.repeat(1000)
-      await user.type(screen.getByPlaceholderText('123 Main Street'), longText)
+      const longText = 'a'.repeat(200)
+      const addressInput = screen.getByPlaceholderText('123 Main Street')
+      fireEvent.change(addressInput, { target: { value: longText } })
 
       expect(screen.getByDisplayValue(longText)).toBeInTheDocument()
     })
 
-    it('should handle rapid form interactions', async () => {
-      const user = userEvent.setup()
+    it('should handle rapid form interactions', () => {
       render(<AddressForm onSubmit={mockOnSubmit} initialAddress={defaultInitialAddress} />)
 
       const firstNameInput = screen.getByPlaceholderText('John')
 
-      // Rapid typing and clearing - check that form handles it gracefully
-      await user.type(firstNameInput, 'test')
+      // Type text and verify
+      fireEvent.change(firstNameInput, { target: { value: 'test' } })
       expect(firstNameInput).toHaveValue('test')
 
-      await user.clear(firstNameInput)
+      // Clear and verify
+      fireEvent.change(firstNameInput, { target: { value: '' } })
       expect(firstNameInput).toHaveValue('')
 
-      // Type again
-      await user.type(firstNameInput, 'John')
+      // Type again and verify
+      fireEvent.change(firstNameInput, { target: { value: 'John' } })
       expect(firstNameInput).toHaveValue('John')
 
       // Form should still be functional

@@ -95,12 +95,25 @@ export function jsonResponse(data: unknown, status: number = 200, req?: Request)
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
-  if (req) {
-    Object.assign(headers, getCorsHeaders(req))
-  }
+
+  const corsHeaders = req
+    ? getCorsHeaders(req)
+    : getDefaultCorsHeaders()
+  Object.assign(headers, corsHeaders)
 
   const response = new Response(JSON.stringify(data), { status, headers })
   return applyHeaders(response, req)
+}
+
+function getDefaultCorsHeaders(): Record<string, string> {
+  const allowed = getConfig().server.allowedOrigins
+  return {
+    'Access-Control-Allow-Origin': allowed[0] || '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin',
+  }
 }
 
 /**
