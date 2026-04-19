@@ -36,7 +36,7 @@
       }
     }
   },
-  "instructions": ["CLAUDE.md", ".opencode/prompts/system.md"],
+  "instructions": ["AGENTS.md"],
   "permission": {
     "edit": "allow",
     "bash": {
@@ -56,7 +56,7 @@
     "build": {
       "mode": "primary",
       "model": "zai-coding-plan/glm-5.1",
-      "prompt": "{file:./.opencode/prompts/build.md}",
+      "prompt": "{file:./.claude/opencode-build-prompt.md}",
       "temperature": 0.2,
       "permission": {
         "edit": "allow",

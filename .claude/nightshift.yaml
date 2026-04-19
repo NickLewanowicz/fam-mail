@@ -1,19 +1,23 @@
 # NightShift orchestrator config for fam-mail
-# Used by: nightshift.py run --config .claude/nightshift.yaml
+# Used by: nightshift run --config .claude/nightshift.yaml
+#
+# Human / Pi context: portable instructions live at repo root `AGENTS.md`.
+# Claude Code loads root `CLAUDE.md` (which imports `AGENTS.md`). OpenCode
+# reads `AGENTS.md` via `opencode.json` instructions.
 
-project_dir: "."
+project_dir: ".."
 
 agent:
-  backend: opencode
-  port: 4096
-  model_provider: zai-coding-plan
-  model_id: glm-5.1
+  backend: pi
+  provider: zai
+  model: glm-5.1
+  max_turns: 50
 
 issue_tracker:
   type: github
   priority_labels:
     - P0-critical
-    - P1-high  
+    - P1-high
     - P2-medium
     - P3-low
 
@@ -26,7 +30,7 @@ qa:
       cmd: "cd frontend && npx vitest run 2>&1"
       timeout: 90
     - name: backend_lint
-      cmd: "cd backend && pnpm lint 2>&1"  
+      cmd: "cd backend && pnpm lint 2>&1"
       timeout: 30
     - name: frontend_lint
       cmd: "cd frontend && pnpm lint 2>&1"

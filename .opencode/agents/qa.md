@@ -27,7 +27,7 @@ cd frontend && pnpm lint
 ### 2. Unit Tests
 ```bash
 cd backend && pnpm test
-cd frontend && pnpm test
+cd frontend && npx vitest run
 ```
 
 ### 3. Build Verification

@@ -3,21 +3,23 @@ name: postcard-validation
 description: Domain knowledge for postcard address, image, and message validation rules required by PostGrid
 ---
 
-## What I Do
+## What I do
 
 Provide domain expertise on validating postcards before sending them to PostGrid for physical printing and mailing. Invalid postcards waste money and deliver bad user experiences.
 
-## When to Use Me
+## When to use
 
-- When implementing or modifying postcard creation endpoints
-- When writing validation tests for postcard inputs
-- When debugging PostGrid API errors
-- When reviewing PRs that touch postcard flows
+- Implementing or modifying postcard creation endpoints
+- Writing validation tests for postcard inputs
+- Debugging PostGrid API errors
+- Reviewing PRs that touch postcard flows
 
-## PostGrid Requirements
+## PostGrid requirements
 
-### Address Validation
+### Address validation
+
 PostGrid requires these fields for both sender and recipient:
+
 - `addressLine1` (required): Street address, max 200 chars
 - `addressLine2` (optional): Apt/Suite number
 - `city` (required): City name
@@ -25,48 +27,57 @@ PostGrid requires these fields for both sender and recipient:
 - `postalOrZip` (required): Postal/ZIP code
 - `country` (required): 2-letter ISO country code (US, CA)
 
-#### Postal Code Formats
+#### Postal code formats
+
 - **US ZIP**: `12345` or `12345-6789`
 - **Canadian**: `A1A 1A1` (letter-digit-letter space digit-letter-digit)
 
-#### Common Validation Errors
+#### Common validation errors
+
 - Empty or whitespace-only strings
 - State codes longer than 2 characters
 - ZIP codes with invalid formats
 - Missing country code
-- PO Box in addressLine1 (some products don't support)
+- PO Box in `addressLine1` (some products do not support)
 
-### Image Validation
+### Image validation
+
 PostGrid postcard front image requirements:
+
 - **Formats**: JPEG, PNG (no SVG, GIF, BMP, WebP)
 - **Minimum dimensions**: 1875 x 1275 pixels (6.25" x 4.25" at 300 DPI)
 - **Maximum file size**: 10MB
 - **Color space**: RGB (not CMYK)
 - **No transparency**: PNG with alpha will have white background
 
-#### Image Validation Checks
+#### Image validation checks
+
 1. File extension matches content type (magic bytes)
 2. Dimensions meet minimum
 3. File size within limit
 4. Not a corrupt/truncated file
 5. No embedded scripts or exploits
 
-### Message Validation
+### Message validation
+
 PostGrid supports HTML content for the back of the postcard:
-- **Max length**: Varies by postcard size, typically ~500 characters for readability
+
+- **Max length**: Varies by postcard size; typically ~500 characters for readability
 - **Allowed HTML**: Basic formatting (bold, italic, line breaks)
 - **Sanitization required**: Strip script tags, event handlers, iframes
-- **Encoding**: UTF-8, but avoid complex Unicode that may not render in print
+- **Encoding**: UTF-8; avoid exotic Unicode that may not render in print
 
-### Return Address
+### Return address
+
 Every postcard MUST have a valid return address:
+
 - Same validation rules as recipient address
-- Should be pre-configured (not user-supplied for each postcard)
+- Often pre-configured (not user-supplied per card)
 - Must be a real, deliverable address
 
-## Test Matrix
+## Test matrix
 
-| Test Case | Input | Expected |
+| Test case | Input | Expected |
 |-----------|-------|----------|
 | Valid US address | All fields, US ZIP | Pass |
 | Valid CA address | All fields, CA postal | Pass |
