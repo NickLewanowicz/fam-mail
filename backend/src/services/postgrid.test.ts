@@ -202,4 +202,64 @@ describe('PostGridService', () => {
       expect(retrieved!.getActiveKey()).toBe("pg_test_registered")
     })
   })
+
+  // ============================================================================
+  // Config env var naming consistency (#17)
+  // Verifies that PostGridService works with the config object shape produced
+  // by getConfig(), which reads POSTGRID_TEST_API_KEY / POSTGRID_LIVE_API_KEY.
+  // We construct the config object directly to avoid env var pollution from
+  // other test files (drafts.test.ts, auth.test.ts set IMAP_HOST without cleanup).
+  // ============================================================================
+  describe("PostGridService - Config env var consistency (#17)", () => {
+    it("should initialize with config-shaped object using canonical testApiKey field", () => {
+      // Simulates what server.ts does: const service = new PostGridService(config.postgrid)
+      // where config.postgrid comes from getConfig() reading POSTGRID_TEST_API_KEY
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "pg_test_canonical",
+        liveApiKey: "pg_live_canonical",
+        forceTestMode: false,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      expect(service.getActiveKey()).toBe("pg_test_canonical")
+      expect(service.getTestMode()).toBe(true)
+    })
+
+    it("should initialize with config-shaped object using canonical liveApiKey field", () => {
+      const service = new PostGridService({
+        mode: "live",
+        testApiKey: "pg_test_canonical",
+        liveApiKey: "pg_live_canonical",
+        forceTestMode: false,
+        webhookSecret: "",
+        size: "4x6",
+        senderId: "",
+      })
+
+      expect(service.getActiveKey()).toBe("pg_live_canonical")
+      expect(service.getTestMode()).toBe(false)
+    })
+
+    it("should pass full config.postgrid object to PostGridService exactly as-is", () => {
+      // Mirrors: new PostGridService(config.postgrid) in server.ts
+      const configPostgrid = {
+        mode: "test" as const,
+        testApiKey: "pg_test_abc",
+        liveApiKey: "pg_live_xyz",
+        forceTestMode: true,
+        webhookSecret: "wh_secret",
+        size: "6x9" as const,
+        senderId: "sender_42",
+      }
+
+      const service = new PostGridService(configPostgrid)
+
+      // forceTestMode overrides mode
+      expect(service.getActiveKey()).toBe("pg_test_abc")
+      expect(service.getTestMode()).toBe(true)
+    })
+  })
 })
