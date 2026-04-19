@@ -707,32 +707,39 @@ describe('validateImage', () => {
   })
 
   describe('valid image at exactly 10MB boundary', () => {
-    it('accepts image whose base64-estimated size is exactly at the 10MB limit', () => {
-      // The validateImage function uses base64 length to estimate decoded size
-      // without decoding: Math.floor(b64Len * 3 / 4) <= 10MB.
-      // Build the largest JPEG whose base64 estimation passes this check.
-      const MAX_SIZE = 10 * 1024 * 1024
-      // binaryLen must be a multiple of 3 so no base64 padding inflation
-      // binaryLen = 10485758 (2 less than 10MB, multiple of 3 - 1... let's compute)
-      // 10MB = 10485760. 10485760 / 3 = 3495253.33. Round down: 3495253 * 3 = 10485759.
-      // btoa(10485759 bytes) = ceil(10485759/3)*4 = 3495253*4 = 13981012 chars
-      // estimate = floor(13981012 * 3 / 4) = floor(10485759) = 10485759 <= 10485760 ✓
-      const binaryLen = 10485759 // largest multiple-of-3-aligned length <= 10MB
-      const header = new Uint8Array([0xff, 0xd8, 0xff, 0xe0])
-      let binary = String.fromCharCode(...header)
-      binary += '\x00'.repeat(binaryLen - header.length)
+    it('accepts image whose decoded size is exactly 10MB', () => {
+      // Build a JPEG buffer that is exactly 10MB at the byte level
+      const size = 10 * 1024 * 1024
+      const buffer = new Uint8Array(size)
+      buffer[0] = 0xff  // JPEG magic
+      buffer[1] = 0xd8
+      buffer[2] = 0xff
+      buffer[3] = 0xe0
+      // Encode in chunks to avoid stack overflow
+      let binary = ''
+      const chunkSize = 8192
+      for (let i = 0; i < buffer.length; i += chunkSize) {
+        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
+        binary += String.fromCharCode(...chunk)
+      }
       const base64 = btoa(binary)
-      const estimatedBytes = Math.floor((base64.length * 3) / 4)
-      expect(estimatedBytes).toBeLessThanOrEqual(MAX_SIZE)
       const result = validateImage(base64)
       expect(result.valid).toBe(true)
     })
 
     it('rejects image whose decoded size is 10MB + 1 byte', () => {
       const size = 10 * 1024 * 1024 + 1
-      const header = new Uint8Array([0xff, 0xd8, 0xff, 0xe0])
-      let binary = String.fromCharCode(...header)
-      binary += '\x00'.repeat(size - header.length)
+      const buffer = new Uint8Array(size)
+      buffer[0] = 0xff  // JPEG magic
+      buffer[1] = 0xd8
+      buffer[2] = 0xff
+      buffer[3] = 0xe0
+      let binary = ''
+      const chunkSize = 8192
+      for (let i = 0; i < buffer.length; i += chunkSize) {
+        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
+        binary += String.fromCharCode(...chunk)
+      }
       const base64 = btoa(binary)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)

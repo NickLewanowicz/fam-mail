@@ -753,6 +753,7 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
   })
 
   it('rejects missing firstName', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { firstName: _firstName, ...noFirst } = validUSAddress
     const req = makeRequest({ to: noFirst, frontHTML: '<html>Test</html>' })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -762,6 +763,7 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
   })
 
   it('rejects missing lastName', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { lastName: _lastName, ...noLast } = validUSAddress
     const req = makeRequest({ to: noLast, frontHTML: '<html>Test</html>' })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -1360,6 +1362,7 @@ describe('handlePostcardCreate — Missing Name Fields', () => {
   })
 
   it('rejects missing firstName at route level', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { firstName: _, ...noFirstName } = validUSAddress
     const req = makeRequest({ to: noFirstName, frontHTML: '<html>Test</html>' })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -1369,6 +1372,7 @@ describe('handlePostcardCreate — Missing Name Fields', () => {
   })
 
   it('rejects missing lastName at route level', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { lastName: _, ...noLastName } = validUSAddress
     const req = makeRequest({ to: noLastName, frontHTML: '<html>Test</html>' })
     const res = await handlePostcardCreate(req, mockUser, db)
