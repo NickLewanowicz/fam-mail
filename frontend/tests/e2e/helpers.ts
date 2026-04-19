@@ -18,7 +18,11 @@ export async function setupMockAuth(page: Page) {
   })
 
   await page.route('**/api/auth/me', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_USER) })
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ user: MOCK_USER }),
+    })
   )
 }
 
@@ -58,6 +62,14 @@ export async function setupMockApi(page: Page) {
     }
     return route.continue()
   })
+
+  await page.route('**/api/postgrid/status', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ mode: 'test', mockMode: false }),
+    })
+  )
 
   await page.route('**/api/postcards', route =>
     route.fulfill({

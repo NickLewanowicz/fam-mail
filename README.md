@@ -1,5 +1,8 @@
 # Fam Mail
 
+[![CI](https://github.com/NickLewanowicz/fam-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/NickLewanowicz/fam-mail/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Send physical postcards through a web UI backed by [PostGrid](https://www.postgrid.com/) (printing and USPS delivery).
 
 ## What it does
@@ -8,14 +11,14 @@ Fam Mail is a small full-stack app for composing a postcard (photo, message, add
 
 ## Features
 
-- **Postcard builder** — Image upload, Markdown message, US/CA address validation, live preview
-- **Drafts API** — Save and resume work via the REST API (used by the UI)
-- **OIDC sign-in** — Google or any OIDC provider, with JWT access and refresh cookies
-- **PostGrid** — Test mode for development, live mode for real mail, optional mock mode
-- **Hardening** — Central security headers, CORS, rate limits on auth and costly routes
-- **SQLite** — Users, drafts, sessions, and (when enabled) email pipeline state
-- **Docker** — One image: API plus built static frontend on a single port
-- **Tests** — Hundreds of backend (`bun test`) and frontend (`vitest`) unit tests; Playwright available for E2E
+- [x] **Postcard builder** — Image upload, Markdown message, US/CA address validation, live preview
+- [x] **Drafts API** — Save and resume work via the REST API (used by the UI)
+- [x] **OIDC sign-in** — Google or any OIDC provider, with JWT access and refresh cookies
+- [x] **PostGrid** — Test mode for development, live mode for real mail, optional mock mode
+- [x] **Hardening** — Central security headers, CORS, rate limits on auth and costly routes
+- [x] **SQLite** — Users, drafts, sessions, and (when enabled) email pipeline state
+- [x] **Docker** — One image: API plus built static frontend on a single port
+- [x] **Tests** — Backend (`bun test`) and frontend (`vitest`) unit tests; Playwright E2E
 
 ## Tech stack
 
@@ -25,11 +28,42 @@ Fam Mail is a small full-stack app for composing a postcard (photo, message, add
 | Frontend | Vite, React 18, TypeScript, Tailwind CSS, DaisyUI |
 | Auth | OIDC + JWT |
 | Mail | PostGrid |
+| E2E | Playwright |
 | Package manager | pnpm workspaces |
 
 ## Screenshots
 
-Screenshots are not embedded in this repository yet. After you run the app locally or via Docker, capture the login flow, create flow, and preview screens here to help new contributors and users see the UI at a glance.
+### Dashboard
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Create postcard
+
+![Photo upload](docs/screenshots/create-photo.png)
+
+![Message editor](docs/screenshots/create-message.png)
+
+### Login
+
+![Login](docs/screenshots/login.png)
+
+## Quick start with Docker
+
+1. Copy the environment template and set at least PostGrid and OIDC values (see [Environment variables](#environment-variables)).
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Build and start the stack (API and static UI on **port 8484**).
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. Open [http://localhost:8484](http://localhost:8484) (or your host / reverse proxy). Set `OIDC_REDIRECT_URI` and any public URL variables so they match how users reach the app.
+
+For a development loop with hot reload, use [Quick start (development)](#quick-start-development) instead.
 
 ## Quick start (development)
 
@@ -110,7 +144,7 @@ pnpm --filter frontend test
 fam-mail/
 ├── backend/src/     # HTTP server, routes, PostGrid, auth, DB
 ├── frontend/src/    # React UI
-├── docs/            # Contributing and architecture notes
+├── docs/            # Contributing, architecture notes, README screenshots
 ├── docker-compose.yml
 ├── Dockerfile
 └── pnpm-workspace.yaml
@@ -118,18 +152,9 @@ fam-mail/
 
 Project-specific OpenCode / Claude Code configuration lives under `.opencode/` for contributors who use those tools.
 
-## Docker
+## Docker (details)
 
-The image installs workspace dependencies, runs `pnpm build` in `frontend`, bundles the backend with `bun build`, and copies `frontend/dist` next to the backend so **one process on port 8484** serves the API and static UI.
-
-```bash
-cp .env.example .env
-# Edit .env for production: secrets, OIDC redirect URL matching your public URL, etc.
-
-docker compose up --build -d
-```
-
-Then open `http://localhost:8484` (or your host / reverse proxy). Ensure `OIDC_REDIRECT_URI` and any public URL settings match how users reach the app.
+The image installs workspace dependencies, runs `pnpm build` in `frontend`, bundles the backend with `bun build`, and copies `frontend/dist` next to the backend so **one process on port 8484** serves the API and static UI. The [Quick start with Docker](#quick-start-with-docker) section above covers the usual `docker compose` workflow.
 
 ## Environment variables
 
