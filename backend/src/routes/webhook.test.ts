@@ -8,6 +8,75 @@ const mockGetConfig = mock(() => ({
 
 mock.module('../config', () => ({ getConfig: mockGetConfig }))
 
+// Mock middleware/headers so CORS uses mockGetConfig instead of the real config.
+// This prevents mock pollution from response.test.ts which replaces this module
+// with a version that hardcodes http://localhost:3000.
+mock.module('../middleware/headers', () => {
+  const SECURITY_HEADERS: Record<string, string> = {
+    'Content-Security-Policy':
+      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
+    'Cross-Origin-Embedder-Policy': 'require-corp',
+    'Cross-Origin-Opener-Policy': 'same-origin',
+    'Cross-Origin-Resource-Policy': 'cross-origin',
+    'DNS-Prefetch-Control': 'off',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), browsing-topics=()',
+    'Strict-Transport-Security': 'max-age=15552000; includeSubDomains',
+  }
+
+  function getCorsHeaders(req?: Request): Record<string, string> {
+    const origin = req?.headers.get('origin') || ''
+    const allowed = mockGetConfig().server.allowedOrigins
+    const allowOrigin = allowed.includes(origin) ? origin : allowed[0] || ''
+    return {
+      'Access-Control-Allow-Origin': allowOrigin,
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Credentials': 'true',
+      'Vary': 'Origin',
+    }
+  }
+
+  function jsonResponse(data: unknown, status: number = 200, req?: Request): Response {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (req) {
+      Object.assign(headers, getCorsHeaders(req))
+    }
+    const response = new Response(JSON.stringify(data), { status, headers })
+    for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+      response.headers.set(key, value)
+    }
+    return response
+  }
+
+  function applyHeaders(response: Response, req?: Request): Response {
+    for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+      response.headers.set(key, value)
+    }
+    if (req) {
+      for (const [key, value] of Object.entries(getCorsHeaders(req))) {
+        response.headers.set(key, value)
+      }
+    }
+    return response
+  }
+
+  function createCorsResponse(req: Request): Response {
+    const response = new Response(null, {
+      status: 204,
+      headers: getCorsHeaders(req),
+    })
+    return applyHeaders(response, req)
+  }
+
+  return { jsonResponse, createCorsResponse, SECURITY_HEADERS, getCorsHeaders, applyHeaders }
+})
+
 // Mock emailService functions
 const mockValidateEmailData = mock(() => ({ isValid: true, errors: [] }))
 const mockProcessEmail = mock(() => Promise.resolve({ success: true, result: { id: 'pc_123' } }))
