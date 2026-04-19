@@ -1,16 +1,33 @@
 node_modules
 .git
 .worktrees
+.gitignore
+.dockerignore
+
+# Environment files (may contain secrets)
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+
+# Documentation (not needed in image)
 *.md
 !README.md
+
+# Test artifacts
 coverage
 test-results
 test.db
+*.test.db
+
+# Backup files
 *.backup
 *.backup2
+*.bak
+*.orig
+
+# Debug artifacts
 qa-screenshots
 debug-*.png
 capture_*.js
@@ -18,7 +35,23 @@ test-api.js
 test-postcard-api.sh
 GIT_HISTORY_REWRITE_REPORT.md
 coverage_output.json
+
+# Orchestrator artifacts
+logs/
+agent-progress.json
+CHANGELOG_AGENT.md
+
+# Frontend dev-only
 frontend/.storybook
 frontend/tests
 frontend/dist
+
+# Backend build output (rebuilt in image)
 backend/dist
+
+# IDE and OS files
+.vscode
+.idea
+.DS_Store
+*.sw?
+*.suo

@@ -66,6 +66,26 @@ function getEnvRequired(key: string): string {
   return value;
 }
 
+/** Minimum JWT secret length for HS256 (prevents brute-force attacks) */
+const JWT_SECRET_MIN_LENGTH = 32;
+
+/**
+ * Get and validate the JWT secret.
+ * Must be at least 32 characters for HS256 security.
+ * Rotatable by simply changing the env var and restarting.
+ * @throws {Error} If secret is missing or too short
+ */
+function getJwtSecret(): string {
+  const secret = getEnvRequired("JWT_SECRET");
+  if (secret.length < JWT_SECRET_MIN_LENGTH) {
+    throw new Error(
+      `JWT_SECRET must be at least ${JWT_SECRET_MIN_LENGTH} characters (got ${secret.length}). ` +
+      `Generate with: openssl rand -base64 48`
+    );
+  }
+  return secret;
+}
+
 /**
  * Get environment variable with default value
  * Empty string is treated as missing value
@@ -134,7 +154,7 @@ export function getConfig(): Config {
       scopes: getEnv("OIDC_SCOPES", "openid profile email"),
     },
     jwt: {
-      secret: getEnvRequired("JWT_SECRET"),
+      secret: getJwtSecret(),
       expiresIn: getEnv("JWT_EXPIRES_IN", "7d"),
       refreshExpiresIn: getEnv("JWT_REFRESH_EXPIRES_IN", "30d"),
     },
