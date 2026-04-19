@@ -80,4 +80,16 @@ export async function logoutUser(token: string): Promise<void> {
   }
 }
 
+/** Build standard JSON headers with Bearer token if available */
+export function getAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  const token = getToken()
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return headers
+}
+
 export { AuthApiError }

@@ -1,5 +1,6 @@
 import type { Address } from '../types/address'
 import type { Draft } from '../types/postcard'
+import { getAuthHeaders } from '../services/authApi'
 
 // ---- Request/Response types ----
 
@@ -69,29 +70,12 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json()
 }
 
-/** Get auth token from localStorage — uses same key as authApi */
-function getAuthToken(): string | null {
-  return localStorage.getItem('fam_mail_token')
-}
-
-/** Build headers with auth token */
-function authHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  const token = getAuthToken()
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  return headers
-}
-
 /** List all drafts, optionally filtered by state */
 export async function listDrafts(state?: 'draft' | 'ready'): Promise<Draft[]> {
   const url = state ? `${API_BASE}?state=${state}` : API_BASE
   const response = await fetch(url, {
     method: 'GET',
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
   })
   const data = await handleResponse<DraftListResponse>(response)
   return data.drafts
@@ -101,7 +85,7 @@ export async function listDrafts(state?: 'draft' | 'ready'): Promise<Draft[]> {
 export async function getDraft(id: string): Promise<Draft> {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: 'GET',
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
   })
   const data = await handleResponse<DraftResponse>(response)
   return data.draft
@@ -111,7 +95,7 @@ export async function getDraft(id: string): Promise<Draft> {
 export async function createDraft(request: CreateDraftRequest): Promise<Draft> {
   const response = await fetch(API_BASE, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(request),
   })
   const data = await handleResponse<DraftResponse>(response)
@@ -122,7 +106,7 @@ export async function createDraft(request: CreateDraftRequest): Promise<Draft> {
 export async function updateDraft(id: string, request: UpdateDraftRequest): Promise<Draft> {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: 'PUT',
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
     body: JSON.stringify(request),
   })
   const data = await handleResponse<DraftResponse>(response)
@@ -133,7 +117,7 @@ export async function updateDraft(id: string, request: UpdateDraftRequest): Prom
 export async function deleteDraft(id: string): Promise<void> {
   const response = await fetch(`${API_BASE}/${id}`, {
     method: 'DELETE',
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
   })
   await handleResponse<DeleteResponse>(response)
 }
@@ -142,7 +126,7 @@ export async function deleteDraft(id: string): Promise<void> {
 export async function publishDraft(id: string): Promise<PublishResponse> {
   const response = await fetch(`${API_BASE}/${id}/publish`, {
     method: 'POST',
-    headers: authHeaders(),
+    headers: getAuthHeaders(),
   })
   return handleResponse<PublishResponse>(response)
 }

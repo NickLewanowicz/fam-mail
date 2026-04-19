@@ -1,5 +1,6 @@
 import type { Address } from '../types/address'
 import { generateFrontHTML } from './postcardTemplate'
+import { getAuthHeaders } from '../services/authApi'
 
 export interface PostcardSubmission {
   to: Address
@@ -53,13 +54,7 @@ export async function submitPostcard(
     submission.message = message
   }
 
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  const token = localStorage.getItem('fam_mail_token')
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
+  const headers = getAuthHeaders()
 
   const response = await fetch('/api/postcards', {
     method: 'POST',
