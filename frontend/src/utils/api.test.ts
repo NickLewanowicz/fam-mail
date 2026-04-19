@@ -123,4 +123,47 @@ describe('submitPostcard', () => {
 
     expect(body.to).toEqual(mockAddress)
   })
+
+  it('should include Authorization header when token is present (#46)', async () => {
+    vi.mocked(global.localStorage.getItem).mockReturnValue('test-jwt-token')
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response)
+
+    await submitPostcard(mockAddress, mockFile)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/postcards',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer test-jwt-token',
+        },
+      })
+    )
+  })
+
+  it('should omit Authorization header when no token is present (#46)', async () => {
+    vi.mocked(global.localStorage.getItem).mockReturnValue(null)
+
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response)
+
+    await submitPostcard(mockAddress, mockFile)
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      '/api/postcards',
+      expect.objectContaining({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+    )
+  })
 })
