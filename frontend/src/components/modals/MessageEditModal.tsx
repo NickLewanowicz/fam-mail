@@ -3,7 +3,8 @@ import MDEditor from '@uiw/react-md-editor'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 /** Lightweight debounce with cancel support — replaces lodash dependency */
-function debounce<T extends (...args: unknown[]) => void>(
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function debounce<T extends (...args: any[]) => void>(
   fn: T,
   ms: number
 ): T & { cancel: () => void } {

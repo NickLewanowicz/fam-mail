@@ -4,6 +4,36 @@ Auto-generated executive summaries from the fam-mail agent orchestrator.
 
 ---
 
+## [2026-04-19 06:40] Progress on #36: [P0/Bug] updateUser() has ReferenceError — userId undefined on line 410
+
+Attempt 3. 7 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 06:38] Progress on #36: [P0/Bug] updateUser() has ReferenceError — userId undefined on line 410
+
+Attempt 2. 7 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 06:35] Progress on #36: [P0/Bug] updateUser() has ReferenceError — userId undefined on line 410
+
+Attempt 1. 7 tools, 1 commits. QA: RED.
+
+---
+
+## [2026-04-19 06:32] Progress on #37: [P0/Bug] lodash imported but not in package.json — runtime crash in MessageEditModal
+
+Attempt 3. 15 tools, 0 commits. QA: RED.
+
+---
+
+## [2026-04-19 06:28] Progress on #37: [P0/Bug] lodash imported but not in package.json — runtime crash in MessageEditModal
+
+Attempt 2. 18 tools, 1 commits. QA: RED.
+
+---
+
 ## [2026-04-19 02:03] Orchestrator v2 Started
 
 43 open issues. PID=61865

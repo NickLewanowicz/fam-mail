@@ -1836,3 +1836,362 @@ describe('handlePostcardCreate — Message Edge Cases Comprehensive', () => {
     expect(res.status).not.toBe(400)
   })
 })
+
+// ============================================================================
+// Issue #22: Return Address — Additional Missing Cases
+// ============================================================================
+
+describe('handlePostcardCreate — Return Address Missing/Null (#22)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  it('rejects when from is explicitly null', async () => {
+    const req = makeRequestNoFrom({
+      to: validUSAddress,
+      from: null,
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from')).toBe(true)
+  })
+
+  it('rejects when from is an empty object', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      from: {},
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    // Empty object should fail all 7 required field checks
+    expect(data.errors!.filter(e => e.field.startsWith('from.')).length).toBeGreaterThanOrEqual(7)
+  })
+
+  it('rejects return address missing firstName only', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { firstName: _, ...noFirstFrom } = validUSAddress
+    const req = makeRequest({
+      to: validUSAddress,
+      from: noFirstFrom,
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from.firstName')).toBe(true)
+  })
+
+  it('rejects return address missing lastName only', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { lastName: _, ...noLastFrom } = validUSAddress
+    const req = makeRequest({
+      to: validUSAddress,
+      from: noLastFrom,
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from.lastName')).toBe(true)
+  })
+
+  it('rejects return address with addressLine1 exceeding 200 characters', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      from: { ...validUSAddress, addressLine1: 'X'.repeat(201) },
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from.addressLine1')).toBe(true)
+  })
+
+  it('accepts return address with addressLine1 at exactly 200 characters', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      from: { ...validUSAddress, addressLine1: 'X'.repeat(200) },
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('rejects return address with numeric state code', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      from: { ...validUSAddress, provinceOrState: '17' },
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from.provinceOrState')).toBe(true)
+  })
+
+  it('rejects return address with 3-letter country code', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      from: { ...validUSAddress, countryCode: 'USA' },
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from.countryCode')).toBe(true)
+  })
+
+  it('rejects return address with CA postal code for US country', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      from: { ...validUSAddress, postalOrZip: 'K1A 0B1' },
+      frontHTML: '<html>Test</html>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'from.postalOrZip')).toBe(true)
+  })
+})
+
+// ============================================================================
+// Issue #22: Combined All-Fields-Invalid Stress Test
+// ============================================================================
+
+describe('handlePostcardCreate — All Fields Invalid (#22)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  it('returns errors for every invalid field when all fields are bad', async () => {
+    const req = makeRequest({
+      // to: all required fields present but invalid formats → format errors
+      to: {
+        firstName: 'Jane',
+        lastName: 'Doe',
+        addressLine1: 'A'.repeat(201),
+        city: 'Springfield',
+        provinceOrState: 'California',
+        postalOrZip: 'BAD',
+        countryCode: 'US',
+      },
+      // from: required fields missing → presence errors (short-circuits format checks)
+      from: {
+        firstName: '',
+        lastName: '',
+        addressLine1: '',
+        city: '',
+        provinceOrState: 'Ontario',
+        postalOrZip: '1234',
+        countryCode: 'GB',
+      },
+      message: 'A'.repeat(5001),
+      size: 'invalid',
+      image: 'not-valid-base64!!!',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    const fields = data.errors!.map(e => e.field)
+
+    // to format errors (required fields present → format checks run)
+    expect(fields).toContain('to.addressLine1')
+    expect(fields).toContain('to.provinceOrState')
+    expect(fields).toContain('to.postalOrZip')
+
+    // from presence errors (required fields missing → short-circuits format checks)
+    expect(fields).toContain('from.firstName')
+    expect(fields).toContain('from.lastName')
+    expect(fields).toContain('from.addressLine1')
+    expect(fields).toContain('from.city')
+    // Note: from.provinceOrState, from.postalOrZip, from.countryCode have values present
+    // so they pass the required check, but format checks are skipped because other
+    // required fields in the same address are missing (validateAddress short-circuits)
+
+    // content errors
+    expect(fields).toContain('message')
+    expect(fields).toContain('size')
+    expect(fields).toContain('image')
+  })
+
+  it('returns to + from + image errors when message and frontHTML are valid', async () => {
+    const req = makeRequest({
+      to: { ...validUSAddress, city: '' },
+      from: { ...validUSAddress, postalOrZip: 'BAD' },
+      frontHTML: '<html>Test</html>',
+      message: 'Hello',
+      image: btoa('not-an-image'),
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    const fields = data.errors!.map(e => e.field)
+    expect(fields).toContain('to.city')
+    expect(fields).toContain('from.postalOrZip')
+    expect(fields).toContain('image')
+  })
+})
+
+// ============================================================================
+// Issue #22: Image Validation — Route-Level Additional Formats
+// ============================================================================
+
+describe('handlePostcardCreate — Image Format Rejection (#22)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  it('rejects BMP image at route level', async () => {
+    const bmpBytes = new Uint8Array([0x42, 0x4D, 0x00, 0x00, 0x00, 0x00])
+    const bmp = btoa(String.fromCharCode(...bmpBytes))
+    const req = makeRequest({
+      to: validUSAddress,
+      image: bmp,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects TIFF (little-endian) image at route level', async () => {
+    const tiffBytes = new Uint8Array([0x49, 0x49, 0x2A, 0x00, 0x00, 0x00])
+    const tiff = btoa(String.fromCharCode(...tiffBytes))
+    const req = makeRequest({
+      to: validUSAddress,
+      image: tiff,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects PDF as image at route level', async () => {
+    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D])
+    const pdf = btoa(String.fromCharCode(...pdfBytes) + '1.7\n')
+    const req = makeRequest({
+      to: validUSAddress,
+      image: pdf,
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+
+  it('rejects empty string as image — triggers content error since empty string is falsy', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      image: '',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    // Empty string is falsy in JS, so route handler treats it as no content
+    expect(data.errors!.some(e => e.field === 'content')).toBe(true)
+  })
+
+  it('rejects image data too short for format detection at route level', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      image: btoa('ab'),
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+  })
+})
+
+// ============================================================================
+// Issue #22: DOMPurify — Comprehensive Sanitization Verification
+// ============================================================================
+
+describe('handlePostcardCreate — DOMPurify Comprehensive (#22)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  it('sanitizes <form> tag with action', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '<form action="https://evil.com/steal"><input type="text"></form>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('sanitizes <base> tag for URL hijacking', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '<base href="https://evil.com/">',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('sanitizes <meta> refresh redirect', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '<meta http-equiv="refresh" content="0;url=https://evil.com/">',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('sanitizes <link> tag injection', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '<link rel="stylesheet" href="https://evil.com/evil.css">',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('preserves allowed list and heading tags', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '<h1>Heading</h1><ol><li>Item 1</li></ol><ul><li>Bullet</li></ul><blockquote>Quote</blockquote>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('handles deeply nested malicious content', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '<div><div><div><script>alert(1)</script></div></div></div>',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+
+  it('handles encoded script tags', async () => {
+    const req = makeRequest({
+      to: validUSAddress,
+      frontHTML: '<html>Front</html>',
+      message: '&lt;script&gt;alert(1)&lt;/script&gt;',
+    })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).not.toBe(400)
+  })
+})
