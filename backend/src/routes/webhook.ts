@@ -55,7 +55,7 @@ function parseSendGridWebhook(body: unknown): EmailData | null {
 
     return null
   } catch (error) {
-    console.error('Error parsing SendGrid webhook:', error)
+    logger.error('Error parsing SendGrid webhook', { error: error instanceof Error ? error.message : String(error) })
     return null
   }
 }
@@ -72,7 +72,7 @@ function parseMailgunWebhook(formData: URLSearchParams): EmailData | null {
       attachments: [] // Mailgun handles attachments differently
     }
   } catch (error) {
-    console.error('Error parsing Mailgun webhook:', error)
+    logger.error('Error parsing Mailgun webhook', { error: error instanceof Error ? error.message : String(error) })
     return null
   }
 }
@@ -96,7 +96,7 @@ function parseGenericWebhook(body: unknown): EmailData | null {
       attachments: (Array.isArray(data.attachments) ? data.attachments : []) as EmailData['attachments']
     }
   } catch (error) {
-    console.error('Error parsing generic webhook:', error)
+    logger.error('Error parsing generic webhook', { error: error instanceof Error ? error.message : String(error) })
     return null
   }
 }

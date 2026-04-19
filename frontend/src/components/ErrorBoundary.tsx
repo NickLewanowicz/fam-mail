@@ -25,9 +25,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    // Log error for monitoring — can be wired to external service later
-    console.error('[ErrorBoundary] Caught error:', error)
-    console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack)
+    // Only log in development — production should use an error tracking service
+    if (import.meta.env.DEV) {
+      console.error('[ErrorBoundary] Caught error:', error)
+      console.error('[ErrorBoundary] Component stack:', errorInfo.componentStack)
+    }
   }
 
   handleReset = (): void => {

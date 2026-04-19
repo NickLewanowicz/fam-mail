@@ -4,6 +4,7 @@ import { AuthMiddleware } from '../middleware/auth'
 import { Database } from '../database'
 import type { User } from '../models/user'
 import { jsonResponse, applyHeaders } from '../middleware/headers'
+import { logger } from '../utils/logger'
 
 /** TTL-based state store for OIDC PKCE code verifiers.
  *  Entries expire after STATE_TTL_MS (10 min). Cleanup runs lazily on access
@@ -115,7 +116,7 @@ export function setupAuthRoutes(
       const redirectUrl = `${new URL(req.url).origin}/auth/callback?token=${accessToken}`
       return applyHeaders(Response.redirect(redirectUrl), req)
     } catch (error) {
-      console.error('OIDC callback error:', error)
+      logger.error('OIDC callback error', { error: error instanceof Error ? error.message : String(error) })
       return jsonResponse({ error: 'Authentication failed' }, 500, req)
     }
   }
@@ -201,7 +202,7 @@ export function setupAuthRoutes(
         refreshToken: newRefreshToken,
       }, 200, req)
     } catch (error) {
-      console.error('Token refresh error:', error)
+      logger.error('Token refresh error', { error: error instanceof Error ? error.message : String(error) })
       return jsonResponse({ error: 'Invalid request body' }, 400, req)
     }
   }
