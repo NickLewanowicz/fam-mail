@@ -1,7 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
-import MDEditor from '@uiw/react-md-editor';
+import { useState, useRef, useCallback, useEffect, lazy, Suspense } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+
+// Lazy-load MDEditor — the markdown editor vendor chunk (~1.1MB) is only
+// fetched when the editor is actually opened, keeping initial load small.
+const MDEditor = lazy(() => import('@uiw/react-md-editor'));
 import { MESSAGE_CONSTRAINTS } from '../../utils/postal';
 
 interface MessageEditorProps {
@@ -131,24 +134,26 @@ export function MessageEditor({
         <div className="h-full flex flex-col">
           {/* Editor */}
           <div className="flex-1 overflow-hidden">
-            <MDEditor
-              value={message}
-              onChange={handleMessageChange}
-              preview="edit"
-              hideToolbar={false}
-              visibleDragbar={false}
-              height={300}
-              textareaProps={{
-                placeholder,
-                style: {
-                  fontSize: '14px',
-                  lineHeight: '1.6',
-                  minHeight: '200px',
-                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                }
-              }}
-              data-color-mode="light"
-            />
+            <Suspense fallback={<div className="h-[300px] flex items-center justify-center"><span className="loading loading-spinner loading-md text-primary"></span></div>}>
+              <MDEditor
+                value={message}
+                onChange={handleMessageChange}
+                preview="edit"
+                hideToolbar={false}
+                visibleDragbar={false}
+                height={300}
+                textareaProps={{
+                  placeholder,
+                  style: {
+                    fontSize: '14px',
+                    lineHeight: '1.6',
+                    minHeight: '200px',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                  }
+                }}
+                data-color-mode="light"
+              />
+            </Suspense>
           </div>
 
           {/* Status bar */}

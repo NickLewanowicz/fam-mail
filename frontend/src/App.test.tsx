@@ -90,7 +90,7 @@ vi.mock('./utils/api', () => ({
   })),
 }))
 
-vi.mock('./components/drafts', () => ({
+vi.mock('./components/drafts/DraftList', () => ({
   DraftList: ({ onLoadDraft, onDraftsChanged, refreshTrigger }: { 
     onLoadDraft: (draft: Draft) => void
     onDraftsChanged?: () => void
@@ -119,6 +119,9 @@ vi.mock('./components/drafts', () => ({
       {onDraftsChanged && <button onClick={onDraftsChanged}>Changed</button>}
     </div>
   ),
+}))
+
+vi.mock('./components/drafts/SaveDraftModal', () => ({
   SaveDraftModal: ({ isOpen, onClose, onSaved }: { 
     isOpen: boolean
     onClose: () => void

@@ -1,6 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
-import MDEditor from '@uiw/react-md-editor'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { marked } from 'marked'
+
+// Lazy-load MDEditor — the markdown editor vendor chunk (~1.1MB) is only
+// fetched when the component actually renders, keeping the initial page
+// load small for users who haven't navigated to the editor yet.
+const MDEditor = lazy(() => import('@uiw/react-md-editor'))
 import { generatePreviewHTML, POSTCARD_6X4_DIMENSIONS } from '../../utils/postcardTemplate'
 import { AddressForm } from '../address/AddressForm'
 import type { Address } from '../../types/address'
@@ -183,12 +187,14 @@ export function PostcardBuilder({
                 <span className="label-text-alt text-xs opacity-70">Markdown with live preview</span>
               </label>
               <div data-color-mode="light">
-                <MDEditor
-                  value={message}
-                  onChange={(val) => onMessageChange(val || '')}
-                  preview="live"
-                  height={300}
-                />
+                <Suspense fallback={<div className="h-[300px] flex items-center justify-center"><span className="loading loading-spinner loading-md text-primary"></span></div>}>
+                  <MDEditor
+                    value={message}
+                    onChange={(val) => onMessageChange(val || '')}
+                    preview="live"
+                    height={300}
+                  />
+                </Suspense>
               </div>
             </div>
           </div>

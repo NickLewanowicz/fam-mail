@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { InteractivePostcard } from './InteractivePostcard'
 import type { Address } from '../../types/address'
 
@@ -72,18 +72,22 @@ describe('InteractivePostcard', () => {
     onAddressChange: vi.fn(),
   }
 
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     render(<InteractivePostcard {...defaultProps} />)
     expect(screen.getByTestId('postcard-front-mock')).toBeInTheDocument()
-    expect(screen.getByTestId('postcard-back-mock')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('postcard-back-mock')).toBeInTheDocument()
+    })
   })
 
-  it('displays the message on the back', () => {
+  it('displays the message on the back', async () => {
     render(<InteractivePostcard {...defaultProps} message="Test message" />)
-    expect(screen.getByTestId('back-message')).toHaveTextContent('Test message')
+    await waitFor(() => {
+      expect(screen.getByTestId('back-message')).toHaveTextContent('Test message')
+    })
   })
 
-  it('displays address info on the back', () => {
+  it('displays address info on the back', async () => {
     const address: Address = {
       firstName: 'John',
       lastName: 'Doe',
@@ -94,12 +98,16 @@ describe('InteractivePostcard', () => {
       countryCode: 'CA',
     }
     render(<InteractivePostcard {...defaultProps} address={address} />)
-    expect(screen.getByTestId('back-address')).toHaveTextContent('John')
+    await waitFor(() => {
+      expect(screen.getByTestId('back-address')).toHaveTextContent('John')
+    })
   })
 
-  it('shows "No address" when address is null', () => {
+  it('shows "No address" when address is null', async () => {
     render(<InteractivePostcard {...defaultProps} address={null} />)
-    expect(screen.getByTestId('back-address')).toHaveTextContent('No address')
+    await waitFor(() => {
+      expect(screen.getByTestId('back-address')).toHaveTextContent('No address')
+    })
   })
 
   it('displays Front Side and Back Side labels', () => {

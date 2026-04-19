@@ -31,7 +31,7 @@ vi.mock('./utils/api', () => ({
   submitPostcard: vi.fn(),
 }))
 
-vi.mock('./components/drafts', () => ({
+vi.mock('./components/drafts/DraftList', () => ({
   DraftList: ({ onLoadDraft, onDraftsChanged, refreshTrigger }: {
     onLoadDraft: (draft: Record<string, unknown>) => void
     onDraftsChanged?: () => void
@@ -43,6 +43,9 @@ vi.mock('./components/drafts', () => ({
       {onDraftsChanged && <button onClick={onDraftsChanged}>Changed</button>}
     </div>
   ),
+}))
+
+vi.mock('./components/drafts/SaveDraftModal', () => ({
   SaveDraftModal: () => null,
 }))
 
@@ -111,10 +114,12 @@ describe('App ErrorBoundary Isolation', () => {
     vi.doMock('./components/postcard/PostcardBuilder', () => ({
       PostcardBuilder: () => <div data-testid="mock-postcard-builder">Postcard Builder</div>,
     }))
-    vi.doMock('./components/drafts', () => ({
+    vi.doMock('./components/drafts/DraftList', () => ({
       DraftList: () => {
         throw new Error('DraftList exploded')
       },
+    }))
+    vi.doMock('./components/drafts/SaveDraftModal', () => ({
       SaveDraftModal: () => null,
     }))
 

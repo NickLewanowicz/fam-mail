@@ -1,6 +1,9 @@
 import { Modal, ModalHeader, ModalBody, ModalFooter } from '../ui/Modal'
-import MDEditor from '@uiw/react-md-editor'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, lazy, Suspense } from 'react'
+
+// Lazy-load MDEditor — the markdown editor vendor chunk (~1.1MB) is only
+// fetched when the modal is actually opened, keeping initial load small.
+const MDEditor = lazy(() => import('@uiw/react-md-editor'))
 
 /** Lightweight debounce with cancel support — replaces lodash dependency */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -98,13 +101,15 @@ export const MessageEditModal: React.FC<MessageEditModalProps> = ({
       <ModalHeader title="Edit Message" onClose={handleCancel} />
       <ModalBody>
         <div data-color-mode="light">
-          <MDEditor
-            value={message}
-            onChange={handleChange}
-            height={400}
-            preview="edit"
-            hideToolbar={false}
-          />
+          <Suspense fallback={<div className="h-[400px] flex items-center justify-center"><span className="loading loading-spinner loading-md text-primary"></span></div>}>
+            <MDEditor
+              value={message}
+              onChange={handleChange}
+              height={400}
+              preview="edit"
+              hideToolbar={false}
+            />
+          </Suspense>
         </div>
       </ModalBody>
       <ModalFooter>

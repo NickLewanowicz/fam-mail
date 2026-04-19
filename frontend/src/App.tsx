@@ -1,12 +1,30 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, lazy, Suspense, type ReactNode } from 'react'
 import { Header } from './components/layout/Header'
 import { StatusCard } from './components/status/StatusCard'
-import { PostcardBuilder } from './components/postcard/PostcardBuilder'
-import { DraftList, SaveDraftModal } from './components/drafts'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { submitPostcard, type PostcardResponse } from './utils/api'
 import type { Address } from './types/address'
 import type { Draft } from './types/postcard'
+
+// Lazy-loaded components — code-split for smaller initial bundle
+const PostcardBuilder = lazy(() =>
+  import('./components/postcard/PostcardBuilder').then(m => ({ default: m.PostcardBuilder }))
+)
+const DraftList = lazy(() =>
+  import('./components/drafts/DraftList').then(m => ({ default: m.DraftList }))
+)
+const SaveDraftModal = lazy(() =>
+  import('./components/drafts/SaveDraftModal').then(m => ({ default: m.SaveDraftModal }))
+)
+
+/** Loading spinner shown while lazy-loaded chunks are fetched */
+function ChunkLoader() {
+  return (
+    <div className="flex justify-center items-center py-12">
+      <span className="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+  )
+}
 
 /** Inline error fallback for section-level boundaries — shows error within the page layout */
 function SectionErrorFallback({ title }: { title: string }): ReactNode {
@@ -161,24 +179,28 @@ function App() {
           </div>
 
           {activeView === 'drafts' ? (
-            <ErrorBoundary fallback={<SectionErrorFallback title="Drafts Error" />}>
-              <DraftList
-                onLoadDraft={handleLoadDraft}
-                onDraftsChanged={handleDraftsChanged}
-                refreshTrigger={draftRefreshTrigger}
-              />
-            </ErrorBoundary>
+              <ErrorBoundary fallback={<SectionErrorFallback title="Drafts Error" />}>
+                <Suspense fallback={<ChunkLoader />}>
+                  <DraftList
+                    onLoadDraft={handleLoadDraft}
+                    onDraftsChanged={handleDraftsChanged}
+                    refreshTrigger={draftRefreshTrigger}
+                  />
+                </Suspense>
+              </ErrorBoundary>
           ) : !submissionSuccess ? (
             <>
               <ErrorBoundary fallback={<SectionErrorFallback title="Postcard Builder Error" />}>
-                <PostcardBuilder
-                  recipientAddress={recipientAddress}
-                  onAddressChange={setRecipientAddress}
-                  selectedImage={selectedImage}
-                  onImageChange={setSelectedImage}
-                  message={message}
-                  onMessageChange={setMessage}
-                />
+                <Suspense fallback={<ChunkLoader />}>
+                  <PostcardBuilder
+                    recipientAddress={recipientAddress}
+                    onAddressChange={setRecipientAddress}
+                    selectedImage={selectedImage}
+                    onImageChange={setSelectedImage}
+                    message={message}
+                    onMessageChange={setMessage}
+                  />
+                </Suspense>
               </ErrorBoundary>
 
               {/* Action buttons row */}
@@ -374,15 +396,17 @@ function App() {
       </main>
 
       {/* Save Draft Modal */}
-      <SaveDraftModal
-        isOpen={showSaveDraftModal}
-        onClose={() => setShowSaveDraftModal(false)}
-        onSaved={handleDraftSaved}
-        recipientAddress={recipientAddress}
-        message={message}
-        selectedImage={selectedImage}
-        existingDraftId={activeDraftId}
-      />
+      <Suspense fallback={null}>
+        <SaveDraftModal
+          isOpen={showSaveDraftModal}
+          onClose={() => setShowSaveDraftModal(false)}
+          onSaved={handleDraftSaved}
+          recipientAddress={recipientAddress}
+          message={message}
+          selectedImage={selectedImage}
+          existingDraftId={activeDraftId}
+        />
+      </Suspense>
 
       <footer className="footer footer-center p-10 bg-base-300 text-base-content">
         <aside>

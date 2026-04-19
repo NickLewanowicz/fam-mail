@@ -1,11 +1,21 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, lazy, Suspense } from 'react'
 import { PostcardFront } from './PostcardFront'
-import { PostcardBack } from './PostcardBack'
-import { MessageEditModal } from '../modals/MessageEditModal'
 import { AddressEditModal } from '../modals/AddressEditModal'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcardState'
 import './InteractivePostcard.css'
+
+// Lazy-load PostcardBack — it pulls in MessageEditor which uses the heavy
+// markdown editor vendor chunk (~1.1MB). Only load when back side renders.
+const PostcardBack = lazy(() =>
+  import('./PostcardBack').then(m => ({ default: m.PostcardBack }))
+)
+
+// Lazy-load MessageEditModal — conditionally rendered modal that imports
+// the heavy markdown editor. Only load when the user opens the modal.
+const MessageEditModal = lazy(() =>
+  import('../modals/MessageEditModal').then(m => ({ default: m.MessageEditModal }))
+)
 
 interface InteractivePostcardProps {
   imageData?: string
@@ -73,16 +83,18 @@ export function InteractivePostcard({
         {/* Back Side */}
         <div className="postcard-side">
           <div className="postcard-side-container">
-            <PostcardBack
-              message={message}
-              recipientAddress={address}
-              senderAddress={null}
-              onMessageChange={onMessageChange}
-              onRecipientAddressChange={handleAddressChange}
-              onSenderAddressChange={() => {}}
-              onMessageEdit={handleMessageEdit}
-              onAddressEdit={handleAddressEdit}
-            />
+            <Suspense fallback={<div className="h-[300px] flex items-center justify-center"><span className="loading loading-spinner loading-md text-primary"></span></div>}>
+              <PostcardBack
+                message={message}
+                recipientAddress={address}
+                senderAddress={null}
+                onMessageChange={onMessageChange}
+                onRecipientAddressChange={handleAddressChange}
+                onSenderAddressChange={() => {}}
+                onMessageEdit={handleMessageEdit}
+                onAddressEdit={handleAddressEdit}
+              />
+            </Suspense>
           </div>
         </div>
       </div>
@@ -98,12 +110,14 @@ export function InteractivePostcard({
       </div>
 
       {/* Message Edit Modal */}
-      <MessageEditModal
-        isOpen={messageModalOpen}
-        onClose={() => setMessageModalOpen(false)}
-        initialMessage={message}
-        onSave={handleMessageSave}
-      />
+      <Suspense fallback={null}>
+        <MessageEditModal
+          isOpen={messageModalOpen}
+          onClose={() => setMessageModalOpen(false)}
+          initialMessage={message}
+          onSave={handleMessageSave}
+        />
+      </Suspense>
 
       {/* Address Edit Modal */}
       <AddressEditModal

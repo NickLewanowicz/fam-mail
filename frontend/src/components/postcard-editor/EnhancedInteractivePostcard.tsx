@@ -1,10 +1,15 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react'
 import { PostcardFront } from './PostcardFront'
-import { PostcardBack } from './PostcardBack'
 import { usePostcardState } from '../../hooks/usePostcardState'
 import type { Address } from '../../types/address'
 import type { PostcardState } from '../../hooks/usePostcardState'
 import './EnhancedInteractivePostcard.css'
+
+// Lazy-load PostcardBack — it pulls in MessageEditor which uses the heavy
+// markdown editor vendor chunk (~1.1MB). Only load when back side renders.
+const PostcardBack = lazy(() =>
+  import('./PostcardBack').then(m => ({ default: m.PostcardBack }))
+)
 
 interface EnhancedInteractivePostcardProps {
   onStateChange?: (state: PostcardState) => void
@@ -317,16 +322,18 @@ export function EnhancedInteractivePostcard({
                 transform: 'rotateY(180deg)'
               }}
             >
-              <PostcardBack
-                message={state.message}
-                recipientAddress={state.recipientAddress}
-                senderAddress={state.senderAddress}
-                onMessageChange={setMessage}
-                onRecipientAddressChange={setRecipientAddress}
-                onSenderAddressChange={setSenderAddress}
-                onError={(field, error) => setError(field, error)}
-                showSafeZones={state.showSafeZones}
-              />
+              <Suspense fallback={<div className="flex items-center justify-center h-full"><span className="loading loading-spinner loading-md text-primary"></span></div>}>
+                <PostcardBack
+                  message={state.message}
+                  recipientAddress={state.recipientAddress}
+                  senderAddress={state.senderAddress}
+                  onMessageChange={setMessage}
+                  onRecipientAddressChange={setRecipientAddress}
+                  onSenderAddressChange={setSenderAddress}
+                  onError={(field, error) => setError(field, error)}
+                  showSafeZones={state.showSafeZones}
+                />
+              </Suspense>
             </div>
           </div>
         </div>
