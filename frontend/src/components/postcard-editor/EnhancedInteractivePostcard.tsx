@@ -224,12 +224,12 @@ export function EnhancedInteractivePostcard({
       {/* Loading Overlay */}
       {isLoading && (
         <div
-          className="loading-overlay fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="loading-overlay fixed inset-0 bg-neutral/50 flex items-center justify-center z-50"
           style={{
             animation: `fadeIn ${FADE_DURATION}ms ease-out`
           }}
         >
-          <div className="bg-white rounded-lg p-6 text-center">
+          <div className="bg-base-100 rounded-lg p-6 text-center">
             <div className="loading loading-spinner loading-lg mb-4"></div>
             <p className="text-lg font-medium">Loading your draft...</p>
           </div>
@@ -239,18 +239,18 @@ export function EnhancedInteractivePostcard({
       {/* Progress Bar */}
       <div className="progress-bar-container mb-6">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium text-gray-600">
+          <span className="text-sm font-medium text-base-content/70">
             Progress: {progress.completed} of {progress.total}
           </span>
           {isDirty && (
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-base-content/50">
               {lastSaved ? `Last saved: ${lastSaved.toLocaleTimeString()}` : 'Saving...'}
             </span>
           )}
         </div>
-        <div className="progress bg-gray-200 h-2 rounded-full overflow-hidden">
+        <div className="progress bg-base-300 h-2 rounded-full overflow-hidden">
           <div
-            className="progress-bar bg-accent-blue h-full rounded-full transition-all duration-500 ease-out"
+            className="progress-bar bg-primary h-full rounded-full transition-all duration-500 ease-out"
             style={{ width: `${progress.percentage}%` }}
           />
         </div>
@@ -358,12 +358,12 @@ export function EnhancedInteractivePostcard({
           </button>
 
           {/* Side Indicator */}
-          <div className="flex items-center space-x-2 text-sm text-gray-600" role="tablist">
+          <div className="flex items-center space-x-2 text-sm text-base-content/70" role="tablist">
             <span
               className={`px-3 py-1 rounded-full transition-colors ${
                 !state.isFlipped
-                  ? 'bg-accent-blue text-white font-medium'
-                  : 'bg-gray-200 text-gray-600'
+                  ? 'bg-primary text-primary-content font-medium'
+                  : 'bg-base-300 text-base-content/70'
               }`}
               role="tab"
               aria-selected={!state.isFlipped}
@@ -371,12 +371,12 @@ export function EnhancedInteractivePostcard({
             >
               Front
             </span>
-            <div className="w-8 h-0.5 bg-gray-300"></div>
+            <div className="w-8 h-0.5 bg-base-content/20"></div>
             <span
               className={`px-3 py-1 rounded-full transition-colors ${
                 state.isFlipped
-                  ? 'bg-accent-blue text-white font-medium'
-                  : 'bg-gray-200 text-gray-600'
+                  ? 'bg-primary text-primary-content font-medium'
+                  : 'bg-base-300 text-base-content/70'
               }`}
               role="tab"
               aria-selected={state.isFlipped}
@@ -446,7 +446,7 @@ export function EnhancedInteractivePostcard({
         {/* Keyboard Shortcuts Help */}
         {isKeyboardNavVisible && (
           <div
-            className="keyboard-help bg-gray-100 rounded-lg p-4 text-sm max-w-md"
+            className="keyboard-help bg-base-200 rounded-lg p-4 text-sm max-w-md"
             style={{
               animation: 'slideUp 0.3s ease-out'
             }}
