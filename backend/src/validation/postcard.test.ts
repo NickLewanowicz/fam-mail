@@ -7,6 +7,11 @@ import {
 import { validateImage, validateMessage, validateSize } from '../utils/validation'
 import type { PostGridAddress } from '../types/postgrid'
 
+/** Safe base64 encoding for Uint8Array of any size (avoids stack overflow from spread operator). */
+function bytesToBase64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString('base64')
+}
+
 // ---------------------------------------------------------------------------
 // Shared test data
 // ---------------------------------------------------------------------------
@@ -703,7 +708,7 @@ describe('validateImage (via postcard module)', () => {
 
     it('rejects GIF content', () => {
       const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00])
-      const gif = btoa(String.fromCharCode(...gifBytes))
+      const gif = bytesToBase64(gifBytes)
       const result = validateImage(gif)
       expect(result.valid).toBe(false)
       expect(result.errors[0].message).toContain('JPEG or PNG')
@@ -711,14 +716,14 @@ describe('validateImage (via postcard module)', () => {
 
     it('rejects WebP content', () => {
       const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
-      const webp = btoa(String.fromCharCode(...webpBytes))
+      const webp = bytesToBase64(webpBytes)
       const result = validateImage(webp)
       expect(result.valid).toBe(false)
     })
 
     it('rejects BMP content', () => {
       const bmpBytes = new Uint8Array([0x42, 0x4D, 0x00, 0x00, 0x00, 0x00])
-      const bmp = btoa(String.fromCharCode(...bmpBytes))
+      const bmp = bytesToBase64(bmpBytes)
       const result = validateImage(bmp)
       expect(result.valid).toBe(false)
     })
@@ -731,14 +736,7 @@ describe('validateImage (via postcard module)', () => {
       buffer[0] = 0xff // JPEG magic
       buffer[1] = 0xd8
       buffer[2] = 0xff
-      // Use chunked base64 encoding to avoid call stack overflow with spread operator
-      let binary = ''
-      const chunkSize = 8192
-      for (let i = 0; i < buffer.length; i += chunkSize) {
-        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
-        binary += String.fromCharCode(...chunk)
-      }
-      const base64 = btoa(binary)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
@@ -754,7 +752,7 @@ describe('validateImage (via postcard module)', () => {
 
     it('rejects random bytes that look like neither JPEG nor PNG', () => {
       const randomBytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
-      const result = validateImage(btoa(String.fromCharCode(...randomBytes)))
+      const result = validateImage(bytesToBase64(randomBytes))
       expect(result.valid).toBe(false)
     })
 

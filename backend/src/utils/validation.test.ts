@@ -8,6 +8,11 @@ import {
   type AddressInput,
 } from './validation'
 
+/** Safe base64 encoding for Uint8Array of any size (avoids stack overflow from spread operator). */
+function bytesToBase64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString('base64')
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -574,7 +579,7 @@ describe('validateImage', () => {
     it('rejects GIF content', () => {
       // GIF magic bytes: GIF89a
       const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00])
-      const gif = btoa(String.fromCharCode(...gifBytes))
+      const gif = bytesToBase64(gifBytes)
       const result = validateImage(gif)
       expect(result.valid).toBe(false)
       expect(result.errors[0].message).toContain('JPEG or PNG')
@@ -583,7 +588,7 @@ describe('validateImage', () => {
     it('rejects WebP content', () => {
       // WebP magic bytes: RIFF....WEBP
       const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
-      const webp = btoa(String.fromCharCode(...webpBytes))
+      const webp = bytesToBase64(webpBytes)
       const result = validateImage(webp)
       expect(result.valid).toBe(false)
     })
@@ -591,7 +596,7 @@ describe('validateImage', () => {
     it('rejects BMP content', () => {
       // BMP magic bytes: BM
       const bmpBytes = new Uint8Array([0x42, 0x4D, 0x00, 0x00, 0x00, 0x00])
-      const bmp = btoa(String.fromCharCode(...bmpBytes))
+      const bmp = bytesToBase64(bmpBytes)
       const result = validateImage(bmp)
       expect(result.valid).toBe(false)
     })
@@ -604,14 +609,8 @@ describe('validateImage', () => {
       buffer[0] = 0xff // JPEG magic
       buffer[1] = 0xd8
       buffer[2] = 0xff
-      // Use chunked base64 encoding to avoid call stack overflow with spread operator
-      let binary = ''
-      const chunkSize = 8192
-      for (let i = 0; i < buffer.length; i += chunkSize) {
-        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
-        binary += String.fromCharCode(...chunk)
-      }
-      const base64 = btoa(binary)
+      // Use Buffer-based base64 encoding to avoid call stack overflow with spread operator
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
@@ -627,7 +626,7 @@ describe('validateImage', () => {
 
     it('rejects random bytes that look like neither JPEG nor PNG', () => {
       const randomBytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
-      const result = validateImage(btoa(String.fromCharCode(...randomBytes)))
+      const result = validateImage(bytesToBase64(randomBytes))
       expect(result.valid).toBe(false)
     })
 
@@ -649,7 +648,7 @@ describe('validateImage', () => {
   describe('undersized / degenerate images', () => {
     it('rejects image data that is exactly 3 bytes (too short for magic check)', () => {
       const bytes = new Uint8Array([0xff, 0xd8, 0xff])
-      const result = validateImage(btoa(String.fromCharCode(...bytes)))
+      const result = validateImage(bytesToBase64(bytes))
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('too short'))).toBe(true)
     })
@@ -657,7 +656,7 @@ describe('validateImage', () => {
     it('accepts a minimal valid JPEG with only 4 bytes', () => {
       // Smallest possible JPEG-like header (4 bytes for magic check)
       const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x00])
-      const result = validateImage(btoa(String.fromCharCode(...bytes)))
+      const result = validateImage(bytesToBase64(bytes))
       expect(result.valid).toBe(true)
     })
   })
@@ -667,9 +666,9 @@ describe('validateImage', () => {
       // Build a >10MB base64 string that is NOT valid JPEG or PNG
       const size = 10 * 1024 * 1024 + 100
       const header = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]) // invalid magic
-      let binary = String.fromCharCode(...header)
-      binary += '\x00'.repeat(size - header.length)
-      const base64 = btoa(binary)
+      const buffer = new Uint8Array(size)
+      buffer.set(header, 0)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
@@ -681,9 +680,9 @@ describe('validateImage', () => {
     it('reports size error but recognizes JPEG format', () => {
       const size = 10 * 1024 * 1024 + 100
       const header = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]) // JPEG header
-      let binary = String.fromCharCode(...header)
-      binary += '\x00'.repeat(size - header.length)
-      const base64 = btoa(binary)
+      const buffer = new Uint8Array(size)
+      buffer.set(header, 0)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       // Should report only the size error (format is valid)
@@ -696,9 +695,9 @@ describe('validateImage', () => {
     it('reports size error but recognizes PNG format', () => {
       const size = 10 * 1024 * 1024 + 100
       const header = new Uint8Array([0x89, 0x50, 0x4e, 0x47]) // PNG header
-      let binary = String.fromCharCode(...header)
-      binary += '\x00'.repeat(size - header.length)
-      const base64 = btoa(binary)
+      const buffer = new Uint8Array(size)
+      buffer.set(header, 0)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       // Should report only the size error (format is valid)
@@ -716,14 +715,7 @@ describe('validateImage', () => {
       buffer[1] = 0xd8
       buffer[2] = 0xff
       buffer[3] = 0xe0
-      // Encode in chunks to avoid stack overflow
-      let binary = ''
-      const chunkSize = 8192
-      for (let i = 0; i < buffer.length; i += chunkSize) {
-        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
-        binary += String.fromCharCode(...chunk)
-      }
-      const base64 = btoa(binary)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(true)
     })
@@ -735,13 +727,7 @@ describe('validateImage', () => {
       buffer[1] = 0xd8
       buffer[2] = 0xff
       buffer[3] = 0xe0
-      let binary = ''
-      const chunkSize = 8192
-      for (let i = 0; i < buffer.length; i += chunkSize) {
-        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
-        binary += String.fromCharCode(...chunk)
-      }
-      const base64 = btoa(binary)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
@@ -751,7 +737,7 @@ describe('validateImage', () => {
   describe('TIFF rejected', () => {
     it('rejects TIFF (little-endian) content', () => {
       const tiffBytes = new Uint8Array([0x49, 0x49, 0x2A, 0x00, 0x00, 0x00])
-      const tiff = btoa(String.fromCharCode(...tiffBytes))
+      const tiff = bytesToBase64(tiffBytes)
       const result = validateImage(tiff)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
@@ -759,7 +745,7 @@ describe('validateImage', () => {
 
     it('rejects TIFF (big-endian) content', () => {
       const tiffBytes = new Uint8Array([0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00])
-      const tiff = btoa(String.fromCharCode(...tiffBytes))
+      const tiff = bytesToBase64(tiffBytes)
       const result = validateImage(tiff)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
@@ -768,8 +754,8 @@ describe('validateImage', () => {
 
   describe('PDF rejected', () => {
     it('rejects PDF content', () => {
-      const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D]) // %PDF-
-      const pdf = btoa(String.fromCharCode(...pdfBytes) + '1.7\n')
+      const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x37, 0x0A]) // %PDF-1.7\n
+      const pdf = bytesToBase64(pdfBytes)
       const result = validateImage(pdf)
       expect(result.valid).toBe(false)
     })

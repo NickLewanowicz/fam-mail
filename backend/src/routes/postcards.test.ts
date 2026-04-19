@@ -3,6 +3,11 @@ import { handlePostcardCreate } from './postcards'
 import type { User } from '../models/user'
 import { Database } from '../database'
 
+/** Safe base64 encoding for Uint8Array of any size (avoids stack overflow from spread operator). */
+function bytesToBase64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString('base64')
+}
+
 // ---------------------------------------------------------------------------
 // Environment setup — required by getConfig() in route handler
 // ---------------------------------------------------------------------------
@@ -1155,7 +1160,7 @@ describe('validateImage — Comprehensive Suite', () => {
 
     it('rejects GIF content', () => {
       const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00])
-      const gif = btoa(String.fromCharCode(...gifBytes))
+      const gif = bytesToBase64(gifBytes)
       const result = validateImage(gif)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
@@ -1163,7 +1168,7 @@ describe('validateImage — Comprehensive Suite', () => {
 
     it('rejects WebP content', () => {
       const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
-      const webp = btoa(String.fromCharCode(...webpBytes))
+      const webp = bytesToBase64(webpBytes)
       const result = validateImage(webp)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
@@ -1171,7 +1176,7 @@ describe('validateImage — Comprehensive Suite', () => {
 
     it('rejects BMP content', () => {
       const bmpBytes = new Uint8Array([0x42, 0x4D, 0x00, 0x00, 0x00, 0x00])
-      const bmp = btoa(String.fromCharCode(...bmpBytes))
+      const bmp = bytesToBase64(bmpBytes)
       const result = validateImage(bmp)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
@@ -1179,13 +1184,13 @@ describe('validateImage — Comprehensive Suite', () => {
 
     it('rejects TIFF little-endian content', () => {
       const tiffBytes = new Uint8Array([0x49, 0x49, 0x2A, 0x00, 0x00, 0x00])
-      const result = validateImage(btoa(String.fromCharCode(...tiffBytes)))
+      const result = validateImage(bytesToBase64(tiffBytes))
       expect(result.valid).toBe(false)
     })
 
     it('rejects PDF content', () => {
-      const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D])
-      const pdf = btoa(String.fromCharCode(...pdfBytes) + '1.7\n')
+      const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x37, 0x0A]) // %PDF-1.7\n
+      const pdf = bytesToBase64(pdfBytes)
       const result = validateImage(pdf)
       expect(result.valid).toBe(false)
     })
@@ -1199,13 +1204,7 @@ describe('validateImage — Comprehensive Suite', () => {
       buffer[0] = 0xff // JPEG magic
       buffer[1] = 0xd8
       buffer[2] = 0xff
-      let binary = ''
-      const chunkSize = 8192
-      for (let i = 0; i < buffer.length; i += chunkSize) {
-        const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
-        binary += String.fromCharCode(...chunk)
-      }
-      const base64 = btoa(binary)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
@@ -1214,9 +1213,9 @@ describe('validateImage — Comprehensive Suite', () => {
     it('reports both size and format errors for oversized non-JPEG/PNG', () => {
       const size = 10 * 1024 * 1024 + 100
       const header = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF])
-      let binary = String.fromCharCode(...header)
-      binary += '\x00'.repeat(size - header.length)
-      const base64 = btoa(binary)
+      const buffer = new Uint8Array(size)
+      buffer.set(header, 0)
+      const base64 = bytesToBase64(buffer)
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
@@ -1235,7 +1234,7 @@ describe('validateImage — Comprehensive Suite', () => {
 
     it('rejects random bytes (not JPEG or PNG)', () => {
       const randomBytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
-      const result = validateImage(btoa(String.fromCharCode(...randomBytes)))
+      const result = validateImage(bytesToBase64(randomBytes))
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
     })
@@ -1253,7 +1252,7 @@ describe('validateImage — Comprehensive Suite', () => {
 
     it('rejects image data that is exactly 3 bytes (too short for magic check)', () => {
       const bytes = new Uint8Array([0xff, 0xd8, 0xff])
-      const result = validateImage(btoa(String.fromCharCode(...bytes)))
+      const result = validateImage(bytesToBase64(bytes))
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('too short'))).toBe(true)
     })
@@ -1330,7 +1329,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
 
   it('rejects GIF image at route level', async () => {
     const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x00, 0x00])
-    const gif = btoa(String.fromCharCode(...gifBytes))
+    const gif = bytesToBase64(gifBytes)
     const req = makeRequest({
       to: validUSAddress,
       image: gif,
@@ -1343,7 +1342,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
 
   it('rejects WebP image at route level', async () => {
     const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
-    const webp = btoa(String.fromCharCode(...webpBytes))
+    const webp = bytesToBase64(webpBytes)
     const req = makeRequest({
       to: validUSAddress,
       image: webp,
@@ -1359,13 +1358,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     buffer[0] = 0xff // JPEG magic
     buffer[1] = 0xd8
     buffer[2] = 0xff
-    let binary = ''
-    const chunkSize = 8192
-    for (let i = 0; i < buffer.length; i += chunkSize) {
-      const chunk = buffer.subarray(i, Math.min(i + chunkSize, buffer.length))
-      binary += String.fromCharCode(...chunk)
-    }
-    const base64 = btoa(binary)
+    const base64 = bytesToBase64(buffer)
     const req = makeRequest({
       to: validUSAddress,
       image: base64,
@@ -1380,7 +1373,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     const randomBytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
     const req = makeRequest({
       to: validUSAddress,
-      image: btoa(String.fromCharCode(...randomBytes)),
+      image: bytesToBase64(randomBytes),
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).toBe(400)
@@ -2053,7 +2046,7 @@ describe('handlePostcardCreate — Image Format Rejection (#22)', () => {
 
   it('rejects BMP image at route level', async () => {
     const bmpBytes = new Uint8Array([0x42, 0x4D, 0x00, 0x00, 0x00, 0x00])
-    const bmp = btoa(String.fromCharCode(...bmpBytes))
+    const bmp = bytesToBase64(bmpBytes)
     const req = makeRequest({
       to: validUSAddress,
       image: bmp,
@@ -2066,7 +2059,7 @@ describe('handlePostcardCreate — Image Format Rejection (#22)', () => {
 
   it('rejects TIFF (little-endian) image at route level', async () => {
     const tiffBytes = new Uint8Array([0x49, 0x49, 0x2A, 0x00, 0x00, 0x00])
-    const tiff = btoa(String.fromCharCode(...tiffBytes))
+    const tiff = bytesToBase64(tiffBytes)
     const req = makeRequest({
       to: validUSAddress,
       image: tiff,
@@ -2078,8 +2071,8 @@ describe('handlePostcardCreate — Image Format Rejection (#22)', () => {
   })
 
   it('rejects PDF as image at route level', async () => {
-    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D])
-    const pdf = btoa(String.fromCharCode(...pdfBytes) + '1.7\n')
+    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x37, 0x0A]) // %PDF-1.7\n
+    const pdf = bytesToBase64(pdfBytes)
     const req = makeRequest({
       to: validUSAddress,
       image: pdf,
