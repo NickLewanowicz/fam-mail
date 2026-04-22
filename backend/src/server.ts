@@ -477,4 +477,4 @@ export async function handleRequest(req: Request): Promise<Response> {
 }
 
 // Export for testing
-export { db, postgrid, notifications, imap }
+export { db, jwtService, postgrid, notifications, imap }
