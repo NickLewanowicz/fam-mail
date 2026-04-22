@@ -8,7 +8,7 @@ export interface PostGridConfig {
   forceTestMode: boolean;
   mockMode?: boolean;
   webhookSecret: string;
-  size: "6x4" | "9x6";
+  size: "6x4" | "9x6" | "11x6";
   senderId: string;
 }
 

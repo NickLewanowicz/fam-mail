@@ -9,7 +9,7 @@ export interface PostcardSubmission {
   frontHTML: string
   backHTML?: string
   message?: string
-  size: '6x4'
+  size: '6x4' | '9x6' | '11x6'
 }
 
 export interface PostcardResponse {
@@ -38,11 +38,14 @@ export interface PostcardResponse {
   selectedImage?: { file: File; preview: string }
 }
 
+export type PostcardSize = '6x4' | '9x6' | '11x6'
+
 export async function submitPostcard(
   address: Address,
   returnAddress: Address,
   imageFile: File,
-  message?: string
+  message?: string,
+  size: PostcardSize = '6x4'
 ): Promise<PostcardResponse> {
   const imageBase64 = await fileToBase64(imageFile)
   const frontHTML = generateFrontHTML(imageBase64)
@@ -51,7 +54,7 @@ export async function submitPostcard(
     to: address,
     from: returnAddress,
     frontHTML,
-    size: '6x4'
+    size
   }
 
   if (message) {

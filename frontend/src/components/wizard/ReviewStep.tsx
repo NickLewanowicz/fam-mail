@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, saving }: Props) {
-  const { image, message, address, returnAddress, isComplete } = postcard
+  const { image, message, address, returnAddress, size, setSize, isComplete } = postcard
   const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
 
   useEffect(() => {
@@ -78,7 +78,27 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, sav
 
       <div className="divider"></div>
 
-      {/* Actions */}
+      {/* Size selector */}
+      <div>
+        <label className="label"><span className="label-text font-semibold">Postcard Size</span></label>
+        <div className="flex gap-2">
+          {(['6x4', '9x6', '11x6'] as const).map(s => (
+            <button
+              key={s}
+              type="button"
+              className={`btn btn-sm ${size === s ? 'btn-primary' : 'btn-outline'}`}
+              onClick={() => setSize(s)}
+            >
+              {s === '6x4' ? '6×4"' : s === '9x6' ? '9×6"' : '11×6"'}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-base-content/50 mt-1">
+          {size === '6x4' ? 'Standard postcard' : size === '9x6' ? 'Large postcard' : 'Extra-large postcard'}
+        </p>
+      </div>
+
+      <div className="divider"></div>
       <div className="flex flex-col gap-3">
         <button
           className="btn btn-primary btn-lg w-full"

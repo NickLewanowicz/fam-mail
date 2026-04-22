@@ -17,7 +17,7 @@ export default function CreatePage() {
   const { id: draftId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const postcard = usePostcard()
-  const { setAddress, setReturnAddress, setMessage, setImage, setCountryCode } = postcard
+  const { setAddress, setReturnAddress, setMessage, setImage, setCountryCode, setSize } = postcard
   const [step, setStep] = useState(0)
   const [showBack, setShowBack] = useState(false)
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
@@ -46,6 +46,9 @@ export default function CreatePage() {
             setImage({ file, preview: draft.imageData })
           } catch { /* ignore image load failure */ }
         }
+        if (draft.size) {
+          setSize(draft.size as '6x4' | '9x6' | '11x6')
+        }
         setActiveDraftId(draft.id)
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load draft')
@@ -54,7 +57,7 @@ export default function CreatePage() {
       }
     })()
     return () => { cancelled = true }
-  }, [draftId, setAddress, setReturnAddress, setMessage, setImage])
+  }, [draftId, setAddress, setReturnAddress, setMessage, setImage, setSize])
 
   // Auto-show correct side based on step
   useEffect(() => {
@@ -82,7 +85,7 @@ export default function CreatePage() {
         recipientAddress: postcard.address,
         message: postcard.message || undefined,
         imageData,
-        size: '6x4' as const,
+        size: postcard.size,
       }
       if (activeDraftId) {
         await updateDraft(activeDraftId, payload)
@@ -95,21 +98,21 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, activeDraftId])
+  }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
 
   const handleSend = useCallback(async () => {
     if (!postcard.address || !postcard.image) return
     setSubmitting(true)
     setError(null)
     try {
-      const response = await submitPostcard(postcard.address, postcard.returnAddress ?? postcard.address, postcard.image.file, postcard.message)
+      const response = await submitPostcard(postcard.address, postcard.returnAddress ?? postcard.address, postcard.image.file, postcard.message, postcard.size)
       setResult(response)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send postcard')
     } finally {
       setSubmitting(false)
     }
-  }, [postcard.address, postcard.returnAddress, postcard.image, postcard.message])
+  }, [postcard.address, postcard.returnAddress, postcard.image, postcard.message, postcard.size])
 
   if (loadingDraft) {
     return (

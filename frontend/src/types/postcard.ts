@@ -6,7 +6,7 @@ export interface PostcardSubmission {
   frontHTML?: string
   backHTML?: string
   message?: string
-  size?: '6x4'
+  size?: '6x4' | '9x6' | '11x6'
 }
 
 export interface PostcardResponse {

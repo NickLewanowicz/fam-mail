@@ -10,7 +10,7 @@ export interface Config {
     forceTestMode: boolean;
     mockMode: boolean;
     webhookSecret: string;
-    size: "6x4" | "9x6";
+    size: "6x4" | "9x6" | "11x6";
     senderId: string;
   };
   oidc: {
@@ -151,7 +151,7 @@ export function getConfig(): Config {
       forceTestMode: getEnvBool("POSTGRID_FORCE_TEST_MODE", false),
       mockMode: isMock,
       webhookSecret: getEnv("POSTGRID_WEBHOOK_SECRET", ""),
-      size: getEnvEnum("POSTCARD_SIZE", "6x4", ["6x4", "9x6"] as const),
+      size: getEnvEnum("POSTCARD_SIZE", "6x4", ["6x4", "9x6", "11x6"] as const),
       senderId: getEnv("POSTCARD_SENDER_ID", ""),
     },
     oidc: {
