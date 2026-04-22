@@ -5,7 +5,7 @@ import type { User } from '../models/user'
 import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
-import { validateAddress, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
+import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
 import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 
@@ -64,7 +64,7 @@ export class DraftRoutes {
       userId: user.id,
       recipientAddress: body.recipientAddress,
       senderAddress: body.senderAddress || undefined,
-      message: body.message,
+      message: body.message ? sanitizeMarkdown(body.message) : undefined,
       frontHTML: body.frontHTML,
       backHTML: body.backHTML,
       imageData: body.imageData,
@@ -119,7 +119,13 @@ export class DraftRoutes {
       return jsonResponse({ error: 'Forbidden' }, 403, req)
     }
 
-    this.db.updateDraft(id, body)
+    // Sanitize message if present in the update
+    const sanitizedBody: Partial<Draft> = { ...body }
+    if (body.message !== undefined) {
+      sanitizedBody.message = sanitizeMarkdown(body.message)
+    }
+
+    this.db.updateDraft(id, sanitizedBody)
 
     const updatedDraft = this.db.getDraft(id!)
 
@@ -225,7 +231,10 @@ export class DraftRoutes {
       // Build backHTML from message if no explicit backHTML
       let finalBackHTML = draft.backHTML
       if (!finalBackHTML && draft.message) {
-        const markedHTML = await marked(draft.message)
+        // The message was already sanitized when the draft was saved/updated,
+        // but sanitize again as a defense-in-depth measure
+        const sanitizedMessage = sanitizeMarkdown(draft.message)
+        const markedHTML = await marked(sanitizedMessage)
         const messageHTML = DOMPurify.sanitize(markedHTML, {
           ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
           ALLOWED_ATTR: ['class'],

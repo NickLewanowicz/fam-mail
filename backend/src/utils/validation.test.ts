@@ -5,6 +5,7 @@ import {
   validateSize,
   validateImage,
   sanitizeHTML,
+  sanitizeMarkdown,
   type AddressInput,
 } from './validation'
 
@@ -1255,6 +1256,257 @@ describe('sanitizeHTML', () => {
       expect(result).not.toContain('alert')
       expect(result).toContain('<h1>Hello!</h1>')
       expect(result).toContain('class="message"')
+    })
+  })
+})
+
+// ============================================================================
+// Markdown Sanitization
+// ============================================================================
+
+describe('sanitizeMarkdown', () => {
+  describe('removes HTML tags', () => {
+    it('removes script tags', () => {
+      const result = sanitizeMarkdown('<script>alert("xss")</script>Hello')
+      expect(result).not.toContain('<script>')
+      expect(result).not.toContain('</script>')
+      expect(result).toContain('Hello')
+    })
+
+    it('removes iframe tags', () => {
+      const result = sanitizeMarkdown('<iframe src="evil.com"></iframe>Text')
+      expect(result).not.toContain('<iframe')
+      expect(result).toContain('Text')
+    })
+
+    it('removes div tags', () => {
+      const result = sanitizeMarkdown('<div onclick="alert(1)">Click</div>')
+      expect(result).not.toContain('<div')
+      expect(result).not.toContain('</div>')
+      expect(result).toContain('Click')
+    })
+
+    it('removes self-closing tags', () => {
+      const result = sanitizeMarkdown('Text<br>More')
+      expect(result).not.toContain('<br>')
+      expect(result).toContain('Text')
+      expect(result).toContain('More')
+    })
+
+    it('removes tags with attributes', () => {
+      const result = sanitizeMarkdown('<a href="javascript:alert(1)" onclick="alert(2)">Link</a>')
+      expect(result).not.toContain('<a')
+      expect(result).not.toContain('href')
+      expect(result).not.toContain('onclick')
+      expect(result).toContain('Link')
+    })
+
+    it('removes nested HTML tags', () => {
+      const result = sanitizeMarkdown('<div><p><strong>Text</strong></p></div>')
+      expect(result).not.toContain('<div')
+      expect(result).not.toContain('<p')
+      expect(result).not.toContain('<strong')
+      expect(result).toContain('Text')
+    })
+
+    it('removes multiple different tags', () => {
+      const result = sanitizeMarkdown('<p>Hello</p><script>alert(1)</script><div>World</div>')
+      expect(result).not.toContain('<p')
+      expect(result).not.toContain('<script')
+      expect(result).not.toContain('<div')
+      expect(result).toContain('Hello')
+      expect(result).toContain('World')
+    })
+  })
+
+  describe('preserves markdown syntax', () => {
+    it('preserves bold markdown', () => {
+      const result = sanitizeMarkdown('**bold** and __also bold__')
+      expect(result).toContain('**bold**')
+      expect(result).toContain('__also bold__')
+    })
+
+    it('preserves italic markdown', () => {
+      const result = sanitizeMarkdown('_italic_ and *also italic*')
+      expect(result).toContain('_italic_')
+      expect(result).toContain('*also italic*')
+    })
+
+    it('preserves headers', () => {
+      const result = sanitizeMarkdown('# H1\n## H2\n### H3')
+      expect(result).toContain('# H1')
+      expect(result).toContain('## H2')
+      expect(result).toContain('### H3')
+    })
+
+    it('preserves links', () => {
+      const result = sanitizeMarkdown('[link text](https://example.com)')
+      expect(result).toContain('[link text](https://example.com)')
+    })
+
+    it('preserves code blocks', () => {
+      const result = sanitizeMarkdown('`inline code` and ```block code```')
+      expect(result).toContain('`inline code`')
+      expect(result).toContain('```block code```')
+    })
+
+    it('preserves lists', () => {
+      const result = sanitizeMarkdown('- Item 1\n- Item 2\n1. Numbered')
+      expect(result).toContain('- Item 1')
+      expect(result).toContain('- Item 2')
+      expect(result).toContain('1. Numbered')
+    })
+  })
+
+  describe('handles edge cases', () => {
+    it('returns empty string for empty input', () => {
+      expect(sanitizeMarkdown('')).toBe('')
+    })
+
+    it('handles input with only HTML tags', () => {
+      const result = sanitizeMarkdown('<div><p></p></div>')
+      expect(result).not.toContain('<')
+      expect(result).not.toContain('>')
+    })
+
+    it('handles unclosed tags', () => {
+      const result = sanitizeMarkdown('<div>Text<p>More')
+      expect(result).not.toContain('<div')
+      expect(result).not.toContain('<p')
+      expect(result).toContain('Text')
+      expect(result).toContain('More')
+    })
+
+    it('handles malformed tags', () => {
+      const result = sanitizeMarkdown('<div attr="value>Text</div')
+      expect(result).not.toContain('<div')
+      expect(result).toContain('Text')
+    })
+
+    it('handles special characters in tag attributes', () => {
+      const result = sanitizeMarkdown('<a href="https://example.com?foo=bar&baz=qux">Link</a>')
+      expect(result).not.toContain('<a')
+      expect(result).toContain('Link')
+    })
+
+    it('handles Unicode content', () => {
+      const result = sanitizeMarkdown('Hello 世界 <script>alert(1)</script> мир')
+      expect(result).toContain('Hello')
+      expect(result).toContain('世界')
+      expect(result).toContain('мир')
+      expect(result).not.toContain('<script')
+    })
+
+    it('handles emoji', () => {
+      const result = sanitizeMarkdown('Hello 🎉 <div>World</div> 🌍')
+      expect(result).toContain('Hello')
+      expect(result).toContain('🎉')
+      expect(result).toContain('World')
+      expect(result).toContain('🌍')
+      expect(result).not.toContain('<div')
+    })
+
+    it('handles newlines and whitespace', () => {
+      const result = sanitizeMarkdown('Line 1\n<p>Line 2</p>\nLine 3')
+      expect(result).toContain('Line 1')
+      expect(result).toContain('Line 2')
+      expect(result).toContain('Line 3')
+      expect(result).not.toContain('<p')
+    })
+  })
+
+  describe('handles non-string inputs', () => {
+    it('returns empty string for null input', () => {
+      expect(sanitizeMarkdown(null as unknown as string)).toBe('')
+    })
+
+    it('returns empty string for undefined input', () => {
+      expect(sanitizeMarkdown(undefined as unknown as string)).toBe('')
+    })
+
+    it('returns empty string for numeric input', () => {
+      expect(sanitizeMarkdown(123 as unknown as string)).toBe('')
+    })
+
+    it('returns empty string for object input', () => {
+      expect(sanitizeMarkdown({ text: 'hello' } as unknown as string)).toBe('')
+    })
+  })
+
+  describe('XSS prevention', () => {
+    it('neutralizes script injection', () => {
+      const result = sanitizeMarkdown('<script>alert("XSS")</script>Hello')
+      expect(result).not.toMatch(/<script/i)
+      // Script tags are removed, leaving harmless text content
+      expect(result).toContain('Hello')
+      // The text "alert(\"XSS\")" is harmless without the script tag
+      // It will be rendered as plain text in markdown
+    })
+
+    it('neutralizes img onerror', () => {
+      const result = sanitizeMarkdown('<img src="x" onerror="alert(1)">')
+      expect(result).not.toMatch(/<img/i)
+      expect(result).not.toContain('onerror')
+    })
+
+    it('neutralizes onclick in div', () => {
+      const result = sanitizeMarkdown('<div onclick="alert(1)">Click me</div>')
+      expect(result).not.toMatch(/<div/i)
+      expect(result).not.toContain('onclick')
+      expect(result).toContain('Click me')
+    })
+
+    it('neutralizes javascript: URI', () => {
+      const result = sanitizeMarkdown('<a href="javascript:alert(1)">click</a>')
+      expect(result).not.toMatch(/<a/i)
+      expect(result).not.toContain('javascript:')
+      expect(result).toContain('click')
+    })
+
+    it('neutralizes data URI XSS', () => {
+      const result = sanitizeMarkdown('<a href="data:text/html,<script>alert(1)</script>">click</a>')
+      expect(result).not.toMatch(/<a/i)
+      expect(result).not.toContain('data:text/html')
+      expect(result).toContain('click')
+    })
+
+    it('neutralizes SVG with onload', () => {
+      const result = sanitizeMarkdown('<svg onload="alert(1)"><circle r="10"/></svg>')
+      expect(result).not.toMatch(/<svg/i)
+      expect(result).not.toContain('onload')
+    })
+
+    it('neutralizes iframe', () => {
+      const result = sanitizeMarkdown('<iframe src="evil.com"></iframe>')
+      expect(result).not.toMatch(/<iframe/i)
+    })
+
+    it('neutralizes object tag', () => {
+      const result = sanitizeMarkdown('<object data="evil.swf"></object>')
+      expect(result).not.toMatch(/<object/i)
+    })
+
+    it('neutralizes embed tag', () => {
+      const result = sanitizeMarkdown('<embed src="evil.swf">')
+      expect(result).not.toMatch(/<embed/i)
+    })
+
+    it('handles complex XSS payload', () => {
+      const payload = `<script>alert('xss')</script>
+        <img src=x onerror=alert(1)>
+        <div onclick="alert(1)">Click</div>
+        <a href="javascript:alert(1)">Link</a>
+        <svg onload="alert(1)"></svg>`
+      const result = sanitizeMarkdown(payload)
+      expect(result).not.toMatch(/<script/i)
+      expect(result).not.toMatch(/<img/i)
+      expect(result).not.toMatch(/<div/i)
+      expect(result).not.toMatch(/<a/i)
+      expect(result).not.toMatch(/<svg/i)
+      expect(result).not.toContain('onclick')
+      expect(result).not.toContain('onerror')
+      expect(result).not.toContain('javascript:')
+      expect(result).not.toContain('onload')
     })
   })
 })

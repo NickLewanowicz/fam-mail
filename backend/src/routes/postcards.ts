@@ -4,7 +4,7 @@ import { getPostgridService } from '../services/postgrid'
 import type { PostGridPostcardRequest } from '../types/postgrid'
 import type { User } from '../models/user'
 import type { Database } from '../database'
-import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
+import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
 import { jsonResponse } from '../middleware/headers'
 
 export async function handlePostcardCreate(req: Request, user: User, db: Database): Promise<Response> {
@@ -97,7 +97,9 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
     let finalBackHTML = backHTML
 
     if (message) {
-      const markedHTML = await marked(message)
+      // Sanitize markdown to strip any raw HTML tags before processing
+      const sanitizedMessage = sanitizeMarkdown(message)
+      const markedHTML = await marked(sanitizedMessage)
       const messageHTML = DOMPurify.sanitize(markedHTML, {
         ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
         ALLOWED_ATTR: ['class'],
