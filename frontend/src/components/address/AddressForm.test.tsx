@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AddressForm } from './AddressForm'
 import type { Address } from '../../types/address'
@@ -393,17 +393,23 @@ describe('AddressForm', () => {
       expect(firstNameInput).toHaveClass('input-error')
     })
 
-    it('should support keyboard navigation', () => {
-      render(<AddressForm onSubmit={mockOnSubmit} initialAddress={defaultInitialAddress} />)
+    it('should support keyboard navigation', async () => {
+      await act(async () => {
+        render(<AddressForm onSubmit={mockOnSubmit} initialAddress={defaultInitialAddress} />)
+      })
 
       const firstNameInput = screen.getByPlaceholderText('John')
-      firstNameInput.focus()
+      act(() => {
+        firstNameInput.focus()
+      })
 
       expect(firstNameInput).toHaveFocus()
 
       // Check that we can move focus to other elements
       const submitButton = screen.getByRole('button', { name: 'Save Address' })
-      submitButton.focus()
+      act(() => {
+        submitButton.focus()
+      })
       expect(submitButton).toHaveFocus()
     })
 

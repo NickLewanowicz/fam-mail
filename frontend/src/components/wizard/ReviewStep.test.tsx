@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
 vi.mock('../../utils/postgridApi', () => ({
   fetchPostgridStatus: vi.fn(),
@@ -50,179 +50,211 @@ describe('ReviewStep', () => {
     vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
   })
 
-  it('renders "Review Your Postcard" title', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
+  it('renders "Review Your Postcard" title', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+    })
     expect(screen.getByRole('heading', { name: /Review Your Postcard/i })).toBeInTheDocument()
   })
 
-  it('shows checklist items for photo, message, address', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
+  it('shows checklist items for photo, message, address', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+    })
     expect(screen.getByText(/Photo uploaded/i)).toBeInTheDocument()
     expect(screen.getByText(/Message \(11 chars\)/i)).toBeInTheDocument()
     expect(screen.getByText(/To: Jane Doe, Toronto, ON/i)).toBeInTheDocument()
   })
 
-  it('shows checkmark for uploaded photo', () => {
-    const { container } = render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
-    expect(container.textContent).toContain('\u2713')
+  it('shows checkmark for uploaded photo', async () => {
+    let container: HTMLElement
+    await act(async () => {
+      const result = render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+      container = result.container
+    })
+    expect(container!.textContent).toContain('\u2713')
     expect(screen.getByText(/Photo uploaded/i)).toBeInTheDocument()
   })
 
-  it('shows X for missing photo', () => {
-    const { container } = render(
-      <ReviewStep
-        postcard={{ ...basePostcard, image: null, isComplete: false }}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
-    expect(container.textContent).toContain('\u2717')
+  it('shows X for missing photo', async () => {
+    let container: HTMLElement
+    await act(async () => {
+      const result = render(
+        <ReviewStep
+          postcard={{ ...basePostcard, image: null, isComplete: false }}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+      container = result.container
+    })
+    expect(container!.textContent).toContain('\u2717')
     expect(screen.getByText(/Photo missing/i)).toBeInTheDocument()
   })
 
-  it('shows warning for empty message', () => {
-    const { container } = render(
-      <ReviewStep
-        postcard={{ ...basePostcard, message: '', isComplete: false }}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
-    expect(container.textContent).toContain('\u26A0')
+  it('shows warning for empty message', async () => {
+    let container: HTMLElement
+    await act(async () => {
+      const result = render(
+        <ReviewStep
+          postcard={{ ...basePostcard, message: '', isComplete: false }}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+      container = result.container
+    })
+    expect(container!.textContent).toContain('\u26A0')
     expect(screen.getByText(/Message \(optional, empty\)/i)).toBeInTheDocument()
   })
 
-  it('shows checkmark for non-empty message with char count', () => {
-    const { container } = render(
-      <ReviewStep
-        postcard={{ ...basePostcard, message: 'Hi' }}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
-    expect(container.textContent).toContain('\u2713')
+  it('shows checkmark for non-empty message with char count', async () => {
+    let container: HTMLElement
+    await act(async () => {
+      const result = render(
+        <ReviewStep
+          postcard={{ ...basePostcard, message: 'Hi' }}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+      container = result.container
+    })
+    expect(container!.textContent).toContain('\u2713')
     expect(screen.getByText(/Message \(2 chars\)/i)).toBeInTheDocument()
   })
 
-  it('Send button is disabled when postcard is incomplete', () => {
-    render(
-      <ReviewStep
-        postcard={{ ...basePostcard, isComplete: false, image: null }}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
+  it('Send button is disabled when postcard is incomplete', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={{ ...basePostcard, isComplete: false, image: null }}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+    })
     expect(screen.getByRole('button', { name: /Send Postcard/i })).toBeDisabled()
   })
 
-  it('Send button is enabled when postcard is complete', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
+  it('Send button is enabled when postcard is complete', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+    })
     expect(screen.getByRole('button', { name: /Send Postcard/i })).not.toBeDisabled()
   })
 
-  it('Save as Draft button calls onSaveDraft', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
+  it('Save as Draft button calls onSaveDraft', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+    })
     fireEvent.click(screen.getByRole('button', { name: /Save as Draft/i }))
     expect(onSaveDraft).toHaveBeenCalledTimes(1)
   })
 
-  it('Back button calls onBack', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving={false}
-      />,
-    )
+  it('Back button calls onBack', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving={false}
+        />,
+      )
+    })
     fireEvent.click(screen.getByRole('button', { name: /^Back$/ }))
     expect(onBack).toHaveBeenCalledTimes(1)
   })
 
-  it('Send button shows Sending... when sending is true', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending
-        saving={false}
-      />,
-    )
+  it('Send button shows Sending... when sending is true', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending
+          saving={false}
+        />,
+      )
+    })
     expect(screen.getByText(/Sending\.\.\./i)).toBeInTheDocument()
   })
 
-  it('Save as Draft shows Saving... when saving is true', () => {
-    render(
-      <ReviewStep
-        postcard={basePostcard}
-        onBack={onBack}
-        onSend={onSend}
-        onSaveDraft={onSaveDraft}
-        sending={false}
-        saving
-      />,
-    )
+  it('Save as Draft shows Saving... when saving is true', async () => {
+    await act(async () => {
+      render(
+        <ReviewStep
+          postcard={basePostcard}
+          onBack={onBack}
+          onSend={onSend}
+          onSaveDraft={onSaveDraft}
+          sending={false}
+          saving
+        />,
+      )
+    })
     expect(screen.getByText(/Saving\.\.\./i)).toBeInTheDocument()
   })
 
