@@ -312,6 +312,13 @@ export class Database {
     return this.rowToUser(row);
   }
 
+  getUserByEmail(email: string) {
+    const stmt = this.db.prepare("SELECT * FROM users WHERE email = ?");
+    const row = stmt.get(email) as UserRow | undefined;
+    if (!row) return undefined;
+    return this.rowToUser(row);
+  }
+
   /**
    * Inserts a new user into the database.
    * @param data - User data

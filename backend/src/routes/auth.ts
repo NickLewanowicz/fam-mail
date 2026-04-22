@@ -98,7 +98,7 @@ export function setupAuthRoutes(
     }
 
     try {
-      const { user } = await oidcService.handleCallback(code, entry.codeVerifier)
+      const { user } = await oidcService.handleCallback(url.searchParams, entry.codeVerifier)
 
       const accessToken = await jwtService.generateAccessToken(user)
       const refreshToken = await jwtService.generateRefreshToken(user)

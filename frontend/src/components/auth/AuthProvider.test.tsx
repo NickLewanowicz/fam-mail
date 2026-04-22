@@ -124,7 +124,7 @@ describe('AuthProvider', () => {
   it('redirects to auth URL on login', async () => {
     const { getToken, initiateLogin } = await import('../../services/authApi')
     ;(getToken as ReturnType<typeof vi.fn>).mockReturnValue(null)
-    ;(initiateLogin as ReturnType<typeof vi.fn>).mockResolvedValue('https://auth.example.com/authorize?state=abc')
+    ;(initiateLogin as ReturnType<typeof vi.fn>).mockResolvedValue({ type: 'redirect', authUrl: 'https://auth.example.com/authorize?state=abc' })
 
     // Mock window.location.href
     const originalLocation = window.location

@@ -54,8 +54,11 @@ const CA_POSTAL_RE = /^[A-Za-z]\d[A-Za-z][\s-]?\d[A-Za-z]\d$/
 /** 2-letter province/state code */
 const STATE_CODE_RE = /^[A-Za-z]{2}$/
 
-/** 2-letter ISO country code — only US and CA supported for now */
-const COUNTRY_CODE_RE = /^(US|CA)$/i
+/** UK postcode: A1 1AA, A1A 1AA, AA1 1AA, AA1A 1AA, etc. */
+const GB_POSTCODE_RE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}$/
+
+/** 2-letter ISO country code — US, CA, and GB supported */
+const COUNTRY_CODE_RE = /^(US|CA|GB)$/i
 
 // ---------------------------------------------------------------------------
 // Validators
@@ -102,11 +105,11 @@ export function validateAddress(address: Partial<AddressInput>, prefix = 'to'): 
     })
   }
 
-  // Country code must be US or CA
+  // Country code must be US, CA, or GB
   if (!COUNTRY_CODE_RE.test(address.countryCode!)) {
     errors.push({
       field: `${prefix}.countryCode`,
-      message: 'Country code must be "US" or "CA"',
+      message: 'Country code must be "US", "CA", or "GB"',
     })
   }
 
@@ -123,6 +126,13 @@ export function validateAddress(address: Partial<AddressInput>, prefix = 'to'): 
     errors.push({
       field: `${prefix}.postalOrZip`,
       message: 'Canadian postal code must be format "A1A 1A1"',
+    })
+  }
+
+  if (country === 'GB' && !GB_POSTCODE_RE.test(address.postalOrZip!)) {
+    errors.push({
+      field: `${prefix}.postalOrZip`,
+      message: 'UK postcode must be valid format (e.g. "SW1A 1AA", "M1 1AA")',
     })
   }
 

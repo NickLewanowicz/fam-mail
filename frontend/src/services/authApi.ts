@@ -24,7 +24,13 @@ export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
-export async function initiateLogin(): Promise<string> {
+export interface LoginResult {
+  type: 'redirect' | 'dev-token'
+  authUrl?: string
+  accessToken?: string
+}
+
+export async function initiateLogin(): Promise<LoginResult> {
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
     headers: {
@@ -41,7 +47,12 @@ export async function initiateLogin(): Promise<string> {
   }
 
   const data = await response.json()
-  return data.authUrl as string
+
+  if (data.devMode && data.accessToken) {
+    return { type: 'dev-token', accessToken: data.accessToken }
+  }
+
+  return { type: 'redirect', authUrl: data.authUrl as string }
 }
 
 export async function fetchCurrentUser(token: string): Promise<User> {

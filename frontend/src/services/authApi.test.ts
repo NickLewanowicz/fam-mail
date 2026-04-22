@@ -44,18 +44,30 @@ describe('authApi', () => {
   })
 
   describe('initiateLogin', () => {
-    it('returns authUrl on success', async () => {
+    it('returns redirect result with authUrl on success', async () => {
       vi.mocked(global.fetch).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ authUrl: 'https://auth.example.com/authorize?state=abc' }),
       } as Response)
 
-      const url = await initiateLogin()
-      expect(url).toBe('https://auth.example.com/authorize?state=abc')
+      const result = await initiateLogin()
+      expect(result.type).toBe('redirect')
+      expect(result.authUrl).toBe('https://auth.example.com/authorize?state=abc')
       expect(global.fetch).toHaveBeenCalledWith('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
+    })
+
+    it('returns dev-token result in dev mode', async () => {
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ devMode: true, accessToken: 'dev-jwt-token' }),
+      } as Response)
+
+      const result = await initiateLogin()
+      expect(result.type).toBe('dev-token')
+      expect(result.accessToken).toBe('dev-jwt-token')
     })
 
     it('throws AuthApiError on failure', async () => {

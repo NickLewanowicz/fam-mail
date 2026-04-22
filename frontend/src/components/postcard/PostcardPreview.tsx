@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
+import type { CountryCode } from '../../utils/postcardTemplate'
 import { InlineMessageEditor } from './InlineMessageEditor'
 import { InlineAddressForm } from './InlineAddressForm'
 
@@ -21,6 +22,7 @@ interface Props {
   onImageChange?: (img: PostcardImage | null) => void
   onMessageChange?: (msg: string) => void
   onAddressChange?: (addr: Address) => void
+  countryCode?: CountryCode
 }
 
 export function PostcardPreview({
@@ -33,6 +35,7 @@ export function PostcardPreview({
   onImageChange,
   onMessageChange,
   onAddressChange,
+  countryCode,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -243,6 +246,7 @@ export function PostcardPreview({
                     address={address}
                     onAddressChange={onAddressChange}
                     onClose={() => setEditingAddress(false)}
+                    countryCode={countryCode}
                   />
                 ) : (
                   <>

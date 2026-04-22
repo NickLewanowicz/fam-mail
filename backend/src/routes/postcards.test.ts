@@ -564,7 +564,7 @@ describe('handlePostcardCreate — Return Address Validation', () => {
   it('rejects invalid return address — unsupported country', async () => {
     const req = makeRequest({
       to: validUSAddress,
-      from: { ...validUSAddress, countryCode: 'GB' },
+      from: { ...validUSAddress, countryCode: 'DE' },
       frontHTML: '<html>Test</html>',
     })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -834,9 +834,9 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
     expect(res.status).toBe(400)
   })
 
-  it('rejects unsupported country code (GB)', async () => {
+  it('rejects unsupported country code (DE)', async () => {
     const req = makeRequest({
-      to: { ...validUSAddress, countryCode: 'GB' },
+      to: { ...validUSAddress, countryCode: 'DE' },
       frontHTML: '<html>Test</html>',
     })
     const res = await handlePostcardCreate(req, mockUser, db)

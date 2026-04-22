@@ -5,6 +5,7 @@ interface Props {
   address: Address | null
   onAddressChange: (addr: Address) => void
   onClose: () => void
+  countryCode?: string
 }
 
 const EMPTY_ADDRESS: Address = {
@@ -12,8 +13,8 @@ const EMPTY_ADDRESS: Address = {
   city: '', provinceOrState: '', postalOrZip: '', countryCode: 'US',
 }
 
-export function InlineAddressForm({ address, onAddressChange, onClose }: Props) {
-  const [form, setForm] = useState<Address>(address ?? EMPTY_ADDRESS)
+export function InlineAddressForm({ address, onAddressChange, onClose, countryCode }: Props) {
+  const [form, setForm] = useState<Address>(address ?? { ...EMPTY_ADDRESS, countryCode: (countryCode as Address['countryCode']) ?? 'US' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -99,12 +100,18 @@ export function InlineAddressForm({ address, onAddressChange, onClose }: Props) 
           </div>
           <div>
             <label className="label py-0"><span className="label-text text-[10px]">Country</span></label>
-            <select className="select select-bordered select-xs w-full text-xs" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
-              <option value="US">US</option>
-              <option value="CA">CA</option>
-              <option value="GB">GB</option>
-              <option value="AU">AU</option>
-            </select>
+            {countryCode ? (
+              <div className="input input-bordered input-xs w-full text-xs bg-base-200">
+                {countryCode}
+              </div>
+            ) : (
+              <select className="select select-bordered select-xs w-full text-xs" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
+                <option value="US">US</option>
+                <option value="CA">CA</option>
+                <option value="GB">GB</option>
+                <option value="AU">AU</option>
+              </select>
+            )}
           </div>
         </div>
       </div>

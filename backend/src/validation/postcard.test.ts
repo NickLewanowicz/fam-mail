@@ -400,8 +400,8 @@ describe('validateAddress (from postcard module)', () => {
       expect(result.errors.some(e => e.field === 'to.countryCode')).toBe(true)
     })
 
-    it('should fail for unsupported country code (GB)', () => {
-      const result = validateAddress({ ...validUSAddress, countryCode: 'GB' })
+    it('should fail for unsupported country code (DE)', () => {
+      const result = validateAddress({ ...validUSAddress, countryCode: 'DE' })
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.field === 'to.countryCode')).toBe(true)
     })

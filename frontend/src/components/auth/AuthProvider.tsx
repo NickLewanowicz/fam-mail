@@ -37,24 +37,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
   }, [])
 
-  const login = useCallback(async () => {
-    const authUrl = await initiateLogin()
-    window.location.href = authUrl
-  }, [])
-
-  const logout = useCallback(async () => {
-    const token = getToken()
-    if (token) {
-      try {
-        await logoutUser(token)
-      } catch {
-        // Continue with local logout even if API call fails
-      }
-    }
-    removeToken()
-    setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
-  }, [])
-
   // Method to handle token received from callback
   const handleCallbackToken = useCallback((token: string) => {
     setToken(token)
@@ -68,6 +50,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         removeToken()
         setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
       })
+  }, [])
+
+  const login = useCallback(async () => {
+    const result = await initiateLogin()
+    if (result.type === 'dev-token' && result.accessToken) {
+      handleCallbackToken(result.accessToken)
+    } else if (result.authUrl) {
+      window.location.href = result.authUrl
+    }
+  }, [handleCallbackToken])
+
+  const logout = useCallback(async () => {
+    const token = getToken()
+    if (token) {
+      try {
+        await logoutUser(token)
+      } catch {
+        // Continue with local logout even if API call fails
+      }
+    }
+    removeToken()
+    setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
   }, [])
 
   return (

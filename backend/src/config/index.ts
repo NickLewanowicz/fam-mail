@@ -2,6 +2,7 @@
  * Application configuration schema
  */
 export interface Config {
+  devMode: boolean;
   postgrid: {
     mode: "test" | "live";
     testApiKey: string;
@@ -138,8 +139,10 @@ function getEnvEnum<T extends string>(key: string, defaultValue: T, allowedValue
 
 export function getConfig(): Config {
   const isMock = getEnvBool("POSTGRID_MOCK", false);
+  const devMode = getEnvBool("DEV_MODE", false);
 
   return {
+    devMode,
     postgrid: {
       mode: getEnvEnum("POSTGRID_MODE", "test", ["test", "live"] as const),
       testApiKey: isMock ? getEnv("POSTGRID_TEST_API_KEY", "mock-test-key") : getEnvRequired("POSTGRID_TEST_API_KEY"),
@@ -151,14 +154,14 @@ export function getConfig(): Config {
       senderId: getEnv("POSTCARD_SENDER_ID", ""),
     },
     oidc: {
-      issuerUrl: getEnvRequired("OIDC_ISSUER_URL"),
-      clientId: getEnvRequired("OIDC_CLIENT_ID"),
-      clientSecret: getEnvRequired("OIDC_CLIENT_SECRET"),
-      redirectUri: getEnvRequired("OIDC_REDIRECT_URI"),
+      issuerUrl: devMode ? getEnv("OIDC_ISSUER_URL", "https://dev.example.com") : getEnvRequired("OIDC_ISSUER_URL"),
+      clientId: devMode ? getEnv("OIDC_CLIENT_ID", "dev-client") : getEnvRequired("OIDC_CLIENT_ID"),
+      clientSecret: devMode ? getEnv("OIDC_CLIENT_SECRET", "dev-secret") : getEnvRequired("OIDC_CLIENT_SECRET"),
+      redirectUri: devMode ? getEnv("OIDC_REDIRECT_URI", "http://localhost:8484/api/auth/callback") : getEnvRequired("OIDC_REDIRECT_URI"),
       scopes: getEnv("OIDC_SCOPES", "openid profile email"),
     },
     jwt: {
-      secret: getJwtSecret(),
+      secret: devMode ? getEnv("JWT_SECRET", "dev-mode-jwt-secret-minimum-32-characters-long") : getJwtSecret(),
       expiresIn: getEnv("JWT_EXPIRES_IN", "7d"),
       refreshExpiresIn: getEnv("JWT_REFRESH_EXPIRES_IN", "30d"),
     },

@@ -84,6 +84,6 @@ describe('MessageStep', () => {
     render(
       <MessageStep message="" onMessageChange={onMessageChange} onNext={onNext} onBack={onBack} />,
     )
-    expect(screen.getByText(/Supports \*\*bold\*\*, \*italic\*, and line breaks/i)).toBeInTheDocument()
+    expect(screen.getByText(/Markdown supported/i)).toBeInTheDocument()
   })
 })

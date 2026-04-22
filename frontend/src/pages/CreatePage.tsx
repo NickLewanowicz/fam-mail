@@ -4,18 +4,19 @@ import { AppShell } from '../components/layout/AppShell'
 import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
+import { CountryStep } from '../components/wizard/CountryStep'
 import { getDraft, createDraft, updateDraft } from '../utils/draftApi'
 import { submitPostcard, type PostcardResponse } from '../utils/api'
 
-const STEPS = ['Photo', 'Message', 'Address', 'Review'] as const
+const STEPS = ['Destination', 'Photo', 'Message', 'Address', 'Review'] as const
 
-const STEP_ZONES: ActiveZone[] = ['photo', 'message', 'address', null]
+const STEP_ZONES: ActiveZone[] = [null, 'photo', 'message', 'address', null]
 
 export default function CreatePage() {
   const { id: draftId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const postcard = usePostcard()
-  const { setAddress, setMessage, setImage } = postcard
+  const { setAddress, setMessage, setImage, setCountryCode } = postcard
   const [step, setStep] = useState(0)
   const [showBack, setShowBack] = useState(false)
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
@@ -55,12 +56,12 @@ export default function CreatePage() {
 
   // Auto-show correct side based on step
   useEffect(() => {
-    if (step === 0) {
+    if (step === 1) {
       setShowBack(false) // Front for photo
-    } else if (step === 1 || step === 2) {
+    } else if (step === 2 || step === 3) {
       setShowBack(true) // Back for message/address
     }
-    // Step 3 (review) keeps current side for browsing
+    // Step 0 (destination) and step 4 (review) keep current side
   }, [step])
 
   const handleNext = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
@@ -180,17 +181,32 @@ export default function CreatePage() {
               onImageChange={setImage}
               onMessageChange={setMessage}
               onAddressChange={setAddress}
+              countryCode={postcard.countryCode}
             />
           </div>
         </div>
 
-        {/* Navigation buttons for non-review steps */}
-        {step < 3 && (
+        {/* Destination step content */}
+        {step === 0 && (
+          <div className="max-w-[640px] mx-auto mt-6">
+            <div className="card bg-base-100 shadow-lg">
+              <div className="card-body">
+                <CountryStep
+                  countryCode={postcard.countryCode}
+                  onCountryChange={setCountryCode}
+                  onNext={handleNext}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation buttons for non-review, non-destination steps */}
+        {step > 0 && step < 4 && (
           <div className="flex justify-between mt-6 max-w-[640px] mx-auto">
             <button
               className="btn btn-ghost"
               onClick={handleBack}
-              disabled={step === 0}
             >
               Back
             </button>
@@ -198,17 +214,17 @@ export default function CreatePage() {
               className="btn btn-primary"
               onClick={handleNext}
               disabled={
-                (step === 0 && !postcard.image) ||
-                step === 2 // Address step uses inline Done button
+                (step === 1 && !postcard.image) ||
+                step === 3 // Address step uses inline Done button
               }
             >
-              {step === 0 ? 'Next: Write Message' : step === 1 ? 'Next: Add Address' : 'Next: Review'}
+              {step === 1 ? 'Next: Write Message' : step === 2 ? 'Next: Add Address' : 'Next: Review'}
             </button>
           </div>
         )}
 
         {/* Review step content below preview */}
-        {step === 3 && (
+        {step === 4 && (
           <div className="max-w-[640px] mx-auto mt-6">
             <div className="card bg-base-100 shadow-lg">
               <div className="card-body">

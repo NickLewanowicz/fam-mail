@@ -39,6 +39,17 @@ const validCAAddress = {
   countryCode: 'CA',
 }
 
+/** Minimal valid UK address. */
+const validGBAddress = {
+  firstName: 'James',
+  lastName: 'Smith',
+  addressLine1: '10 Downing Street',
+  city: 'London',
+  provinceOrState: 'EN',
+  postalOrZip: 'SW1A 1AA',
+  countryCode: 'GB',
+}
+
 // ============================================================================
 // Address Validation
 // ============================================================================
@@ -55,6 +66,12 @@ describe('validateAddress', () => {
 
     it('accepts a valid CA address', () => {
       const result = validateAddress(validCAAddress)
+      expect(result.valid).toBe(true)
+      expect(result.errors).toHaveLength(0)
+    })
+
+    it('accepts a valid GB address', () => {
+      const result = validateAddress(validGBAddress)
       expect(result.valid).toBe(true)
       expect(result.errors).toHaveLength(0)
     })
@@ -314,7 +331,7 @@ describe('validateAddress', () => {
 
   describe('country code', () => {
     it('rejects unsupported country code', () => {
-      const result = validateAddress({ ...validUSAddress, countryCode: 'GB' })
+      const result = validateAddress({ ...validUSAddress, countryCode: 'DE' })
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.field === 'to.countryCode')).toBe(true)
     })
@@ -413,6 +430,57 @@ describe('validateAddress', () => {
       const result = validateAddress({ ...validCAAddress, postalOrZip: '62704' })
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.field === 'to.postalOrZip')).toBe(true)
+    })
+
+    it('validates GB postcode when countryCode is GB', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: '62704' })
+      expect(result.valid).toBe(false)
+      expect(result.errors.some(e => e.field === 'to.postalOrZip')).toBe(true)
+    })
+
+    it('rejects US ZIP for GB address', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: '12345' })
+      expect(result.valid).toBe(false)
+    })
+  })
+
+  describe('UK postcode formats', () => {
+    it('accepts SW1A 1AA (London)', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: 'SW1A 1AA' })
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts M1 1AA (Manchester)', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: 'M1 1AA' })
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts EC1A 1BB (City of London)', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: 'EC1A 1BB' })
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts W1A 0AX (BBC)', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: 'W1A 0AX' })
+      expect(result.valid).toBe(true)
+    })
+
+    it('accepts B33 8TH (Birmingham)', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: 'B33 8TH' })
+      expect(result.valid).toBe(true)
+    })
+
+    it('rejects invalid UK postcode', () => {
+      const result = validateAddress({ ...validGBAddress, postalOrZip: 'INVALID' })
+      expect(result.valid).toBe(false)
+      expect(result.errors[0].message).toContain('UK postcode')
+    })
+  })
+
+  describe('GB country code acceptance', () => {
+    it('accepts GB as valid country code', () => {
+      const result = validateAddress(validGBAddress)
+      expect(result.valid).toBe(true)
     })
   })
 })
@@ -835,13 +903,13 @@ describe('validateAddress — combined format errors', () => {
       city: 'Springfield',
       provinceOrState: 'California',    // invalid: not 2-letter
       postalOrZip: 'ABCDE',             // invalid: not a US ZIP
-      countryCode: 'USA',               // invalid: not US or CA
+      countryCode: 'USA',               // invalid: not US, CA, or GB
     })
     expect(result.valid).toBe(false)
     // State and country format errors are always reported
     expect(result.errors.some(e => e.field === 'to.provinceOrState')).toBe(true)
     expect(result.errors.some(e => e.field === 'to.countryCode')).toBe(true)
-    // Note: postal code format check is skipped when countryCode is not US or CA
+    // Note: postal code format check is skipped when countryCode is not US, CA, or GB
     // so no postalOrZip error in this specific combination
     expect(result.errors.length).toBeGreaterThanOrEqual(2)
   })

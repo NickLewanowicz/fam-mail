@@ -65,15 +65,20 @@ function checkRateLimit(limiter: RateLimiter, req: Request): Response | null {
 const config = getConfig()
 const db = new Database(config.database.path)
 
-// Initialize OIDC service
-const oidcService = new OIDCService({
-  issuerUrl: config.oidc.issuerUrl,
-  clientId: config.oidc.clientId,
-  clientSecret: config.oidc.clientSecret,
-  redirectUri: config.oidc.redirectUri,
-  scopes: config.oidc.scopes,
-}, db)
-await oidcService.initialize()
+// Initialize OIDC service (skipped in dev mode)
+let oidcService: OIDCService | null = null
+if (!config.devMode) {
+  oidcService = new OIDCService({
+    issuerUrl: config.oidc.issuerUrl,
+    clientId: config.oidc.clientId,
+    clientSecret: config.oidc.clientSecret,
+    redirectUri: config.oidc.redirectUri,
+    scopes: config.oidc.scopes,
+  }, db)
+  await oidcService.initialize()
+} else {
+  logger.info('DEV_MODE enabled — OIDC authentication bypassed')
+}
 
 // Initialize JWT service
 const jwtService = new JWTService({
@@ -85,8 +90,10 @@ const jwtService = new JWTService({
 // Initialize auth middleware
 const authMiddleware = new AuthMiddleware(jwtService, db)
 
-// Setup auth routes
-const authRoutes = setupAuthRoutes(oidcService, jwtService, authMiddleware, db)
+// Setup auth routes (uses a dummy OIDC service in dev mode)
+const authRoutes = oidcService
+  ? setupAuthRoutes(oidcService, jwtService, authMiddleware, db)
+  : null
 
 // Initialize PostGrid (before DraftRoutes, which depends on it)
 const postgrid = new PostGridService({
@@ -161,31 +168,106 @@ export async function handleRequest(req: Request): Promise<Response> {
     return withSecurityHeaders(createCorsResponse(req), req)
   }
 
+  // Dev mode: auto-login endpoint that creates/returns a dev user token
+  if (config.devMode && url.pathname === '/api/auth/dev-login' && req.method === 'POST') {
+    const devEmail = 'dev@fammail.local'
+    let user = db.getUserByEmail?.(devEmail)
+    if (!user) {
+      user = {
+        id: crypto.randomUUID(),
+        oidcSub: 'dev-user',
+        oidcIssuer: 'dev-mode',
+        email: devEmail,
+        emailVerified: true,
+        firstName: 'Dev',
+        lastName: 'User',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      db.insertUser(user)
+    }
+    const accessToken = await jwtService.generateAccessToken(user)
+    const refreshToken = await jwtService.generateRefreshToken(user)
+    db.insertSession({
+      id: crypto.randomUUID(),
+      userId: user.id,
+      token: accessToken,
+      refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    })
+    return withSecurityHeaders(jsonResponse({ accessToken, refreshToken, user }, 200, req), req)
+  }
+
   // Auth endpoints — rate limited to prevent brute-force attacks
   if (url.pathname === '/api/auth/login' && req.method === 'POST') {
+    if (config.devMode) {
+      // In dev mode, redirect login to dev-login for convenience
+      const devEmail = 'dev@fammail.local'
+      let user = db.getUserByEmail?.(devEmail)
+      if (!user) {
+        user = {
+          id: crypto.randomUUID(),
+          oidcSub: 'dev-user',
+          oidcIssuer: 'dev-mode',
+          email: devEmail,
+          emailVerified: true,
+          firstName: 'Dev',
+          lastName: 'User',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+        db.insertUser(user)
+      }
+      const accessToken = await jwtService.generateAccessToken(user)
+      const refreshToken = await jwtService.generateRefreshToken(user)
+      db.insertSession({
+        id: crypto.randomUUID(),
+        userId: user.id,
+        token: accessToken,
+        refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      })
+      return withSecurityHeaders(jsonResponse({ devMode: true, accessToken, refreshToken, user }, 200, req), req)
+    }
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
-    return withSecurityHeaders(await authRoutes.handleAuthLogin(req), req)
+    return withSecurityHeaders(await authRoutes!.handleAuthLogin(req), req)
   }
 
   if (url.pathname === '/api/auth/callback' && req.method === 'GET') {
+    if (config.devMode) {
+      return withSecurityHeaders(jsonResponse({ error: 'OIDC callback not available in dev mode' }, 400, req), req)
+    }
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
-    return withSecurityHeaders(await authRoutes.handleAuthCallback(req), req)
+    return withSecurityHeaders(await authRoutes!.handleAuthCallback(req), req)
   }
 
   if (url.pathname === '/api/auth/me' && req.method === 'GET') {
-    return withSecurityHeaders(await authRoutes.handleGetMe(req), req)
+    if (authRoutes) return withSecurityHeaders(await authRoutes.handleGetMe(req), req)
+    // Dev mode fallback: use auth middleware directly
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
+    return withSecurityHeaders(jsonResponse({ user: authResult.user }, 200, req), req)
   }
 
   if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
-    return withSecurityHeaders(await authRoutes.handleLogout(req), req)
+    if (authRoutes) return withSecurityHeaders(await authRoutes.handleLogout(req), req)
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
+    const authHeader = req.headers.get('authorization')
+    const token = authHeader?.substring(7)
+    if (token) db.deleteSession(token)
+    return withSecurityHeaders(jsonResponse({ message: 'Logged out successfully' }, 200, req), req)
   }
 
   if (url.pathname === '/api/auth/refresh' && req.method === 'POST') {
-    const rateLimitResponse = checkRateLimit(authRateLimiter, req)
-    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
-    return withSecurityHeaders(await authRoutes.handleAuthRefresh(req), req)
+    if (authRoutes) {
+      const rateLimitResponse = checkRateLimit(authRateLimiter, req)
+      if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+      return withSecurityHeaders(await authRoutes.handleAuthRefresh(req), req)
+    }
+    return withSecurityHeaders(jsonResponse({ error: 'Token refresh not available in dev mode' }, 400, req), req)
   }
 
   // Drafts endpoints (all require authentication)

@@ -6,6 +6,7 @@ interface Props {
   onAddressChange: (addr: Address) => void
   onNext: () => void
   onBack: () => void
+  countryCode?: string
 }
 
 const EMPTY_ADDRESS: Address = {
@@ -13,8 +14,8 @@ const EMPTY_ADDRESS: Address = {
   city: '', provinceOrState: '', postalOrZip: '', countryCode: 'US',
 }
 
-export function AddressStep({ address, onAddressChange, onNext, onBack }: Props) {
-  const [form, setForm] = useState<Address>(address ?? EMPTY_ADDRESS)
+export function AddressStep({ address, onAddressChange, onNext, onBack, countryCode }: Props) {
+  const [form, setForm] = useState<Address>(address ?? { ...EMPTY_ADDRESS, countryCode: countryCode ?? 'US' })
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
@@ -81,12 +82,18 @@ export function AddressStep({ address, onAddressChange, onNext, onBack }: Props)
         {field('ZIP/Postal Code', 'postalOrZip', 'M5V 2T6', true)}
         <div className="form-control">
           <label className="label py-1"><span className="label-text text-sm">Country</span></label>
-          <select className="select select-bordered select-sm" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
-            <option value="US">United States</option>
-            <option value="CA">Canada</option>
-            <option value="GB">United Kingdom</option>
-            <option value="AU">Australia</option>
-          </select>
+          {countryCode ? (
+            <div className="select select-bordered select-sm bg-base-200">
+              {countryCode === 'US' ? 'United States' : countryCode === 'CA' ? 'Canada' : countryCode === 'GB' ? 'United Kingdom' : countryCode}
+            </div>
+          ) : (
+            <select className="select select-bordered select-sm" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
+              <option value="US">United States</option>
+              <option value="CA">Canada</option>
+              <option value="GB">United Kingdom</option>
+              <option value="AU">Australia</option>
+            </select>
+          )}
         </div>
       </div>
 

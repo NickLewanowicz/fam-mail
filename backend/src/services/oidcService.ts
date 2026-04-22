@@ -53,28 +53,34 @@ export class OIDCService {
     return { authUrl: authUrl.href, codeVerifier }
   }
 
-  async handleCallback(code: string, codeVerifier: string): Promise<{ user: User; tokens: client.TokenEndpointResponse }> {
+  async handleCallback(callbackParams: URLSearchParams, codeVerifier: string): Promise<{ user: User; tokens: client.TokenEndpointResponse }> {
     if (!this.config) {
       throw new Error('OIDCService not initialized')
     }
 
-    // Get the current URL (this would normally be passed in from the request)
-    // For now, we'll construct it from the redirect_uri
+    // Reconstruct the callback URL the provider redirected to:
+    // base from our configured redirect_uri + actual query params from the request.
+    // This avoids hostname mismatches when running behind Docker/reverse proxy.
     const currentUrl = new URL(this.configData.redirectUri)
+    for (const [key, value] of callbackParams) {
+      currentUrl.searchParams.set(key, value)
+    }
 
     const tokens = await client.authorizationCodeGrant(
       this.config,
       currentUrl,
       {
         pkceCodeVerifier: codeVerifier,
+        expectedState: callbackParams.get('state') || undefined,
       }
     )
 
-    // Fetch user info
+    const claims = tokens.claims()
+
     const userInfo: Record<string, unknown> = await client.fetchUserInfo(
       this.config,
       tokens.access_token,
-      tokens.access_token
+      claims.sub
     )
 
     let user = this.db.getUserByOidc(userInfo.sub as string, this.configData.issuerUrl)

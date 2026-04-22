@@ -56,7 +56,7 @@ const mockGenerateAuthUrl = mock(() =>
   })
 )
 
-const mockHandleCallback = mock(() =>
+const mockHandleCallback = mock((_params: URLSearchParams, _verifier: string) =>
   Promise.resolve({
     user: testUser,
     tokens: { access_token: 'at', id_token: 'it' },
@@ -252,10 +252,13 @@ describe('Auth Routes - handleAuthCallback', () => {
     // We can verify the token exists by using it for authentication
     expect(token).toBeTruthy()
 
-    // Verify handleCallback was called with correct arguments
+    // Verify handleCallback was called with URLSearchParams and code verifier
     expect(mockHandleCallback).toHaveBeenCalled()
-    expect(mockHandleCallback.mock.calls[0][0]).toBe('auth-code')
-    expect(mockHandleCallback.mock.calls[0][1]).toBe('verifier123')
+    const lastCall = mockHandleCallback.mock.calls[mockHandleCallback.mock.calls.length - 1]
+    const passedParams = lastCall[0] as URLSearchParams
+    expect(passedParams.get('code')).toBe('auth-code')
+    expect(passedParams.get('state')).toBe(state)
+    expect(lastCall[1]).toBe('verifier123')
   })
 
   it('state is removed from store after successful callback', async () => {

@@ -13,6 +13,16 @@ agent:
   model: glm-5.1
   max_turns: 50
 
+  model_tiers:
+    - model: glm-4.7
+      provider: zai
+      max_turns: 30
+      labels: ["tier:fast"]
+    - model: glm-5
+      provider: zai
+      max_turns: 50
+      labels: ["tier:complex"]
+
 issue_tracker:
   type: github
   priority_labels:
