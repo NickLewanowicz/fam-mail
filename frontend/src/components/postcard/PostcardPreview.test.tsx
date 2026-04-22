@@ -42,11 +42,18 @@ describe('PostcardPreview', () => {
     expect(screen.getByText('6" x 4" postcard • Back')).toBeInTheDocument()
   })
 
-  it('shows Upload a photo placeholder when no image', () => {
+  it('shows Upload a photo placeholder when no image and no activeZone', () => {
     render(
       <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} />,
     )
     expect(screen.getByText('Upload a photo')).toBeInTheDocument()
+  })
+
+  it('shows Click to upload photo when activeZone is photo', () => {
+    render(
+      <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} activeZone="photo" />,
+    )
+    expect(screen.getByText('Click to upload photo')).toBeInTheDocument()
   })
 
   it('shows image when provided', () => {
@@ -75,14 +82,14 @@ describe('PostcardPreview', () => {
 
   it('shows Recipient address... placeholder when no address', () => {
     render(
-      <PostcardPreview image={null} message="Hi" address={null} showBack={false} onFlip={onFlip} />,
+      <PostcardPreview image={null} message="Hi" address={null} showBack onFlip={onFlip} />,
     )
     expect(screen.getByText('Recipient address...')).toBeInTheDocument()
   })
 
   it('shows address when provided', () => {
     render(
-      <PostcardPreview image={null} message="Hi" address={sampleAddress} showBack={false} onFlip={onFlip} />,
+      <PostcardPreview image={null} message="Hi" address={sampleAddress} showBack onFlip={onFlip} />,
     )
     expect(screen.getByText(/Jane Doe/i)).toBeInTheDocument()
     expect(screen.getByText(/123 Main St/i)).toBeInTheDocument()
@@ -93,7 +100,7 @@ describe('PostcardPreview', () => {
 
   it('shows STAMP on the back side', () => {
     render(
-      <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} />,
+      <PostcardPreview image={null} message="" address={null} showBack onFlip={onFlip} />,
     )
     expect(screen.getByText('STAMP')).toBeInTheDocument()
   })
@@ -111,5 +118,92 @@ describe('PostcardPreview', () => {
       <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} />,
     )
     expect(screen.getByText('6" x 4" postcard • Front')).toBeInTheDocument()
+  })
+
+  it('has hidden file input for photo upload', () => {
+    const { container } = render(
+      <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} activeZone="photo" />,
+    )
+    expect(container.querySelector('input[type="file"]')).toBeInTheDocument()
+  })
+
+  it('shows remove button on image when photo zone is active', () => {
+    const onImageChange = vi.fn()
+    render(
+      <PostcardPreview
+        image="data:image/jpeg;base64,abc"
+        message=""
+        address={null}
+        showBack={false}
+        onFlip={onFlip}
+        activeZone="photo"
+        onImageChange={onImageChange}
+      />,
+    )
+    const removeBtn = screen.getByTitle('Remove photo')
+    expect(removeBtn).toBeInTheDocument()
+    fireEvent.click(removeBtn)
+    expect(onImageChange).toHaveBeenCalledWith(null)
+  })
+
+  it('opens inline message editor when message zone clicked', () => {
+    const onMessageChange = vi.fn()
+    render(
+      <PostcardPreview
+        image={null}
+        message=""
+        address={null}
+        showBack
+        onFlip={onFlip}
+        activeZone="message"
+        onMessageChange={onMessageChange}
+      />,
+    )
+    // Click the message area to open editor
+    const msgArea = screen.getByText('Click to write your message...')
+    fireEvent.click(msgArea)
+    // Now the inline editor should be visible with a Done button
+    expect(screen.getByText('Done')).toBeInTheDocument()
+  })
+
+  it('opens inline address form when address zone clicked', () => {
+    const onAddressChange = vi.fn()
+    render(
+      <PostcardPreview
+        image={null}
+        message=""
+        address={null}
+        showBack
+        onFlip={onFlip}
+        activeZone="address"
+        onAddressChange={onAddressChange}
+      />,
+    )
+    // Click the address area to open editor
+    const addrArea = screen.getByText('Click to add address...')
+    fireEvent.click(addrArea)
+    // Now inline address form should be visible
+    expect(screen.getByText('Recipient')).toBeInTheDocument()
+  })
+
+  it('shows inline message editor with character count', () => {
+    const onMessageChange = vi.fn()
+    const { container } = render(
+      <PostcardPreview
+        image={null}
+        message="Hello"
+        address={null}
+        showBack
+        onFlip={onFlip}
+        activeZone="message"
+        onMessageChange={onMessageChange}
+      />,
+    )
+    // Click the message zone container (role=button when active and not editing)
+    const msgZone = container.querySelector('[role="button"][tabindex="0"]')
+    expect(msgZone).toBeTruthy()
+    fireEvent.click(msgZone!)
+    expect(screen.getByText('5/500')).toBeInTheDocument()
+    expect(screen.getByText('Markdown supported')).toBeInTheDocument()
   })
 })

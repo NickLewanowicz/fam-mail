@@ -2,15 +2,14 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/layout/AppShell'
 import { usePostcard } from '../hooks/usePostcard'
-import { PostcardPreview } from '../components/postcard/PostcardPreview'
-import { PhotoStep } from '../components/wizard/PhotoStep'
-import { MessageStep } from '../components/wizard/MessageStep'
-import { AddressStep } from '../components/wizard/AddressStep'
+import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { getDraft, createDraft, updateDraft } from '../utils/draftApi'
 import { submitPostcard, type PostcardResponse } from '../utils/api'
 
 const STEPS = ['Photo', 'Message', 'Address', 'Review'] as const
+
+const STEP_ZONES: ActiveZone[] = ['photo', 'message', 'address', null]
 
 export default function CreatePage() {
   const { id: draftId } = useParams<{ id: string }>()
@@ -54,9 +53,14 @@ export default function CreatePage() {
     return () => { cancelled = true }
   }, [draftId, setAddress, setMessage, setImage])
 
-  // Auto-show back side on message/address steps
+  // Auto-show correct side based on step
   useEffect(() => {
-    setShowBack(step >= 1 && step <= 2)
+    if (step === 0) {
+      setShowBack(false) // Front for photo
+    } else if (step === 1 || step === 2) {
+      setShowBack(true) // Back for message/address
+    }
+    // Step 3 (review) keeps current side for browsing
   }, [step])
 
   const handleNext = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
@@ -142,11 +146,13 @@ export default function CreatePage() {
     )
   }
 
+  const activeZone = STEP_ZONES[step]
+
   return (
     <AppShell>
-      <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <div className="container mx-auto px-4 py-6 max-w-3xl">
         {/* Step indicator */}
-        <ul className="steps steps-horizontal w-full mb-8">
+        <ul className="steps steps-horizontal w-full mb-6">
           {STEPS.map((label, i) => (
             <li key={label} className={`step ${i <= step ? 'step-primary' : ''} cursor-pointer`} onClick={() => setStep(i)}>
               <span className="hidden sm:inline">{label}</span>
@@ -161,62 +167,63 @@ export default function CreatePage() {
           </div>
         )}
 
-        {/* Main layout: preview + controls */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Postcard Preview */}
-          <div className="lg:w-1/2 flex-shrink-0">
-            <div className="sticky top-4">
-              <PostcardPreview
-                image={postcard.image?.preview ?? null}
-                message={postcard.message}
-                address={postcard.address}
-                showBack={showBack}
-                onFlip={() => setShowBack(b => !b)}
-              />
-            </div>
+        {/* Integrated preview as editing surface */}
+        <div className="flex justify-center">
+          <div className="w-full max-w-[640px]">
+            <PostcardPreview
+              image={postcard.image?.preview ?? null}
+              message={postcard.message}
+              address={postcard.address}
+              showBack={showBack}
+              onFlip={() => setShowBack(b => !b)}
+              activeZone={activeZone}
+              onImageChange={setImage}
+              onMessageChange={setMessage}
+              onAddressChange={setAddress}
+            />
           </div>
+        </div>
 
-          {/* Step Content */}
-          <div className="lg:w-1/2 min-w-0">
+        {/* Navigation buttons for non-review steps */}
+        {step < 3 && (
+          <div className="flex justify-between mt-6 max-w-[640px] mx-auto">
+            <button
+              className="btn btn-ghost"
+              onClick={handleBack}
+              disabled={step === 0}
+            >
+              Back
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleNext}
+              disabled={
+                (step === 0 && !postcard.image) ||
+                step === 2 // Address step uses inline Done button
+              }
+            >
+              {step === 0 ? 'Next: Write Message' : step === 1 ? 'Next: Add Address' : 'Next: Review'}
+            </button>
+          </div>
+        )}
+
+        {/* Review step content below preview */}
+        {step === 3 && (
+          <div className="max-w-[640px] mx-auto mt-6">
             <div className="card bg-base-100 shadow-lg">
               <div className="card-body">
-                {step === 0 && (
-                  <PhotoStep
-                    image={postcard.image}
-                    onImageChange={postcard.setImage}
-                    onNext={handleNext}
-                  />
-                )}
-                {step === 1 && (
-                  <MessageStep
-                    message={postcard.message}
-                    onMessageChange={postcard.setMessage}
-                    onNext={handleNext}
-                    onBack={handleBack}
-                  />
-                )}
-                {step === 2 && (
-                  <AddressStep
-                    address={postcard.address}
-                    onAddressChange={postcard.setAddress}
-                    onNext={handleNext}
-                    onBack={handleBack}
-                  />
-                )}
-                {step === 3 && (
-                  <ReviewStep
-                    postcard={postcard}
-                    onBack={handleBack}
-                    onSend={handleSend}
-                    onSaveDraft={handleSaveDraft}
-                    sending={submitting}
-                    saving={saving}
-                  />
-                )}
+                <ReviewStep
+                  postcard={postcard}
+                  onBack={handleBack}
+                  onSend={handleSend}
+                  onSaveDraft={handleSaveDraft}
+                  sending={submitting}
+                  saving={saving}
+                />
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </AppShell>
   )
