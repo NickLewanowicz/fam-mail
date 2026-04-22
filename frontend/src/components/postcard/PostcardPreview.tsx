@@ -4,6 +4,7 @@ import { marked } from 'marked'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
 import type { CountryCode } from '../../utils/postcardTemplate'
+import { POSTCARD_6X4_DIMENSIONS, calculateSafeZones, getCountrySpec } from '../../utils/postcardTemplate'
 import { InlineMessageEditor } from './InlineMessageEditor'
 import { InlineAddressForm } from './InlineAddressForm'
 
@@ -96,6 +97,36 @@ export function PostcardPreview({
   const isPhotoActive = activeZone === 'photo'
   const isMessageActive = activeZone === 'message'
   const isAddressActive = activeZone === 'address'
+
+  // Calculate country-specific safe zones for dynamic layout
+  const safeZones = useMemo(() => {
+    return calculateSafeZones(POSTCARD_6X4_DIMENSIONS, true, countryCode ?? 'US')
+  }, [countryCode])
+
+  const countrySpec = useMemo(() => {
+    return getCountrySpec(countryCode ?? 'US')
+  }, [countryCode])
+
+  // Calculate percentages from pixel dimensions
+  const messageWidthPercent = useMemo(() => {
+    if (!safeZones.messageArea) return 60 // fallback
+    return (safeZones.messageArea.width / POSTCARD_6X4_DIMENSIONS.width) * 100
+  }, [safeZones])
+
+  const addressWidthPercent = useMemo(() => {
+    if (!safeZones.addressBlock) return 40 // fallback
+    return (safeZones.addressBlock.width / POSTCARD_6X4_DIMENSIONS.width) * 100
+  }, [safeZones])
+
+  const dividerLeftPercent = useMemo(() => {
+    return (1 - countrySpec.addressWidthRatio) * 100
+  }, [countrySpec])
+
+  // Barcode zone indicator (US only)
+  const barcodeZonePercent = useMemo(() => {
+    if (!safeZones.barcodeZone) return 0
+    return (safeZones.barcodeZone.height / POSTCARD_6X4_DIMENSIONS.height) * 100
+  }, [safeZones])
 
   return (
     <div className="space-y-3">
@@ -200,11 +231,12 @@ export function PostcardPreview({
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
           >
             <div className="h-full flex relative">
-              {/* Message side (60%) */}
+              {/* Message side */}
               <div
-                className={`relative w-3/5 p-4 border-r border-dashed border-gray-300 overflow-hidden transition-colors duration-200 ${
+                className={`relative p-4 overflow-hidden transition-all duration-300 ease-in-out ${
                   isMessageActive ? 'border-primary/60' : ''
                 } ${isMessageActive && !editingMessage ? 'cursor-pointer' : ''}`}
+                style={{ width: `${messageWidthPercent}%` }}
                 onClick={handleMessageClick}
                 role={isMessageActive && !editingMessage ? 'button' : undefined}
                 tabIndex={isMessageActive && !editingMessage ? 0 : undefined}
@@ -228,11 +260,12 @@ export function PostcardPreview({
                 )}
               </div>
 
-              {/* Address side (40%) */}
+              {/* Address side */}
               <div
-                className={`relative w-2/5 p-4 flex flex-col justify-between overflow-hidden transition-colors duration-200 ${
+                className={`relative p-4 flex flex-col justify-between overflow-hidden transition-all duration-300 ease-in-out ${
                   isAddressActive && !editingAddress ? 'cursor-pointer' : ''
                 }`}
+                style={{ width: `${addressWidthPercent}%` }}
                 onClick={handleAddressClick}
                 role={isAddressActive && !editingAddress ? 'button' : undefined}
                 tabIndex={isAddressActive && !editingAddress ? 0 : undefined}
@@ -256,10 +289,12 @@ export function PostcardPreview({
                         <span className="text-gray-300 text-xs">STAMP</span>
                       </div>
                     </div>
-                    {/* Address block */}
-                    <div className="mt-auto">
+                    {/* Address block with quiet zone indicator */}
+                    <div className="mt-auto relative">
+                      {/* Faint dotted border showing address quiet zone boundary */}
+                      <div className="absolute inset-0 border border-dashed border-gray-200/50 rounded pointer-events-none" />
                       {address ? (
-                        <div className="font-mono text-xs leading-relaxed text-gray-800">
+                        <div className="font-mono text-xs leading-relaxed text-gray-800 relative z-10">
                           <p>{address.firstName} {address.lastName}</p>
                           <p>{address.addressLine1}</p>
                           {address.addressLine2 && <p>{address.addressLine2}</p>}
@@ -267,7 +302,7 @@ export function PostcardPreview({
                           <p>{address.countryCode}</p>
                         </div>
                       ) : (
-                        <p className="text-gray-300 text-xs italic font-mono">
+                        <p className="text-gray-300 text-xs italic font-mono relative z-10">
                           {isAddressActive ? 'Click to add address...' : 'Recipient address...'}
                         </p>
                       )}
@@ -275,6 +310,22 @@ export function PostcardPreview({
                   </>
                 )}
               </div>
+
+              {/* Vertical divider */}
+              <div
+                className="absolute top-4 bottom-4 border-r border-dashed border-gray-300 transition-all duration-300 ease-in-out pointer-events-none"
+                style={{ left: `${dividerLeftPercent}%` }}
+              />
+
+              {/* US Barcode zone indicator (US only) */}
+              {countryCode === 'US' && barcodeZonePercent > 0 && (
+                <div
+                  className="absolute left-0 right-0 bg-red-50/30 border-t border-dashed border-red-300/50 flex items-start justify-center transition-all duration-300 ease-in-out"
+                  style={{ bottom: 0, height: `${barcodeZonePercent}%` }}
+                >
+                  <span className="text-[9px] text-red-400/70 mt-0.5 tracking-wide">USPS Barcode Zone</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
