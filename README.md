@@ -124,13 +124,16 @@ For production-like local behavior (single origin), build the frontend and run t
 
 Responses are JSON unless the server is serving static assets. Authenticated routes use `Authorization: Bearer <access_token>`.
 
-| Area | Examples |
-|------|-----------|
-| Health | `GET /api/health` |
-| Auth | `POST /api/auth/login`, `GET /api/auth/callback`, `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/refresh` |
-| Postcards | `POST /api/postcards` |
-| Drafts | `GET/POST /api/drafts`, `GET/PUT/DELETE /api/drafts/:id`, publish / schedule actions |
-| Webhooks | `POST /api/webhook/email`, `GET /api/webhook/health` |
+| Area | Description |
+|------|-------------|
+| Health | System health and dependency checks |
+| Auth | OIDC login, token management, user info |
+| Postcards | Direct postcard creation and sending |
+| Drafts | Draft CRUD, publish, schedule management |
+| PostGrid | Service status and mode toggling |
+| Webhooks | Email-to-postcard webhook processing |
+
+See [docs/API.md](docs/API.md) for full request/response schemas, authentication details, and error codes.
 
 ## Commands
 
