@@ -23,13 +23,14 @@ function fullAddress(overrides: Partial<Address> = {}): Address {
 }
 
 describe('usePostcard', () => {
-  it('default state: image null, message empty, address null, isComplete false, currentStep 1', () => {
+  it('default state: image null, message empty, address null, isComplete false, currentStep 1, countryCode US', () => {
     const { result } = renderHook(() => usePostcard())
     expect(result.current.image).toBeNull()
     expect(result.current.message).toBe('')
     expect(result.current.address).toBeNull()
     expect(result.current.isComplete).toBe(false)
     expect(result.current.currentStep).toBe(1)
+    expect(result.current.countryCode).toBe('US')
   })
 
   it('setting image updates state and moves currentStep to 2 when no message', () => {
@@ -141,5 +142,47 @@ describe('usePostcard', () => {
       result.current.setAddress(fullAddress())
     })
     expect(result.current.isComplete).toBe(false)
+  })
+
+  it('countryCode defaults to US', () => {
+    const { result } = renderHook(() => usePostcard())
+    expect(result.current.countryCode).toBe('US')
+  })
+
+  it('setCountryCode updates countryCode', () => {
+    const { result } = renderHook(() => usePostcard())
+    act(() => {
+      result.current.setCountryCode('CA')
+    })
+    expect(result.current.countryCode).toBe('CA')
+
+    act(() => {
+      result.current.setCountryCode('GB')
+    })
+    expect(result.current.countryCode).toBe('GB')
+
+    act(() => {
+      result.current.setCountryCode('US')
+    })
+    expect(result.current.countryCode).toBe('US')
+  })
+
+  it('initial values can include countryCode', () => {
+    const { result } = renderHook(() =>
+      usePostcard({ countryCode: 'CA' })
+    )
+    expect(result.current.countryCode).toBe('CA')
+  })
+
+  it('reset() resets countryCode to US', () => {
+    const { result } = renderHook(() => usePostcard())
+    act(() => {
+      result.current.setCountryCode('GB')
+    })
+    expect(result.current.countryCode).toBe('GB')
+    act(() => {
+      result.current.reset()
+    })
+    expect(result.current.countryCode).toBe('US')
   })
 })

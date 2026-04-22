@@ -206,4 +206,114 @@ describe('PostcardPreview', () => {
     expect(screen.getByText('5/500')).toBeInTheDocument()
     expect(screen.getByText('Markdown supported')).toBeInTheDocument()
   })
+
+  it('accepts countryCode prop with default US', () => {
+    render(
+      <PostcardPreview
+        image={null}
+        message=""
+        address={null}
+        showBack={false}
+        onFlip={onFlip}
+      />
+    )
+    // Should render without error when countryCode is not provided (defaults to undefined)
+    expect(screen.getByText('Preview')).toBeInTheDocument()
+  })
+
+  it('accepts countryCode prop for CA', () => {
+    render(
+      <PostcardPreview
+        image={null}
+        message=""
+        address={null}
+        showBack={false}
+        onFlip={onFlip}
+        countryCode="CA"
+      />
+    )
+    expect(screen.getByText('Preview')).toBeInTheDocument()
+  })
+
+  it('accepts countryCode prop for GB', () => {
+    render(
+      <PostcardPreview
+        image={null}
+        message=""
+        address={null}
+        showBack={false}
+        onFlip={onFlip}
+        countryCode="GB"
+      />
+    )
+    expect(screen.getByText('Preview')).toBeInTheDocument()
+  })
+
+  it('passes countryCode to inline address form when editing', () => {
+    const onAddressChange = vi.fn()
+    render(
+      <PostcardPreview
+        image={null}
+        message=""
+        address={null}
+        showBack
+        onFlip={onFlip}
+        activeZone="address"
+        onAddressChange={onAddressChange}
+        countryCode="CA"
+      />
+    )
+    // Click to open inline address form
+    const addrArea = screen.getByText('Click to add address...')
+    fireEvent.click(addrArea)
+    // InlineAddressForm should be visible with country code CA
+    expect(screen.getByText('Recipient')).toBeInTheDocument()
+    // The form should show the country code value
+    expect(screen.getByText('CA')).toBeInTheDocument()
+  })
+
+  it('renders back side with message and address for US countryCode', () => {
+    render(
+      <PostcardPreview
+        image={null}
+        message="Hello from the US!"
+        address={sampleAddress}
+        showBack
+        onFlip={onFlip}
+        countryCode="US"
+      />
+    )
+    expect(screen.getByText(/Hello from the US!/i)).toBeInTheDocument()
+    expect(screen.getByText(/Jane Doe/i)).toBeInTheDocument()
+  })
+
+  it('renders back side with message and address for CA countryCode', () => {
+    render(
+      <PostcardPreview
+        image={null}
+        message="Hello from Canada!"
+        address={sampleAddress}
+        showBack
+        onFlip={onFlip}
+        countryCode="CA"
+      />
+    )
+    expect(screen.getByText(/Hello from Canada!/i)).toBeInTheDocument()
+    expect(screen.getByText(/Jane Doe/i)).toBeInTheDocument()
+  })
+
+  it('renders back side with message and address for GB countryCode', () => {
+    render(
+      <PostcardPreview
+        image={null}
+        message="Hello from the UK!"
+        address={sampleAddress}
+        showBack
+        onFlip={onFlip}
+        countryCode="GB"
+      />
+    )
+    expect(screen.getByText(/Hello from the UK!/i)).toBeInTheDocument()
+    expect(screen.getByText(/Jane Doe/i)).toBeInTheDocument()
+  })
 })
