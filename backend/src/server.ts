@@ -116,12 +116,12 @@ const draftRoutes = new DraftRoutes(db, authMiddleware, postgrid)
 // Initialize notifications
 const notifications = new NotificationService({
   smtp: {
-    host: process.env.SMTP_HOST || "localhost",
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    user: process.env.SMTP_USER || "",
-    password: process.env.SMTP_PASSWORD || "",
+    host: config.smtp.host,
+    port: config.smtp.port,
+    user: config.smtp.user,
+    password: config.smtp.password,
   },
-  from: process.env.EMAIL_FROM || "noreply@fammail.com",
+  from: config.smtp.from,
 })
 
 // Initialize IMAP service (optional — only if IMAP_HOST is configured)
