@@ -355,9 +355,27 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
+    // Check database health
+    const dbHealth = db.checkHealth()
+    
+    // Check PostGrid health (async but we'll await it for health endpoint)
+    const postgridHealth = await postgrid.checkHealth()
+    
+    // Determine overall status based on dependencies
+    const anyDependencyDown = dbHealth.status === 'down' || postgridHealth.status === 'down'
+    const overallStatus = anyDependencyDown ? 'degraded' : 'healthy'
+    
     return withSecurityHeaders(
       jsonResponse(
-        { status: 'healthy', version: '1.0.0', timestamp: new Date().toISOString() },
+        {
+          status: overallStatus,
+          version: '1.0.0',
+          timestamp: new Date().toISOString(),
+          dependencies: {
+            database: dbHealth,
+            postgrid: postgridHealth,
+          },
+        },
         200,
         req
       ),

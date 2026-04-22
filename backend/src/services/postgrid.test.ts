@@ -325,4 +325,111 @@ describe('PostGridService', () => {
       expect(service.getActiveKey()).toBe("pg_test_x")
     })
   })
+
+  describe("PostGridService — health check", () => {
+    it("checkHealth returns up in mock mode", async () => {
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "t",
+        liveApiKey: "l",
+        forceTestMode: false,
+        mockMode: true,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      const health = await service.checkHealth()
+      expect(health.status).toBe("up")
+    })
+
+    it("checkHealth returns up when API is reachable", async () => {
+      const mockFetch = mock(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ data: [] }),
+        })
+      )
+      global.fetch = mockFetch as unknown as typeof fetch
+
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "test_key",
+        liveApiKey: "live_key",
+        forceTestMode: false,
+        mockMode: false,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      const health = await service.checkHealth()
+      expect(health.status).toBe("up")
+      expect(mockFetch).toHaveBeenCalled()
+    })
+
+    it("checkHealth returns up even with 401/403 responses (API is reachable)", async () => {
+      const mockFetch = mock(() =>
+        Promise.resolve({
+          ok: false,
+          status: 401,
+          json: () => Promise.resolve({ error: 'Unauthorized' }),
+        })
+      )
+      global.fetch = mockFetch as unknown as typeof fetch
+
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "invalid_key",
+        liveApiKey: "live_key",
+        forceTestMode: false,
+        mockMode: false,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      const health = await service.checkHealth()
+      // Any HTTP response means the API is reachable
+      expect(health.status).toBe("up")
+    })
+
+    it("checkHealth returns down on network error", async () => {
+      const mockFetch = mock(() =>
+        Promise.reject(new Error('Network error'))
+      )
+      global.fetch = mockFetch as unknown as typeof fetch
+
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "test_key",
+        liveApiKey: "live_key",
+        forceTestMode: false,
+        mockMode: false,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      const health = await service.checkHealth()
+      expect(health.status).toBe("down")
+    })
+
+    it("checkHealth handles timeout errors", async () => {
+      const mockFetch = mock(() =>
+        Promise.reject(new Error('The operation was aborted'))
+      )
+      global.fetch = mockFetch as unknown as typeof fetch
+
+      const service = new PostGridService({
+        mode: "test",
+        testApiKey: "test_key",
+        liveApiKey: "live_key",
+        forceTestMode: false,
+        mockMode: false,
+        webhookSecret: "",
+        size: "6x4",
+        senderId: "",
+      })
+      const health = await service.checkHealth()
+      expect(health.status).toBe("down")
+    })
+  })
 })

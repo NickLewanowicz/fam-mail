@@ -178,6 +178,47 @@ export class PostGridService {
   getTestMode(): boolean {
     return this.isTestMode
   }
+
+  /**
+   * Checks PostGrid API reachability.
+   * In mock mode, always returns "up".
+   * @returns Health check result with status
+   */
+  async checkHealth(): Promise<{ status: "up" | "down" }> {
+    if (this.mockMode) {
+      return { status: "up" };
+    }
+
+    try {
+      // Create an abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      try {
+        // Make a lightweight request to check API reachability
+        // Use a simple GET request to verify connectivity
+        await fetch(`${this.baseUrl}/letters`, {
+          method: 'GET',
+          headers: {
+            'x-api-key': this.apiKey,
+          },
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        // Any response (including 401/403) means the API is reachable
+        // Network errors will be caught below
+        return { status: "up" };
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
+      }
+    } catch (error) {
+      logger.warn('PostGrid health check failed', { error });
+      return { status: "down" };
+    }
+  }
 }
 
 let _postgridService: PostGridService | null = null

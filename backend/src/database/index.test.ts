@@ -300,4 +300,23 @@ describe("Database - Session methods", () => {
     const deletedCount = db.deleteExpiredSessions();
     expect(deletedCount).toBe(0);
   });
+
+  describe("Health check", () => {
+    it("checkHealth returns up with latency when database is accessible", () => {
+      const health = db.checkHealth();
+      expect(health.status).toBe("up");
+      expect(typeof health.latency_ms).toBe("number");
+      expect(health.latency_ms).toBeGreaterThanOrEqual(0);
+    });
+
+    it("checkHealth executes query successfully", () => {
+      // First check should work
+      const health1 = db.checkHealth();
+      expect(health1.status).toBe("up");
+
+      // Second check should also work
+      const health2 = db.checkHealth();
+      expect(health2.status).toBe("up");
+    });
+  });
 });

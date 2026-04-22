@@ -62,7 +62,7 @@ describe('Backend Server', () => {
     })
 
     describe('GET /api/health', () => {
-        it('should return minimal health response without service details', async () => {
+        it('should return health response with dependency status', async () => {
             const req = new Request('http://localhost:3001/api/health')
             const res = await handleRequest(req)
             const data = await res.json() as Record<string, unknown>
@@ -72,7 +72,22 @@ describe('Backend Server', () => {
             expect(data.version).toBe('1.0.0')
             expect(typeof data.timestamp).toBe('string')
             expect(Number.isNaN(Date.parse(String(data.timestamp)))).toBe(false)
-            expect(Object.keys(data).sort()).toEqual(['status', 'timestamp', 'version'])
+            
+            // Check dependencies object
+            expect(data.dependencies).toBeDefined()
+            expect(typeof data.dependencies).toBe('object')
+            
+            // Check database health
+            expect(data.dependencies.database).toBeDefined()
+            expect(typeof data.dependencies.database).toBe('object')
+            expect(data.dependencies.database.status).toBe('up')
+            expect(typeof data.dependencies.database.latency_ms).toBe('number')
+            expect(data.dependencies.database.latency_ms).toBeGreaterThanOrEqual(0)
+            
+            // Check PostGrid health (up in mock/test mode)
+            expect(data.dependencies.postgrid).toBeDefined()
+            expect(typeof data.dependencies.postgrid).toBe('object')
+            expect(data.dependencies.postgrid.status).toBe('up')
         })
 
         it('should include CORS headers', async () => {
@@ -81,6 +96,70 @@ describe('Backend Server', () => {
 
             expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173')
             expect(res.headers.get('Content-Type')).toBe('application/json')
+        })
+    })
+
+    describe('GET /api/health with dependency failures', () => {
+        it('should return degraded status when database is down', async () => {
+            // Mock database checkHealth to return down
+            const originalCheckHealth = db.checkHealth.bind(db)
+            db.checkHealth = () => ({ status: 'down', latency_ms: 0 })
+
+            try {
+                const req = new Request('http://localhost:3001/api/health')
+                const res = await handleRequest(req)
+                const data = await res.json() as Record<string, unknown>
+
+                expect(res.status).toBe(200)
+                expect(data.status).toBe('degraded')
+                expect(data.dependencies.database.status).toBe('down')
+            } finally {
+                // Restore original method
+                db.checkHealth = originalCheckHealth
+            }
+        })
+
+        it('should return degraded status when PostGrid is down', async () => {
+            // Mock PostGrid checkHealth to return down
+            const originalCheckHealth = postgrid.checkHealth.bind(postgrid)
+            postgrid.checkHealth = async () => ({ status: 'down' })
+
+            try {
+                const req = new Request('http://localhost:3001/api/health')
+                const res = await handleRequest(req)
+                const data = await res.json() as Record<string, unknown>
+
+                expect(res.status).toBe(200)
+                expect(data.status).toBe('degraded')
+                expect(data.dependencies.postgrid.status).toBe('down')
+            } finally {
+                // Restore original method
+                postgrid.checkHealth = originalCheckHealth
+            }
+        })
+
+        it('should return degraded status when both dependencies are down', async () => {
+            // Mock both checks to return down
+            const originalDbCheckHealth = db.checkHealth.bind(db)
+            const originalPostgridCheckHealth = postgrid.checkHealth.bind(postgrid)
+            
+            db.checkHealth = () => ({ status: 'down', latency_ms: 0 })
+            postgrid.checkHealth = async () => ({ status: 'down' })
+
+            try {
+                const req = new Request('http://localhost:3001/api/health')
+                const res = await handleRequest(req)
+                const data = await res.json() as Record<string, unknown>
+
+                expect(res.status).toBe(200)
+                expect(data.status).toBe('degraded')
+                expect(data.dependencies.database.status).toBe('down')
+                expect(data.dependencies.postgrid.status).toBe('down')
+            } finally {
+                // Restore original methods
+                db.checkHealth = originalDbCheckHealth
+                postgrid.checkHealth = originalPostgridCheckHealth
+            }
         })
     })
 

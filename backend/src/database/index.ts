@@ -148,6 +148,22 @@ export class Database {
   }
 
   /**
+   * Checks database connectivity and returns health status.
+   * @returns Health check result with status and latency
+   */
+  checkHealth(): { status: "up" | "down"; latency_ms: number } {
+    const startTime = performance.now();
+    try {
+      // Execute a simple query to verify connectivity
+      this.db.prepare("SELECT 1").get();
+      const latency = Math.round(performance.now() - startTime);
+      return { status: "up", latency_ms: latency };
+    } catch (error) {
+      return { status: "down", latency_ms: Math.round(performance.now() - startTime) };
+    }
+  }
+
+  /**
    * Inserts a new postcard record into the database.
    * @param data - Postcard data (excluding auto-managed timestamps)
    * @throws {DatabaseError} If constraint violation or other database error occurs
