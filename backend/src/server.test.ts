@@ -35,6 +35,7 @@ describe('Backend Server', () => {
         process.env.JWT_SECRET = 'test-secret-key-minimum-32-characters-long'
         process.env.JWT_EXPIRES_IN = '7d'
         process.env.JWT_REFRESH_EXPIRES_IN = '30d'
+        process.env.ADMIN_EMAILS = 'admin@example.com'
 
         const module = await import('./server')
         handleRequest = module.handleRequest
@@ -299,12 +300,15 @@ describe('Backend Server', () => {
     })
 
     describe('PostGrid mode API', () => {
-        function insertAuthUser(): User {
+        function insertAuthUser(email?: string): User {
+            const userEmail = email ?? `postgrid-${crypto.randomUUID()}@example.com`
+            const existing = db.getUserByEmail?.(userEmail)
+            if (existing) return existing
             const user: User = {
                 id: crypto.randomUUID(),
                 oidcSub: `postgrid-api-${crypto.randomUUID()}`,
                 oidcIssuer: 'https://accounts.google.com',
-                email: `postgrid-${crypto.randomUUID()}@example.com`,
+                email: userEmail,
                 emailVerified: true,
                 firstName: 'API',
                 lastName: 'Tester',
@@ -354,7 +358,7 @@ describe('Backend Server', () => {
         })
 
         it('POST /api/postgrid/mode returns 400 for invalid mode', async () => {
-            const user = insertAuthUser()
+            const user = insertAuthUser('admin@example.com')
             const token = await jwtService.generateAccessToken(user)
             const req = new Request('http://localhost:3001/api/postgrid/mode', {
                 method: 'POST',
@@ -370,8 +374,25 @@ describe('Backend Server', () => {
             expect(data.error).toContain('test')
         })
 
+        it('POST /api/postgrid/mode returns 403 for non-admin user', async () => {
+            const user = insertAuthUser() // random non-admin email
+            const token = await jwtService.generateAccessToken(user)
+            const req = new Request('http://localhost:3001/api/postgrid/mode', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mode: 'live' }),
+            })
+            const res = await handleRequest(req)
+            const data = (await res.json()) as { error: string }
+            expect(res.status).toBe(403)
+            expect(data.error).toContain('admin')
+        })
+
         it('POST /api/postgrid/mode switches to live then back to test', async () => {
-            const user = insertAuthUser()
+            const user = insertAuthUser('admin@example.com')
             const token = await jwtService.generateAccessToken(user)
 
             const reqLive = new Request('http://localhost:3001/api/postgrid/mode', {

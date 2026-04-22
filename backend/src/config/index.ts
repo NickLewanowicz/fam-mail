@@ -48,6 +48,7 @@ export interface Config {
   database: {
     path: string;
   };
+  adminEmails: string[];
   server: {
     port: number;
     nodeEnv: string;
@@ -190,6 +191,10 @@ export function getConfig(): Config {
     database: {
       path: getEnv("DATABASE_PATH", "/data/fammail.db"),
     },
+    adminEmails: getEnv("ADMIN_EMAILS", "")
+      .split(",")
+      .map((s: string) => s.trim().toLowerCase())
+      .filter((s: string) => s.length > 0),
     server: {
       port: getEnvInt("PORT", 8484),
       nodeEnv: getEnv("NODE_ENV", "development"),

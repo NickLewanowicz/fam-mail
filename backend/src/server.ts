@@ -399,6 +399,11 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (authResult.error) {
       return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
+    // #70: Only admins can toggle PostGrid test/live mode
+    const adminEmails = config.adminEmails
+    if (adminEmails.length > 0 && !adminEmails.includes(authResult.user!.email.toLowerCase())) {
+      return withSecurityHeaders(jsonResponse({ error: 'Forbidden: admin access required' }, 403, req), req)
+    }
     let body: unknown
     try {
       body = await req.json()
