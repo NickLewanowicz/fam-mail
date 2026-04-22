@@ -48,6 +48,10 @@ qa:
       cmd: "cd frontend && pnpm build 2>&1"
       timeout: 60
 
+# Verify all QA checks pass before starting the orchestration loop.
+# Prevents nightshift from wasting cycles on a broken baseline.
+qa_gate_on_start: true
+
 session:
   max_wait_seconds: 900
   max_attempts_per_issue: 3

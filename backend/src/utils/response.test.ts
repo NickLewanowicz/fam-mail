@@ -1,59 +1,17 @@
 import { describe, it, expect, mock } from 'bun:test'
-import { jsonResponse } from './response'
 
-// Mock the centralized headers module so the re-export in response.ts
-// uses our controlled implementation without hitting real config.
-mock.module('../middleware/headers', () => {
-  const SECURITY_HEADERS: Record<string, string> = {
-    'Content-Security-Policy':
-      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Strict-Transport-Security': 'max-age=15552000; includeSubDomains',
-  }
+// Mock config (NOT middleware/headers) to avoid Bun mock.module pollution
+// that would break headers.test.ts. The real headers module will load and
+// use this controlled config.
+mock.module('../config', () => ({
+  getConfig: () => ({
+    server: {
+      allowedOrigins: ['http://localhost:3000', 'https://example.com'],
+    },
+  }),
+}))
 
-  function getCorsHeaders(req?: Request): Record<string, string> {
-    const origin = req?.headers.get('origin') || ''
-    const allowed = ['http://localhost:3000', 'https://example.com']
-    const allowOrigin = allowed.includes(origin) ? origin : allowed[0]
-    return {
-      'Access-Control-Allow-Origin': allowOrigin,
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Credentials': 'true',
-      'Vary': 'Origin',
-    }
-  }
-
-  function jsonResponse(data: unknown, status: number = 200, req?: Request): Response {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (req) {
-      Object.assign(headers, getCorsHeaders(req))
-    }
-    const response = new Response(JSON.stringify(data), { status, headers })
-    for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-      response.headers.set(key, value)
-    }
-    return response
-  }
-
-  function createCorsResponse(req: Request): Response {
-    const response = new Response(null, {
-      status: 204,
-      headers: getCorsHeaders(req),
-    })
-    for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-      response.headers.set(key, value)
-    }
-    return response
-  }
-
-  return { jsonResponse, createCorsResponse, SECURITY_HEADERS, getCorsHeaders, applyHeaders: (r: Response) => r }
-})
+const { jsonResponse } = await import('./response')
 
 describe('jsonResponse', () => {
   it('sets Content-Type to application/json', () => {
