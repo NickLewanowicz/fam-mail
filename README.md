@@ -47,6 +47,12 @@ Fam Mail is a small full-stack app for composing a postcard (photo, message, add
 
 ![Login](docs/screenshots/login.png)
 
+## Documentation
+
+- [Contributing](docs/CONTRIBUTING.md) — How to contribute to the project
+- [Security Policy](SECURITY.md) — Security guidelines and vulnerability reporting
+- [Changelog](CHANGELOG.md) — Version history and notable changes
+
 ## Quick start with Docker
 
 1. Copy the environment template and set at least PostGrid and OIDC values (see [Environment variables](#environment-variables)).
