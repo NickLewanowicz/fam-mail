@@ -88,7 +88,7 @@ export interface User {
   lastName?: string
   avatarUrl?: string
   createdAt: string
-  updated_at: string
+  updatedAt: string
 }
 
 export interface Session {
