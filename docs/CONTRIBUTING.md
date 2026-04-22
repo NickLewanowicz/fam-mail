@@ -11,8 +11,8 @@ Thank you for your interest in contributing to Fam Mail! This document provides 
 ## Getting Started
 
 1. Fork the repository
-2. Clone your fork: `git clone https://github.com/YOUR_USERNAME/fam-mail.git`
-3. Add the upstream remote: `git remote add upstream https://github.com/nicklewanowicz/fam-mail.git`
+2. Clone your fork: `git clone https://github.com/NickLewanowicz/fam-mail.git`
+3. Add the upstream remote: `git remote add upstream https://github.com/NickLewanowicz/fam-mail.git`
 4. Follow the setup instructions in [README.md](../README.md)
 
 This repo uses **pnpm** as the package manager (not npm or yarn). Install dependencies from the repository root with `pnpm install`.
