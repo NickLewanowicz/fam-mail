@@ -46,7 +46,16 @@ describe('AuthCallbackPage', () => {
   it('calls handleCallbackToken with token from URL', () => {
     const mockHandleCallbackToken = vi.fn()
     renderCallbackPage({ handleCallbackToken: mockHandleCallbackToken })
-    expect(mockHandleCallbackToken).toHaveBeenCalledWith('test-token')
+    expect(mockHandleCallbackToken).toHaveBeenCalledWith('test-token', undefined)
+  })
+
+  it('calls handleCallbackToken with token and refreshToken from URL', () => {
+    const mockHandleCallbackToken = vi.fn()
+    renderCallbackPage(
+      { handleCallbackToken: mockHandleCallbackToken },
+      ['/auth/callback?token=test-token&refreshToken=refresh-123']
+    )
+    expect(mockHandleCallbackToken).toHaveBeenCalledWith('test-token', 'refresh-123')
   })
 
   it('navigates to login when error param is present', () => {

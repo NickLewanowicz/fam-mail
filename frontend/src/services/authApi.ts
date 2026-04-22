@@ -2,6 +2,7 @@ import type { User } from '../types/auth'
 import { API_BASE_URL } from '../utils/apiConfig'
 
 const TOKEN_KEY = 'fam_mail_token'
+const REFRESH_TOKEN_KEY = 'fam_mail_refresh_token'
 
 class AuthApiError extends Error {
   status: number
@@ -24,10 +25,23 @@ export function removeToken(): void {
   localStorage.removeItem(TOKEN_KEY)
 }
 
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY)
+}
+
+export function setRefreshToken(token: string): void {
+  localStorage.setItem(REFRESH_TOKEN_KEY, token)
+}
+
+export function removeRefreshToken(): void {
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
+}
+
 export interface LoginResult {
   type: 'redirect' | 'dev-token'
   authUrl?: string
   accessToken?: string
+  refreshToken?: string
 }
 
 export async function initiateLogin(): Promise<LoginResult> {
@@ -49,7 +63,7 @@ export async function initiateLogin(): Promise<LoginResult> {
   const data = await response.json()
 
   if (data.devMode && data.accessToken) {
-    return { type: 'dev-token', accessToken: data.accessToken }
+    return { type: 'dev-token', accessToken: data.accessToken, refreshToken: data.refreshToken }
   }
 
   return { type: 'redirect', authUrl: data.authUrl as string }
@@ -102,6 +116,46 @@ export function getAuthHeaders(): Record<string, string> {
     headers['Authorization'] = `Bearer ${token}`
   }
   return headers
+}
+
+/** Remove both access and refresh tokens from storage */
+export function clearAllTokens(): void {
+  removeToken()
+  removeRefreshToken()
+}
+
+export interface RefreshResult {
+  accessToken: string
+  refreshToken: string
+}
+
+/** Attempt to refresh the access token using the stored refresh token.
+ *  On success, stores the new token pair and returns them.
+ *  On failure, clears all tokens and throws. */
+export async function refreshAccessToken(): Promise<RefreshResult> {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) {
+    clearAllTokens()
+    throw new AuthApiError('No refresh token available', 401)
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ refreshToken }),
+  })
+
+  if (!response.ok) {
+    clearAllTokens()
+    throw new AuthApiError('Token refresh failed', response.status)
+  }
+
+  const data = await response.json() as { accessToken: string; refreshToken: string }
+  setToken(data.accessToken)
+  setRefreshToken(data.refreshToken)
+  return data
 }
 
 export { AuthApiError }

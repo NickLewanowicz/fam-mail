@@ -12,6 +12,7 @@ export function AuthCallbackPage() {
     if (hasProcessed.current) return
 
     const token = searchParams.get('token')
+    const refreshToken = searchParams.get('refreshToken')
     const urlError = searchParams.get('error')
 
     if (urlError) {
@@ -21,7 +22,7 @@ export function AuthCallbackPage() {
 
     if (token) {
       hasProcessed.current = true
-      handleCallbackToken(token)
+      handleCallbackToken(token, refreshToken ?? undefined)
       // Clean up URL
       window.history.replaceState({}, '/', '/')
       return

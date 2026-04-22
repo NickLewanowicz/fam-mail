@@ -5,9 +5,13 @@ import {
   getToken,
   setToken,
   removeToken,
+  getRefreshToken,
+  setRefreshToken,
+  clearAllTokens,
   initiateLogin,
   fetchCurrentUser,
   logoutUser,
+  refreshAccessToken,
 } from '../../services/authApi'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -31,15 +35,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({ user, token, isLoading: false, isAuthenticated: true })
       })
       .catch(() => {
-        // Token is invalid or expired
-        removeToken()
-        setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
+        // Access token might be expired — try refresh before logging out
+        const storedRefresh = getRefreshToken()
+        if (storedRefresh) {
+          refreshAccessToken()
+            .then(({ accessToken }) => fetchCurrentUser(accessToken)
+              .then((user: User) => {
+                setState({ user, token: accessToken, isLoading: false, isAuthenticated: true })
+              })
+            )
+            .catch(() => {
+              clearAllTokens()
+              setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
+            })
+        } else {
+          removeToken()
+          setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
+        }
       })
   }, [])
 
-  // Method to handle token received from callback
-  const handleCallbackToken = useCallback((token: string) => {
+  // Method to handle tokens received from callback
+  const handleCallbackToken = useCallback((token: string, refreshToken?: string) => {
     setToken(token)
+    if (refreshToken) {
+      setRefreshToken(refreshToken)
+    }
     setState(prev => ({ ...prev, token, isLoading: true }))
 
     fetchCurrentUser(token)
@@ -47,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setState({ user, token, isLoading: false, isAuthenticated: true })
       })
       .catch(() => {
-        removeToken()
+        clearAllTokens()
         setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
       })
   }, [])
@@ -55,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async () => {
     const result = await initiateLogin()
     if (result.type === 'dev-token' && result.accessToken) {
-      handleCallbackToken(result.accessToken)
+      handleCallbackToken(result.accessToken, result.refreshToken)
     } else if (result.authUrl) {
       window.location.href = result.authUrl
     }
@@ -70,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Continue with local logout even if API call fails
       }
     }
-    removeToken()
+    clearAllTokens()
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
   }, [])
 

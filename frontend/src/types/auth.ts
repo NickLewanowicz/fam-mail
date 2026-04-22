@@ -21,5 +21,5 @@ export interface AuthState {
 export interface AuthContextType extends AuthState {
   login: () => Promise<void>
   logout: () => Promise<void>
-  handleCallbackToken: (token: string) => void
+  handleCallbackToken: (token: string, refreshToken?: string) => void
 }

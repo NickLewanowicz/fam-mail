@@ -113,7 +113,7 @@ export function setupAuthRoutes(
 
       oidcStateStore.delete(state)
 
-      const redirectUrl = `${new URL(req.url).origin}/auth/callback?token=${accessToken}`
+      const redirectUrl = `${new URL(req.url).origin}/auth/callback?token=${accessToken}&refreshToken=${encodeURIComponent(refreshToken)}`
       return applyHeaders(Response.redirect(redirectUrl), req)
     } catch (error) {
       logger.error('OIDC callback error', { error: error instanceof Error ? error.message : String(error) })

@@ -13,15 +13,14 @@ agent:
   model: glm-5.1
   max_turns: 50
 
+  # GLM 4.7: 3x faster than 5.1, use for well-scoped implementation tasks
+  # GLM 5.1 (default): orchestration, review, complex architecture
+  # GLM 5-turbo: 5.1-quality at 4.7 speed but higher quota cost — use for review agent
   model_tiers:
     - model: glm-4.7
       provider: zai
       max_turns: 30
       labels: ["tier:fast"]
-    - model: glm-5
-      provider: zai
-      max_turns: 50
-      labels: ["tier:complex"]
 
 issue_tracker:
   type: github
