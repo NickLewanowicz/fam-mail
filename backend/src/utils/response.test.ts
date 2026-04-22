@@ -6,7 +6,7 @@ import { jsonResponse } from './response'
 mock.module('../middleware/headers', () => {
   const SECURITY_HEADERS: Record<string, string> = {
     'Content-Security-Policy':
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
+      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'",
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',
@@ -119,7 +119,7 @@ describe('jsonResponse', () => {
   it('includes Content-Security-Policy security header', () => {
     const response = jsonResponse({ message: 'test' })
     expect(response.headers.get('Content-Security-Policy')).toBe(
-      "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'"
+      "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'"
     )
   })
 
