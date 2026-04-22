@@ -6,20 +6,24 @@ import { AuthContext } from './AuthContext'
 import type { AuthContextType } from '../../types/auth'
 
 // Mock the auth API service
-vi.mock('../../services/authApi', () => ({
-  getToken: vi.fn(() => null),
-  setToken: vi.fn(),
-  removeToken: vi.fn(),
-  getRefreshToken: vi.fn(() => null),
-  setRefreshToken: vi.fn(),
-  removeRefreshToken: vi.fn(),
-  clearAllTokens: vi.fn(),
-  initiateLogin: vi.fn(),
-  fetchCurrentUser: vi.fn(),
-  logoutUser: vi.fn(),
-  refreshAccessToken: vi.fn(),
-  getAuthHeaders: vi.fn(() => ({ 'Content-Type': 'application/json' })),
-}))
+vi.mock('../../services/authApi', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../services/authApi')>()
+  return {
+    ...original,
+    getToken: vi.fn(() => null),
+    setToken: vi.fn(),
+    removeToken: vi.fn(),
+    getRefreshToken: vi.fn(() => null),
+    setRefreshToken: vi.fn(),
+    removeRefreshToken: vi.fn(),
+    clearAllTokens: vi.fn(),
+    initiateLogin: vi.fn(),
+    fetchCurrentUser: vi.fn(),
+    logoutUser: vi.fn(),
+    refreshAccessToken: vi.fn(),
+    getAuthHeaders: vi.fn(() => ({ 'Content-Type': 'application/json' })),
+  }
+})
 
 function renderWithRouter(ui: React.ReactElement) {
   return render(<BrowserRouter>{ui}</BrowserRouter>)
@@ -375,5 +379,49 @@ describe('AuthProvider', () => {
 
     expect(refreshAccessToken).toHaveBeenCalled()
     expect(clearAllTokens).toHaveBeenCalled()
+  })
+
+  it('updates token state when TOKEN_REFRESHED_EVENT is dispatched', async () => {
+    const { getToken, fetchCurrentUser, TOKEN_REFRESHED_EVENT } = await import('../../services/authApi')
+    const mockUser = {
+      id: 'user-1',
+      oidcSub: 'sub-1',
+      oidcIssuer: 'https://auth.example.com',
+      email: 'test@example.com',
+      emailVerified: true,
+      firstName: 'Test',
+      lastName: 'User',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
+    ;(getToken as ReturnType<typeof vi.fn>).mockReturnValue('initial-token')
+    ;(fetchCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser)
+
+    let contextValue: AuthContextType | null = null
+    renderWithRouter(
+      <AuthProvider>
+        <AuthContext.Consumer>
+          {(value) => {
+            contextValue = value
+            return <div data-testid="consumer">consumed</div>
+          }}
+        </AuthContext.Consumer>
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      expect(contextValue!.isAuthenticated).toBe(true)
+    })
+
+    expect(contextValue!.token).toBe('initial-token')
+
+    // Simulate authFetch refreshing the token
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(TOKEN_REFRESHED_EVENT, { detail: { accessToken: 'refreshed-token' } }))
+    })
+
+    await waitFor(() => {
+      expect(contextValue!.token).toBe('refreshed-token')
+    })
   })
 })

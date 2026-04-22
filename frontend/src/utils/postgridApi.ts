@@ -1,4 +1,4 @@
-import { getAuthHeaders } from '../services/authApi'
+import { getAuthHeaders, authFetch } from '../services/authApi'
 import { API_BASE_URL } from './apiConfig'
 
 export type PostgridApiMode = 'test' | 'live' | 'mock'
@@ -9,7 +9,7 @@ export interface PostgridStatusResponse {
 }
 
 export async function fetchPostgridStatus(): Promise<PostgridStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/postgrid/status`, {
+  const response = await authFetch(`${API_BASE_URL}/api/postgrid/status`, {
     headers: getAuthHeaders(),
   })
   if (!response.ok) {
@@ -20,7 +20,7 @@ export async function fetchPostgridStatus(): Promise<PostgridStatusResponse> {
 }
 
 export async function setPostgridMode(mode: 'test' | 'live'): Promise<PostgridStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/postgrid/mode`, {
+  const response = await authFetch(`${API_BASE_URL}/api/postgrid/mode`, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify({ mode }),

@@ -1,6 +1,6 @@
 import type { Address } from '../types/address'
 import type { Draft } from '../types/postcard'
-import { getAuthHeaders } from '../services/authApi'
+import { getAuthHeaders, authFetch } from '../services/authApi'
 import { API_BASE_URL } from './apiConfig'
 
 // ---- Request/Response types ----
@@ -74,7 +74,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
 /** List all drafts, optionally filtered by state */
 export async function listDrafts(state?: 'draft' | 'ready'): Promise<Draft[]> {
   const url = state ? `${API_BASE}?state=${state}` : API_BASE
-  const response = await fetch(url, {
+  const response = await authFetch(url, {
     method: 'GET',
     headers: getAuthHeaders(),
   })
@@ -84,7 +84,7 @@ export async function listDrafts(state?: 'draft' | 'ready'): Promise<Draft[]> {
 
 /** Get a single draft by ID */
 export async function getDraft(id: string): Promise<Draft> {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  const response = await authFetch(`${API_BASE}/${id}`, {
     method: 'GET',
     headers: getAuthHeaders(),
   })
@@ -94,7 +94,7 @@ export async function getDraft(id: string): Promise<Draft> {
 
 /** Create a new draft */
 export async function createDraft(request: CreateDraftRequest): Promise<Draft> {
-  const response = await fetch(API_BASE, {
+  const response = await authFetch(API_BASE, {
     method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(request),
@@ -105,7 +105,7 @@ export async function createDraft(request: CreateDraftRequest): Promise<Draft> {
 
 /** Update an existing draft */
 export async function updateDraft(id: string, request: UpdateDraftRequest): Promise<Draft> {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  const response = await authFetch(`${API_BASE}/${id}`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(request),
@@ -116,7 +116,7 @@ export async function updateDraft(id: string, request: UpdateDraftRequest): Prom
 
 /** Delete a draft */
 export async function deleteDraft(id: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  const response = await authFetch(`${API_BASE}/${id}`, {
     method: 'DELETE',
     headers: getAuthHeaders(),
   })
@@ -125,7 +125,7 @@ export async function deleteDraft(id: string): Promise<void> {
 
 /** Publish a draft (mark as ready to send) */
 export async function publishDraft(id: string): Promise<PublishResponse> {
-  const response = await fetch(`${API_BASE}/${id}/publish`, {
+  const response = await authFetch(`${API_BASE}/${id}/publish`, {
     method: 'POST',
     headers: getAuthHeaders(),
   })

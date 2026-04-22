@@ -12,6 +12,7 @@ import {
   fetchCurrentUser,
   logoutUser,
   refreshAccessToken,
+  TOKEN_REFRESHED_EVENT,
 } from '../../services/authApi'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -53,6 +54,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
         }
       })
+  }, [])
+
+  // Keep React state in sync when authFetch silently refreshes the token
+  useEffect(() => {
+    function handleTokenRefreshed(e: Event) {
+      const { accessToken } = (e as CustomEvent<{ accessToken: string }>).detail
+      setState(prev => {
+        if (prev.token === accessToken) return prev
+        return { ...prev, token: accessToken }
+      })
+    }
+    window.addEventListener(TOKEN_REFRESHED_EVENT, handleTokenRefreshed)
+    return () => window.removeEventListener(TOKEN_REFRESHED_EVENT, handleTokenRefreshed)
   }, [])
 
   // Method to handle tokens received from callback

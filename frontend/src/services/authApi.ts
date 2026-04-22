@@ -158,4 +158,67 @@ export async function refreshAccessToken(): Promise<RefreshResult> {
   return data
 }
 
+// ---- authFetch: 401 → refresh → retry wrapper ----
+
+/** Custom event dispatched on `window` when a silent token refresh succeeds. */
+export const TOKEN_REFRESHED_EVENT = 'fam-mail:token-refreshed'
+
+/** Singleton promise used to coalesce concurrent refresh attempts. */
+let pendingRefresh: Promise<RefreshResult> | null = null
+
+/** Attempt a single refresh, reusing any in-flight refresh promise. */
+function safeRefresh(): Promise<RefreshResult> {
+  if (!pendingRefresh) {
+    pendingRefresh = refreshAccessToken().finally(() => {
+      pendingRefresh = null
+    })
+  }
+  return pendingRefresh
+}
+
+/** Drop-in replacement for `fetch` that automatically retries once on 401
+ *  by refreshing the access token. Public/unauthenticated endpoints should
+ *  keep using raw `fetch`.
+ *
+ *  On successful refresh a `TOKEN_REFRESHED_EVENT` is dispatched on `window`
+ *  so that React state (AuthProvider) can stay in sync. */
+export async function authFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  // First attempt with current token
+  const response = await fetch(input, init)
+
+  if (response.status !== 401) {
+    return response
+  }
+
+  // 401 — try to refresh the token
+  try {
+    const { accessToken } = await safeRefresh()
+
+    // Notify any listeners (e.g. AuthProvider) that tokens changed
+    window.dispatchEvent(new CustomEvent(TOKEN_REFRESHED_EVENT, { detail: { accessToken } }))
+
+    // Clone the original init and update the Authorization header
+    const retryInit: RequestInit = {
+      ...init,
+      headers: {
+        ...(init?.headers instanceof Headers
+          ? Object.fromEntries(init.headers.entries())
+          : Array.isArray(init?.headers)
+            ? Object.fromEntries(init.headers as [string, string][])
+            : (init?.headers as Record<string, string> | undefined)),
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+
+    return fetch(input, retryInit)
+  } catch {
+    // Refresh failed — return the original 401 response so the caller
+    // can handle it (e.g. show an error, redirect to login)
+    return response
+  }
+}
+
 export { AuthApiError }

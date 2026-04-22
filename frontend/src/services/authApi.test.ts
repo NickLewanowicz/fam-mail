@@ -12,6 +12,8 @@ import {
   logoutUser,
   getAuthHeaders,
   refreshAccessToken,
+  authFetch,
+  TOKEN_REFRESHED_EVENT,
   AuthApiError,
 } from './authApi'
 
@@ -279,6 +281,152 @@ describe('authApi', () => {
       await expect(refreshAccessToken()).rejects.toThrow('Token refresh failed')
       expect(getToken()).toBeNull()
       expect(getRefreshToken()).toBeNull()
+    })
+  })
+
+  describe('authFetch', () => {
+    it('passes through non-401 responses unchanged', async () => {
+      const mockResponse = { ok: true, status: 200, json: async () => ({ data: 'test' }) } as Response
+      vi.mocked(global.fetch).mockResolvedValueOnce(mockResponse)
+
+      const response = await authFetch('/api/drafts', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer my-token' },
+      })
+
+      expect(response.status).toBe(200)
+      expect(global.fetch).toHaveBeenCalledTimes(1)
+    })
+
+    it('refreshes token and retries on 401', async () => {
+      setRefreshToken('stored-refresh')
+
+      // First call returns 401
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      } as Response)
+
+      // Refresh call succeeds
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ accessToken: 'new-access', refreshToken: 'new-refresh' }),
+      } as Response)
+
+      // Retry call succeeds
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: 'success' }),
+      } as Response)
+
+      const response = await authFetch('/api/drafts', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer old-token' },
+      })
+
+      expect(response.status).toBe(200)
+      expect(global.fetch).toHaveBeenCalledTimes(3)
+
+      // Verify retry used new token
+      const retryCall = vi.mocked(global.fetch).mock.calls[2]
+      expect(retryCall[1]?.headers).toHaveProperty('Authorization', 'Bearer new-access')
+    })
+
+    it('dispatches TOKEN_REFRESHED_EVENT on successful refresh', async () => {
+      setRefreshToken('stored-refresh')
+
+      const eventSpy = vi.fn()
+      window.addEventListener(TOKEN_REFRESHED_EVENT, eventSpy)
+
+      // First call returns 401
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+      } as Response)
+
+      // Refresh succeeds
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ accessToken: 'new-access', refreshToken: 'new-refresh' }),
+      } as Response)
+
+      // Retry succeeds
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+      } as Response)
+
+      await authFetch('/api/drafts', {
+        headers: { Authorization: 'Bearer old-token' },
+      })
+
+      expect(eventSpy).toHaveBeenCalledTimes(1)
+      expect(eventSpy.mock.calls[0][0].detail).toEqual({ accessToken: 'new-access' })
+
+      window.removeEventListener(TOKEN_REFRESHED_EVENT, eventSpy)
+    })
+
+    it('returns original 401 response when refresh fails', async () => {
+      setToken('old-access')
+      setRefreshToken('expired-refresh')
+
+      // First call returns 401
+      const original401 = { ok: false, status: 401 } as Response
+      vi.mocked(global.fetch).mockResolvedValueOnce(original401)
+
+      // Refresh fails
+      vi.mocked(global.fetch).mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Invalid refresh token' }),
+      } as Response)
+
+      const response = await authFetch('/api/drafts', {
+        headers: { Authorization: 'Bearer old-token' },
+      })
+
+      expect(response.status).toBe(401)
+      // original + refresh attempt = 2 calls
+      expect(global.fetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('coalesces concurrent 401 refresh attempts', async () => {
+      setRefreshToken('stored-refresh')
+
+      // Both initial requests return 401
+      vi.mocked(global.fetch).mockResolvedValue({
+        ok: false,
+        status: 401,
+      } as Response)
+
+      // One refresh call succeeds
+      vi.mocked(global.fetch)
+        .mockResolvedValueOnce({ ok: false, status: 401 } as Response) // req1 401
+        .mockResolvedValueOnce({ ok: false, status: 401 } as Response) // req2 401
+        .mockResolvedValueOnce({ // refresh (only once)
+          ok: true,
+          json: async () => ({ accessToken: 'new-access', refreshToken: 'new-refresh' }),
+        } as Response)
+        .mockResolvedValueOnce({ ok: true, status: 200 } as Response) // req1 retry
+        .mockResolvedValueOnce({ ok: true, status: 200 } as Response) // req2 retry
+
+      const [res1, res2] = await Promise.all([
+        authFetch('/api/drafts', { headers: { Authorization: 'Bearer old' } }),
+        authFetch('/api/drafts', { headers: { Authorization: 'Bearer old' } }),
+      ])
+
+      expect(res1.status).toBe(200)
+      expect(res2.status).toBe(200)
+
+      // Should be: 2 initial + 1 refresh + 2 retries = 5 calls
+      expect(global.fetch).toHaveBeenCalledTimes(5)
+
+      // Refresh endpoint called exactly once
+      const refreshCalls = vi.mocked(global.fetch).mock.calls.filter(
+        c => (c[0] as string)?.includes?.('/api/auth/refresh'),
+      )
+      expect(refreshCalls).toHaveLength(1)
     })
   })
 })
