@@ -5,6 +5,7 @@ import { API_BASE_URL } from './apiConfig'
 
 export interface PostcardSubmission {
   to: Address
+  from: Address
   frontHTML: string
   backHTML?: string
   message?: string
@@ -39,6 +40,7 @@ export interface PostcardResponse {
 
 export async function submitPostcard(
   address: Address,
+  returnAddress: Address,
   imageFile: File,
   message?: string
 ): Promise<PostcardResponse> {
@@ -47,6 +49,7 @@ export async function submitPostcard(
 
   const submission: PostcardSubmission = {
     to: address,
+    from: returnAddress,
     frontHTML,
     size: '6x4'
   }

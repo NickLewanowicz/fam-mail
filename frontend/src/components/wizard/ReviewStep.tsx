@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, saving }: Props) {
-  const { image, message, address, isComplete } = postcard
+  const { image, message, address, returnAddress, isComplete } = postcard
   const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
 
   useEffect(() => {
@@ -65,7 +65,13 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, sav
         <div className={`flex items-center gap-2 ${address?.firstName ? 'text-success' : 'text-error'}`}>
           <span>{address?.firstName ? '\u2713' : '\u2717'}</span>
           <span className="text-sm">
-            {address?.firstName ? `${address.firstName} ${address.lastName}, ${address.city}, ${address.provinceOrState}` : 'Address missing'}
+            {address?.firstName ? `To: ${address.firstName} ${address.lastName}, ${address.city}, ${address.provinceOrState}` : 'Recipient address missing'}
+          </span>
+        </div>
+        <div className={`flex items-center gap-2 ${returnAddress?.firstName ? 'text-success' : 'text-error'}`}>
+          <span>{returnAddress?.firstName ? '\u2713' : '\u2717'}</span>
+          <span className="text-sm">
+            {returnAddress?.firstName ? `From: ${returnAddress.firstName} ${returnAddress.lastName}, ${returnAddress.city}, ${returnAddress.provinceOrState}` : 'Return address missing'}
           </span>
         </div>
       </div>

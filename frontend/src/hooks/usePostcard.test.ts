@@ -60,6 +60,7 @@ describe('usePostcard', () => {
       result.current.setImage(makeImage())
       result.current.setMessage('Hello')
       result.current.setAddress(fullAddress())
+      result.current.setReturnAddress(fullAddress())
     })
     expect(result.current.currentStep).toBe(4)
     expect(result.current.isComplete).toBe(true)
@@ -84,6 +85,7 @@ describe('usePostcard', () => {
       ;(partial as Record<string, string>)[omit] = ''
       act(() => {
         result.current.setAddress(partial)
+        result.current.setReturnAddress(fullAddress())
       })
       expect(result.current.isComplete).toBe(false)
     }
@@ -95,6 +97,7 @@ describe('usePostcard', () => {
       result.current.setImage(makeImage())
       result.current.setMessage('   \n\t  ')
       result.current.setAddress(fullAddress())
+      result.current.setReturnAddress(fullAddress())
     })
     expect(result.current.isComplete).toBe(false)
     expect(result.current.currentStep).toBe(2)
@@ -106,6 +109,7 @@ describe('usePostcard', () => {
       result.current.setImage(makeImage())
       result.current.setMessage('Hello')
       result.current.setAddress(fullAddress())
+      result.current.setReturnAddress(fullAddress())
     })
     act(() => {
       result.current.reset()
@@ -113,6 +117,7 @@ describe('usePostcard', () => {
     expect(result.current.image).toBeNull()
     expect(result.current.message).toBe('')
     expect(result.current.address).toBeNull()
+    expect(result.current.returnAddress).toBeNull()
     expect(result.current.isComplete).toBe(false)
     expect(result.current.currentStep).toBe(1)
   })
@@ -125,11 +130,13 @@ describe('usePostcard', () => {
         image: img,
         message: 'Started',
         address: addr,
+        returnAddress: addr,
       }),
     )
     expect(result.current.image).toEqual(img)
     expect(result.current.message).toBe('Started')
     expect(result.current.address).toEqual(addr)
+    expect(result.current.returnAddress).toEqual(addr)
     expect(result.current.currentStep).toBe(4)
     expect(result.current.isComplete).toBe(true)
   })
@@ -140,6 +147,7 @@ describe('usePostcard', () => {
       result.current.setImage(makeImage())
       result.current.setMessage('')
       result.current.setAddress(fullAddress())
+      result.current.setReturnAddress(fullAddress())
     })
     expect(result.current.isComplete).toBe(false)
   })

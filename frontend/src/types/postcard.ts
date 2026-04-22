@@ -2,7 +2,7 @@ import type { Address } from './address'
 
 export interface PostcardSubmission {
   to: Address
-  from?: Address
+  from: Address
   frontHTML?: string
   backHTML?: string
   message?: string

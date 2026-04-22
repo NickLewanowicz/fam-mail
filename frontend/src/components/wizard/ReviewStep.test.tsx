@@ -23,7 +23,18 @@ const basePostcard = {
     postalOrZip: 'M5V2T6',
     countryCode: 'CA',
   },
+  returnAddress: {
+    firstName: 'John',
+    lastName: 'Smith',
+    addressLine1: '456 Oak',
+    addressLine2: '',
+    city: 'Ottawa',
+    provinceOrState: 'ON',
+    postalOrZip: 'K1A0B1',
+    countryCode: 'CA',
+  },
   setAddress: vi.fn(),
+  setReturnAddress: vi.fn(),
   isComplete: true,
   currentStep: 4,
   reset: vi.fn(),
@@ -66,7 +77,7 @@ describe('ReviewStep', () => {
     )
     expect(screen.getByText(/Photo uploaded/i)).toBeInTheDocument()
     expect(screen.getByText(/Message \(11 chars\)/i)).toBeInTheDocument()
-    expect(screen.getByText(/Jane Doe, Toronto, ON/i)).toBeInTheDocument()
+    expect(screen.getByText(/To: Jane Doe, Toronto, ON/i)).toBeInTheDocument()
   })
 
   it('shows checkmark for uploaded photo', () => {

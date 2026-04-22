@@ -13,6 +13,16 @@ describe('submitPostcard', () => {
     countryCode: 'CA',
   }
 
+  const mockReturnAddress: Address = {
+    firstName: 'Jane',
+    lastName: 'Smith',
+    addressLine1: '456 Oak Ave',
+    city: 'Toronto',
+    provinceOrState: 'ON',
+    postalOrZip: 'M5V 2T6',
+    countryCode: 'CA',
+  }
+
   const mockFile = new File(['test content'], 'test.jpg', { type: 'image/jpeg' })
 
   beforeEach(() => {
@@ -59,7 +69,7 @@ describe('submitPostcard', () => {
       json: async () => mockResponse,
     } as Response)
 
-    const result = await submitPostcard(mockAddress, mockFile)
+    const result = await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/postcards',
@@ -81,7 +91,7 @@ describe('submitPostcard', () => {
       json: async () => ({ success: true }),
     } as Response)
 
-    await submitPostcard(mockAddress, mockFile)
+    await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     const callArgs = vi.mocked(global.fetch).mock.calls[0]
     const body = JSON.parse(callArgs[1]?.body as string)
@@ -98,7 +108,7 @@ describe('submitPostcard', () => {
       json: async () => ({ error: errorMessage }),
     } as Response)
 
-    await expect(submitPostcard(mockAddress, mockFile)).rejects.toThrow(errorMessage)
+    await expect(submitPostcard(mockAddress, mockReturnAddress, mockFile)).rejects.toThrow(errorMessage)
   })
 
   it('should throw generic error if no error message provided', async () => {
@@ -107,7 +117,7 @@ describe('submitPostcard', () => {
       json: async () => ({}),
     } as Response)
 
-    await expect(submitPostcard(mockAddress, mockFile)).rejects.toThrow('Failed to submit postcard')
+    await expect(submitPostcard(mockAddress, mockReturnAddress, mockFile)).rejects.toThrow('Failed to submit postcard')
   })
 
   it('should include all address fields in submission', async () => {
@@ -116,12 +126,13 @@ describe('submitPostcard', () => {
       json: async () => ({ success: true }),
     } as Response)
 
-    await submitPostcard(mockAddress, mockFile)
+    await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     const callArgs = vi.mocked(global.fetch).mock.calls[0]
     const body = JSON.parse(callArgs[1]?.body as string)
 
     expect(body.to).toEqual(mockAddress)
+    expect(body.from).toEqual(mockReturnAddress)
   })
 
   it('should include Authorization header when token is present (#46)', async () => {
@@ -132,7 +143,7 @@ describe('submitPostcard', () => {
       json: async () => ({ success: true }),
     } as Response)
 
-    await submitPostcard(mockAddress, mockFile)
+    await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/postcards',
@@ -154,7 +165,7 @@ describe('submitPostcard', () => {
       json: async () => ({ success: true }),
     } as Response)
 
-    await submitPostcard(mockAddress, mockFile)
+    await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
       '/api/postcards',

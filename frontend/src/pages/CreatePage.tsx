@@ -5,6 +5,7 @@ import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { CountryStep } from '../components/wizard/CountryStep'
+import { AddressStep } from '../components/wizard/AddressStep'
 import { getDraft, createDraft, updateDraft } from '../utils/draftApi'
 import { submitPostcard, type PostcardResponse } from '../utils/api'
 
@@ -16,7 +17,7 @@ export default function CreatePage() {
   const { id: draftId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const postcard = usePostcard()
-  const { setAddress, setMessage, setImage, setCountryCode } = postcard
+  const { setAddress, setReturnAddress, setMessage, setImage, setCountryCode } = postcard
   const [step, setStep] = useState(0)
   const [showBack, setShowBack] = useState(false)
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
@@ -35,6 +36,7 @@ export default function CreatePage() {
         const draft = await getDraft(draftId)
         if (cancelled) return
         setAddress(draft.recipientAddress ?? null)
+        setReturnAddress(draft.senderAddress ?? draft.recipientAddress ?? null)
         setMessage(draft.message ?? '')
         if (draft.imageData) {
           try {
@@ -52,7 +54,7 @@ export default function CreatePage() {
       }
     })()
     return () => { cancelled = true }
-  }, [draftId, setAddress, setMessage, setImage])
+  }, [draftId, setAddress, setReturnAddress, setMessage, setImage])
 
   // Auto-show correct side based on step
   useEffect(() => {
@@ -100,14 +102,14 @@ export default function CreatePage() {
     setSubmitting(true)
     setError(null)
     try {
-      const response = await submitPostcard(postcard.address, postcard.image.file, postcard.message)
+      const response = await submitPostcard(postcard.address, postcard.returnAddress ?? postcard.address, postcard.image.file, postcard.message)
       setResult(response)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send postcard')
     } finally {
       setSubmitting(false)
     }
-  }, [postcard.address, postcard.image, postcard.message])
+  }, [postcard.address, postcard.returnAddress, postcard.image, postcard.message])
 
   if (loadingDraft) {
     return (
@@ -137,7 +139,7 @@ export default function CreatePage() {
                 </div>
               )}
               <div className="card-actions justify-center mt-6 gap-3">
-                <button onClick={() => { postcard.reset(); setResult(null); setStep(0); setActiveDraftId(null) }} className="btn btn-primary">Create Another</button>
+                <button onClick={() => { postcard.reset(); setResult(null); setStep(0); setActiveDraftId(null); }} className="btn btn-primary">Create Another</button>
                 <button onClick={() => navigate('/')} className="btn btn-ghost">Back to Dashboard</button>
               </div>
             </div>
@@ -201,8 +203,27 @@ export default function CreatePage() {
           </div>
         )}
 
-        {/* Navigation buttons for non-review, non-destination steps */}
-        {step > 0 && step < 4 && (
+        {/* Address step content — collect return address */}
+        {step === 3 && (
+          <div className="max-w-[640px] mx-auto mt-6">
+            <div className="card bg-base-100 shadow-lg">
+              <div className="card-body">
+                <AddressStep
+                  address={postcard.address}
+                  returnAddress={postcard.returnAddress}
+                  onAddressChange={setAddress}
+                  onReturnAddressChange={setReturnAddress}
+                  onNext={handleNext}
+                  onBack={handleBack}
+                  countryCode={postcard.countryCode}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation buttons for non-review, non-destination, non-address steps */}
+        {step > 0 && step < 4 && step !== 3 && (
           <div className="flex justify-between mt-6 max-w-[640px] mx-auto">
             <button
               className="btn btn-ghost"
@@ -214,8 +235,7 @@ export default function CreatePage() {
               className="btn btn-primary"
               onClick={handleNext}
               disabled={
-                (step === 1 && !postcard.image) ||
-                step === 3 // Address step uses inline Done button
+                (step === 1 && !postcard.image)
               }
             >
               {step === 1 ? 'Next: Write Message' : step === 2 ? 'Next: Add Address' : 'Next: Review'}
