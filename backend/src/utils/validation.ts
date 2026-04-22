@@ -190,7 +190,7 @@ export function validateSize(size: string): ValidationResult {
  * Validate a base64-encoded image for the postcard front.
  *
  * Checks:
- * - Format (JPEG/PNG only)
+ * - Format (JPEG/PNG/WebP only)
  * - File size (≤ 10 MB)
  * - Not corrupt (magic bytes)
  */
@@ -215,8 +215,8 @@ export function validateImage(base64Data: string): ValidationResult {
     // the first few bytes.
     let headerBytes: Uint8Array
     try {
-      // Decode only enough for magic-byte check (4 bytes = 8 base64 chars)
-      const rawHeader = atob(base64Data.slice(0, 8))
+      // Decode enough for WebP magic-byte check (12 bytes = 20 base64 chars)
+      const rawHeader = atob(base64Data.slice(0, 20))
       headerBytes = new Uint8Array(rawHeader.length)
       for (let i = 0; i < rawHeader.length; i++) {
         headerBytes[i] = rawHeader.charCodeAt(i)
@@ -231,8 +231,17 @@ export function validateImage(base64Data: string): ValidationResult {
         && headerBytes[1] === 0x50  // P
         && headerBytes[2] === 0x4e  // N
         && headerBytes[3] === 0x47  // G
-      if (!isJPEG && !isPNG) {
-        errors.push({ field: 'image', message: 'Image must be JPEG or PNG format' })
+      const isWebP = headerBytes.length >= 12
+        && headerBytes[0] === 0x52  // R
+        && headerBytes[1] === 0x49  // I
+        && headerBytes[2] === 0x46  // F
+        && headerBytes[3] === 0x46  // F
+        && headerBytes[8] === 0x57  // W
+        && headerBytes[9] === 0x45  // E
+        && headerBytes[10] === 0x42  // B
+        && headerBytes[11] === 0x50  // P
+      if (!isJPEG && !isPNG && !isWebP) {
+        errors.push({ field: 'image', message: 'Image must be JPEG, PNG, or WebP format' })
       }
     }
     return { valid: false, errors }
@@ -266,9 +275,18 @@ export function validateImage(base64Data: string): ValidationResult {
     && buffer[1] === 0x50  // P
     && buffer[2] === 0x4e  // N
     && buffer[3] === 0x47  // G
+  const isWebP = buffer.length >= 12
+    && buffer[0] === 0x52  // R
+    && buffer[1] === 0x49  // I
+    && buffer[2] === 0x46  // F
+    && buffer[3] === 0x46  // F
+    && buffer[8] === 0x57  // W
+    && buffer[9] === 0x45  // E
+    && buffer[10] === 0x42  // B
+    && buffer[11] === 0x50  // P
 
-  if (!isJPEG && !isPNG) {
-    errors.push({ field: 'image', message: 'Image must be JPEG or PNG format' })
+  if (!isJPEG && !isPNG && !isWebP) {
+    errors.push({ field: 'image', message: 'Image must be JPEG, PNG, or WebP format' })
   }
 
   return { valid: errors.length === 0, errors }

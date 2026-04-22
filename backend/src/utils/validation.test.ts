@@ -641,7 +641,7 @@ describe('validateImage', () => {
       const svg = btoa('<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>')
       const result = validateImage(svg)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('JPEG or PNG')
+      expect(result.errors[0].message).toContain('JPEG, PNG, or WebP')
     })
 
     it('rejects GIF content', () => {
@@ -650,15 +650,15 @@ describe('validateImage', () => {
       const gif = bytesToBase64(gifBytes)
       const result = validateImage(gif)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('JPEG or PNG')
+      expect(result.errors[0].message).toContain('JPEG, PNG, or WebP')
     })
 
-    it('rejects WebP content', () => {
+    it('accepts WebP content', () => {
       // WebP magic bytes: RIFF....WEBP
       const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
       const webp = bytesToBase64(webpBytes)
       const result = validateImage(webp)
-      expect(result.valid).toBe(false)
+      expect(result.valid).toBe(true)
     })
 
     it('rejects BMP content', () => {
@@ -731,7 +731,7 @@ describe('validateImage', () => {
 
   describe('oversized file with invalid format (early exit path)', () => {
     it('reports both size and format errors for oversized non-JPEG/PNG', () => {
-      // Build a >10MB base64 string that is NOT valid JPEG or PNG
+      // Build a >10MB base64 string that is NOT valid JPEG, PNG, or WebP
       const size = 10 * 1024 * 1024 + 100
       const header = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]) // invalid magic
       const buffer = new Uint8Array(size)
@@ -740,7 +740,7 @@ describe('validateImage', () => {
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
   })
 
@@ -755,7 +755,7 @@ describe('validateImage', () => {
       expect(result.valid).toBe(false)
       // Should report only the size error (format is valid)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(false)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(false)
     })
   })
 
@@ -770,7 +770,7 @@ describe('validateImage', () => {
       expect(result.valid).toBe(false)
       // Should report only the size error (format is valid)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(false)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(false)
     })
   })
 
@@ -808,7 +808,7 @@ describe('validateImage', () => {
       const tiff = bytesToBase64(tiffBytes)
       const result = validateImage(tiff)
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
 
     it('rejects TIFF (big-endian) content', () => {
@@ -816,7 +816,7 @@ describe('validateImage', () => {
       const tiff = bytesToBase64(tiffBytes)
       const result = validateImage(tiff)
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
   })
 

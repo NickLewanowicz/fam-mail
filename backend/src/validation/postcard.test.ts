@@ -703,7 +703,7 @@ describe('validateImage (via postcard module)', () => {
       const svg = btoa('<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>')
       const result = validateImage(svg)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('JPEG or PNG')
+      expect(result.errors[0].message).toContain('JPEG, PNG, or WebP')
     })
 
     it('rejects GIF content', () => {
@@ -711,14 +711,14 @@ describe('validateImage (via postcard module)', () => {
       const gif = bytesToBase64(gifBytes)
       const result = validateImage(gif)
       expect(result.valid).toBe(false)
-      expect(result.errors[0].message).toContain('JPEG or PNG')
+      expect(result.errors[0].message).toContain('JPEG, PNG, or WebP')
     })
 
-    it('rejects WebP content', () => {
+    it('accepts WebP content', () => {
       const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
       const webp = bytesToBase64(webpBytes)
       const result = validateImage(webp)
-      expect(result.valid).toBe(false)
+      expect(result.valid).toBe(true)
     })
 
     it('rejects BMP content', () => {

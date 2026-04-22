@@ -1155,7 +1155,7 @@ describe('validateImage — Comprehensive Suite', () => {
       const svg = btoa('<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1"/></svg>')
       const result = validateImage(svg)
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
 
     it('rejects GIF content', () => {
@@ -1163,15 +1163,14 @@ describe('validateImage — Comprehensive Suite', () => {
       const gif = bytesToBase64(gifBytes)
       const result = validateImage(gif)
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
 
-    it('rejects WebP content', () => {
+    it('accepts WebP content', () => {
       const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
       const webp = bytesToBase64(webpBytes)
       const result = validateImage(webp)
-      expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.valid).toBe(true)
     })
 
     it('rejects BMP content', () => {
@@ -1179,7 +1178,7 @@ describe('validateImage — Comprehensive Suite', () => {
       const bmp = bytesToBase64(bmpBytes)
       const result = validateImage(bmp)
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
 
     it('rejects TIFF little-endian content', () => {
@@ -1219,7 +1218,7 @@ describe('validateImage — Comprehensive Suite', () => {
       const result = validateImage(base64)
       expect(result.valid).toBe(false)
       expect(result.errors.some(e => e.message.includes('10 MB'))).toBe(true)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
   })
 
@@ -1232,11 +1231,11 @@ describe('validateImage — Comprehensive Suite', () => {
       expect(result.errors.some(e => e.message.includes('too short'))).toBe(true)
     })
 
-    it('rejects random bytes (not JPEG or PNG)', () => {
+    it('rejects random bytes (not JPEG, PNG, or WebP)', () => {
       const randomBytes = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34])
       const result = validateImage(bytesToBase64(randomBytes))
       expect(result.valid).toBe(false)
-      expect(result.errors.some(e => e.message.includes('JPEG or PNG'))).toBe(true)
+      expect(result.errors.some(e => e.message.includes('JPEG, PNG, or WebP'))).toBe(true)
     })
 
     it('rejects invalid base64 string', () => {
@@ -1340,7 +1339,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     expect(data.errors!.some(e => e.field === 'image')).toBe(true)
   })
 
-  it('rejects WebP image at route level', async () => {
+  it('accepts WebP image at route level', async () => {
     const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
     const webp = bytesToBase64(webpBytes)
     const req = makeRequest({
@@ -1348,9 +1347,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
       image: webp,
     })
     const res = await handlePostcardCreate(req, mockUser, db)
-    expect(res.status).toBe(400)
-    const data = await getResponse(res)
-    expect(data.errors!.some(e => e.field === 'image')).toBe(true)
+    expect(res.status).toBe(401) // PostGrid API call attempted (mock key → 401)
   })
 
   it('rejects oversized image (>10MB) at route level', async () => {
