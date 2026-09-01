@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
 import { listSentPostcards, type SentPostcard } from '../utils/api'
 
@@ -10,6 +11,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 export default function HistoryPage() {
+  const navigate = useNavigate()
   const [postcards, setPostcards] = useState<SentPostcard[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -60,9 +62,30 @@ export default function HistoryPage() {
                     {new Date(card.createdAt).toLocaleDateString()} · {card.mode} mode
                   </p>
                 </div>
-                <span className={`shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_STYLES[card.status] ?? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'}`}>
-                  {card.status}
-                </span>
+                <div className="shrink-0 flex items-center gap-1">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(`${card.recipientName}\n${card.recipientAddress}`).then(
+                        () => toast.success('Address copied'),
+                        () => toast.error('Could not copy'),
+                      )
+                    }}
+                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-1.5 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    title="Copy address"
+                  >
+                    Copy
+                  </button>
+                  <button
+                    onClick={() => navigate('/create', { state: { prefillRecipient: { firstName: card.recipientName.split(' ')[0], lastName: card.recipientName.split(' ').slice(1).join(' ') || '', addressLine1: card.recipientAddress } } })}
+                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-1.5 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    title="Send another card to this recipient"
+                  >
+                    Again
+                  </button>
+                  <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_STYLES[card.status] ?? 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'}`}>
+                    {card.status}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>
