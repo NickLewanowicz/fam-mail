@@ -40,6 +40,18 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M7.455 2.004a.75.75 0 01.26.77 7 7 0 009.958 7.967.75.75 0 011.067.853A8.5 8.5 0 116.647 1.921a.75.75 0 01.808.083z" clipRule="evenodd" /></svg>
               )}
             </button>
+            {user && (
+              <Link
+                to="/history"
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  location.pathname === '/history'
+                    ? 'bg-zinc-900 text-white'
+                    : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800'
+                }`}
+              >
+                History
+              </Link>
+            )}
             {user && <PostGridModeBadge />}
             <Link
               to="/create"

@@ -415,6 +415,17 @@ export async function handleRequest(req: Request): Promise<Response> {
     return withSecurityHeaders(await handlePostcardCreate(req, authResult.user!, db), req)
   }
 
+  if (url.pathname === '/api/postcards' && req.method === 'GET') {
+    const authResult = await authMiddleware.authenticate(req)
+    if (authResult.error) {
+      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
+    }
+    const limitParam = parseInt(new URL(req.url).searchParams.get('limit') ?? '50', 10)
+    const limit = Number.isNaN(limitParam) ? 50 : limitParam
+    const postcards = db.listPostcardsByUser(authResult.user!.id, limit)
+    return withSecurityHeaders(jsonResponse({ data: postcards }, 200, req), req)
+  }
+
   if (url.pathname === '/api/postgrid/status' && req.method === 'GET') {
     const authResult = await authMiddleware.authenticate(req)
     if (authResult.error) {
