@@ -12,6 +12,7 @@ export default function DashboardPage() {
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
   const [deleteTarget, setDeleteTarget] = useState<Draft | null>(null)
+  const [search, setSearch] = useState('')
 
   const loadDrafts = async () => {
     try {
@@ -39,6 +40,15 @@ export default function DashboardPage() {
       setDeleteTarget(null)
     }
   }
+
+  const visibleDrafts = drafts.filter((d) => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    const name = d.recipientAddress
+      ? `${d.recipientAddress.firstName} ${d.recipientAddress.lastName}`.toLowerCase()
+      : ''
+    return (d.message ?? '').toLowerCase().includes(q) || name.includes(q)
+  })
 
   return (
     <AppShell>
@@ -68,8 +78,17 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Drafts */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 gap-3">
           <h2 className="text-lg font-semibold text-zinc-900">Your Drafts</h2>
+          {drafts.length > 0 && (
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search drafts…"
+              aria-label="Search drafts"
+              className="h-8 w-44 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-sm outline-none focus:border-zinc-400"
+            />
+          )}
           <button
             onClick={loadDrafts}
             className="text-sm text-zinc-400 hover:text-zinc-600 transition-colors disabled:opacity-50"
@@ -110,7 +129,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
-            {drafts.map(draft => (
+            {visibleDrafts.map(draft => (
               <div
                 key={draft.id}
                 className="group bg-white rounded-lg border border-zinc-200 cursor-pointer overflow-hidden hover:border-zinc-300 transition-colors"
