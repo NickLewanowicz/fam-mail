@@ -1,6 +1,12 @@
 services:
   fammail:
+    # Pin image versions when you switch to a registry build, e.g.
+    # image: ghcr.io/nicklewanowicz/fam-mail:v1.1.0
     build: .
+    labels:
+      - "com.fammail.description=Fam Mail - self-hosted postcards via PostGrid"
+    security_opt:
+      - no-new-privileges:true
     container_name: fammail
     restart: unless-stopped
     env_file:
