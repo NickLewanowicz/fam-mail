@@ -163,18 +163,34 @@ export class DraftRoutes {
       return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
-    const draft = this.db.getDraft(id!)
+    const result = await this.publishDraftById(id, user)
+    return jsonResponse(result.body, result.status, req)
+  }
+
+  /**
+   * Core publish pipeline shared by the HTTP route and the scheduled-draft
+   * dispatcher. Returns a JSON-able body + status so both callers can use it.
+   *
+   * `allowScheduled` lets the dispatcher publish drafts in `ready` state that
+   * carry a `scheduledFor` date (the HTTP route only publishes `draft` state).
+   */
+  async publishDraftById(
+    id: string,
+    user: User,
+    options?: { allowScheduled?: boolean }
+  ): Promise<{ status: number; body: Record<string, unknown> }> {
+    const draft = this.db.getDraft(id)
 
     if (!draft) {
-      return jsonResponse({ error: 'Draft not found' }, 404, req)
+      return { status: 404, body: { error: 'Draft not found' } }
     }
 
     if (draft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403, req)
+      return { status: 403, body: { error: 'Forbidden' } }
     }
 
-    if (draft.state !== 'draft') {
-      return jsonResponse({ error: 'Draft is not in draft state' }, 400, req)
+    if (draft.state !== 'draft' && !options?.allowScheduled) {
+      return { status: 400, body: { error: 'Draft is not in draft state' } }
     }
 
     // --- Validate all required fields before sending to PostGrid ---
@@ -216,14 +232,17 @@ export class DraftRoutes {
     }
 
     if (allErrors.length > 0) {
-      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400, req)
+      return { status: 400, body: { error: 'Validation failed', errors: allErrors } }
     }
 
     // Check PostGrid service is configured
     if (!this.postgrid) {
-      return jsonResponse({
-        error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.',
-      }, 500, req)
+      return {
+        status: 500,
+        body: {
+          error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.',
+        },
+      }
     }
 
     try {
@@ -275,23 +294,29 @@ export class DraftRoutes {
       // Only update draft state after successful PostGrid call
       this.db.updateDraft(id, { state: 'ready' })
 
-      return jsonResponse({
-        success: true,
-        message: 'Postcard sent successfully',
-        postcard: {
-          id: result.id,
-          status: result.status,
-          testMode: this.postgrid.getTestMode(),
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: 'Postcard sent successfully',
+          postcard: {
+            id: result.id,
+            status: result.status,
+            testMode: this.postgrid.getTestMode(),
+          },
         },
-      }, 200, req)
+      }
     } catch (error: unknown) {
       const pgError = error as PostGridError
       const status = pgError.status || 500
-      return jsonResponse({
-        success: false,
-        error: pgError.message || 'Failed to create postcard',
-        details: pgError.error,
-      }, status, req)
+      return {
+        status,
+        body: {
+          success: false,
+          error: pgError.message || 'Failed to create postcard',
+          details: pgError.error,
+        },
+      }
     }
   }
 

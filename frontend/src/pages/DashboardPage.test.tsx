@@ -4,18 +4,18 @@ import { MemoryRouter } from 'react-router-dom'
 import DashboardPage from './DashboardPage'
 import type { Draft } from '../types/postcard'
 import { listDrafts, deleteDraft } from '../utils/draftApi'
+import type { HTMLAttributes, ReactNode } from 'react'
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => {
-      const {
-        initial, animate, exit, transition, variants, whileHover, whileTap, layout, layoutId,
-        ...rest
-      } = props
-      return <div {...rest}>{children}</div>
-    },
+    div: ({
+      children, initial: _initial, animate: _animate, exit: _exit, transition: _transition, variants: _variants, whileHover: _whileHover, whileTap: _whileTap, layout: _layout, layoutId: _layoutId,
+      ...props
+    }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
+      <div {...props}>{children}</div>
+    ),
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }))
 
 vi.mock('../utils/draftApi', () => ({

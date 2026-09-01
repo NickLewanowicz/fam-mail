@@ -190,13 +190,23 @@ export default function CreatePage() {
 
   const activeZone = STEP_ZONES[step]
 
+  // A step shows ✓ only when its content is actually satisfied — jumping
+  // ahead must not mark skipped steps (e.g. Photo) as complete.
+  const stepComplete: boolean[] = [
+    true, // Destination: countryCode has a valid default
+    postcard.image !== null,
+    postcard.message.trim().length > 0,
+    postcard.address !== null,
+    false, // Review completes by sending
+  ]
+
   return (
     <AppShell>
       <div className="container mx-auto px-4 py-6 max-w-3xl">
         {/* Step indicator — numbered circles with connecting lines */}
         <div className="flex items-center justify-center mb-8">
           {STEPS.map((s, i) => {
-            const isDone = i < step
+            const isDone = stepComplete[i] && i < step
             const isActive = i === step
             return (
               <div key={s.key} className="flex items-center">

@@ -5,10 +5,9 @@ import type { AuthContextType } from '../../types/auth'
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => {
-      const { initial, animate, transition, ...rest } = props
-      return <div {...rest}>{children}</div>
-    },
+    div: ({ children, initial: _initial, animate: _animate, transition: _transition, ...props }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
+      <div {...props}>{children}</div>
+    ),
   },
 }))
 
@@ -23,6 +22,7 @@ vi.mock('../auth/AuthContext', () => ({
 import { AppShell } from './AppShell'
 
 import { useAuth } from '../auth/AuthContext'
+import type { HTMLAttributes } from 'react'
 
 const authMock = (): AuthContextType => ({
   user: {

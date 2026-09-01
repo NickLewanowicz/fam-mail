@@ -3,10 +3,9 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
 vi.mock('framer-motion', () => ({
   motion: {
-    button: ({ children, ...props }: any) => {
-      const { whileHover, whileTap, initial, animate, transition, ...rest } = props
-      return <button {...rest}>{children}</button>
-    },
+    button: ({ children, whileHover: _whileHover, whileTap: _whileTap, initial: _initial, animate: _animate, transition: _transition, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => (
+      <button {...props}>{children}</button>
+    ),
   },
 }))
 
@@ -16,6 +15,7 @@ vi.mock('../../utils/postgridApi', () => ({
 
 import { ReviewStep } from './ReviewStep'
 import { fetchPostgridStatus } from '../../utils/postgridApi'
+import type { ButtonHTMLAttributes } from 'react'
 
 const basePostcard = {
   image: { file: new File([''], 'test.jpg', { type: 'image/jpeg' }), preview: 'data:image/jpeg;base64,abc' },

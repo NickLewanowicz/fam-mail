@@ -606,6 +606,22 @@ export class Database {
   }
 
   /**
+   * Retrieves all drafts in `ready` state that carry a `scheduled_for` date,
+   * in any user's account. The scheduler filters by due date in JS because
+   * scheduled_for is stored as an ISO string, which does not compare
+   * correctly against SQLite's datetime() format.
+   */
+  getReadyScheduledDrafts() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM drafts
+      WHERE state = 'ready' AND scheduled_for IS NOT NULL
+      ORDER BY scheduled_for ASC
+    `);
+    const rows = stmt.all() as DraftRow[];
+    return rows.map(row => this.rowToDraft(row));
+  }
+
+  /**
    * Retrieves all drafts for a user (any state).
    * @param user_id - User ID
    * @returns Array of draft objects
