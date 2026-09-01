@@ -168,3 +168,15 @@ describe('formatting chain (regression: bold then color)', () => {
     void textarea
   })
 })
+
+describe('occasion templates', () => {
+  it('inserts the template text at the cursor position', async () => {
+    const onChange = vi.fn()
+    render(<InlineMessageEditor message="Dear you, " onMessageChange={onChange} onClose={() => {}} />)
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
+    textarea.setSelectionRange(10, 10)
+    fireEvent.change(screen.getByLabelText('Insert occasion template'), { target: { value: 'Birthday' } })
+    const value = onChange.mock.calls[0][0] as string
+    expect(value).toBe('Dear you, Happy birthday! Wishing you a wonderful year ahead.\n\n')
+  })
+})
