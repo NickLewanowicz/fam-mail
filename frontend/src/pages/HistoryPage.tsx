@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
 import { listSentPostcards, type SentPostcard } from '../utils/api'
+import { timeAgo } from '../utils/time'
 
 const STATUS_STYLES: Record<string, string> = {
   sent: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
@@ -61,7 +62,9 @@ export default function HistoryPage() {
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{card.recipientName}</p>
                   <p className="text-xs text-zinc-500 truncate">{card.recipientAddress}</p>
                   <p className="text-[11px] text-zinc-400 mt-0.5">
-                    {new Date(card.createdAt).toLocaleDateString()} · {card.mode} mode
+                    <span title={new Date(card.createdAt).toLocaleString()}>
+                      {timeAgo(card.createdAt)} · {card.mode} mode
+                    </span>
                   </p>
                 </div>
                 <div className="shrink-0 flex items-center gap-1">
