@@ -8,7 +8,7 @@ import { PostcardPreview, type ActiveZone } from '../components/postcard/Postcar
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
-import { getDraft, createDraft, updateDraft } from '../utils/draftApi'
+import { getDraft, createDraft, updateDraft, scheduleDraft } from '../utils/draftApi'
 import { submitPostcard, type PostcardResponse } from '../utils/api'
 
 const STEPS = [
@@ -101,7 +101,39 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
+  }, [postcard.address, postcard.message, postcard.image, postcard.returnAddress, postcard.size, activeDraftId])
+
+  // Save the draft, then hand its send date to the backend dispatcher.
+  const handleSchedule = useCallback(async (scheduledFor: string) => {
+    if (!postcard.address?.firstName) {
+      toast.error('Add a recipient address before scheduling')
+      return
+    }
+    setSaving(true)
+    try {
+      const payload = {
+        recipientAddress: postcard.address,
+        senderAddress: postcard.returnAddress ?? postcard.address,
+        message: postcard.message || undefined,
+        imageData: postcard.image?.preview.split(',')[1],
+        size: postcard.size,
+      }
+      let draftId = activeDraftId
+      if (draftId) {
+        await updateDraft(draftId, payload)
+      } else {
+        const created = await createDraft(payload)
+        draftId = created.id
+        setActiveDraftId(created.id)
+      }
+      await scheduleDraft(draftId, scheduledFor)
+      toast.success(`Scheduled — the postcard mails on ${new Date(scheduledFor).toLocaleString()}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to schedule draft')
+    } finally {
+      setSaving(false)
+    }
+  }, [postcard.address, postcard.message, postcard.image, postcard.returnAddress, postcard.size, activeDraftId])
 
   const handleSend = useCallback(async () => {
     if (!postcard.address || !postcard.image) return
@@ -311,6 +343,7 @@ export default function CreatePage() {
                   onBack={handleBack}
                   onSend={handleSend}
                   onSaveDraft={handleSaveDraft}
+                  onSchedule={handleSchedule}
                   sending={submitting}
                   saving={saving}
                 />
