@@ -20,6 +20,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-100 transition-colors">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-2 focus:left-2 focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-zinc-900 focus:text-white focus:text-sm"
+      >
+        Skip to content
+      </a>
       <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
         <div className="container mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
@@ -81,7 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </nav>
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 4 }}
