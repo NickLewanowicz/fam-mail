@@ -10,7 +10,8 @@
     "test": "pnpm --filter backend test && pnpm --filter frontend test:run",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean",
-    "qa": "pnpm -r lint && pnpm --filter backend test && pnpm --filter frontend test:run && pnpm -r build"
+    "qa": "pnpm -r lint && pnpm --filter backend test && pnpm --filter frontend test:run && pnpm -r build",
+    "shots": "pnpm --filter frontend shots"
   },
   "keywords": [
     "postgrid",
