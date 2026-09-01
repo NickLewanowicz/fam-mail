@@ -222,7 +222,7 @@ describe('PostcardPreview', () => {
     const msgZone = container.querySelector('[role="button"][tabindex="0"]')
     expect(msgZone).toBeTruthy()
     fireEvent.click(msgZone!)
-    expect(screen.getByText('5/500')).toBeInTheDocument()
+    expect(screen.getByText(/5\/500 · \d+ words/)).toBeInTheDocument()
     expect(screen.getByText('Markdown')).toBeInTheDocument()
   })
 
