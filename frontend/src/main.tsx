@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'sonner'
+import { MotionConfig } from 'framer-motion'
 import { AuthProvider } from './components/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
@@ -20,6 +21,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
+    <MotionConfig reducedMotion="user">
     <ErrorBoundary>
       <BrowserRouter>
         <AuthProvider>
@@ -38,5 +40,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
+    </MotionConfig>
   </React.StrictMode>,
 )
