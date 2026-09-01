@@ -65,3 +65,36 @@ Started: 2026-04-10
 ## Verification Log
 | Time | Check | Result | Notes |
 |------|-------|--------|-------|
+
+## Session Log — 2026-09-01 (maintainer sprint, 11:41–13:10 EDT)
+
+Commits: 760a5ef, 2638c2b, 852f4a6
+
+Shipped
+- Agent API /api/v1 (API_KEYS env, key:label:email) + docs/agent-api.md
+- Return address now actually sent to PostGrid (was validated then dropped)
+- Uploaded images now become full-bleed front artwork (were silently dropped;
+  same fix on the draft publish path)
+- Size-aware print canvases (back HTML used 6x4 dims for every card size)
+- DOMPurify was stripping the whole print canvas: WHOLE_DOCUMENT fix
+- Rich text end-to-end: underline/strikethrough/color via safe CSS allowlist
+- Scheduled drafts now dispatch (birthdays/anniversaries actually send)
+- Size-aware preview (11x6 aspect + labels), stepper skip-✓ fix (browser QA find),
+  toolbar selection-loss fix (browser QA find)
+- Coverage: frontend thresholds (branches ≥80%) scoped to src/; backend 82% lines
+- E2E suites rewritten for current wizard; 19/19 green desktop+mobile
+- Frontend lint fully clean (33 pre-existing errors fixed)
+
+Verification state
+- Backend: 854 tests / 0 fail, lint clean, build clean
+- Frontend: 390 tests / 0 fail, lint clean, build clean, e2e 19/19
+- Browser persona QA: full wizard walked on desktop + mobile viewports with
+  screenshots (dev-mode + POSTGRID_MOCK)
+
+Known gaps / next up
+- ADMIN_EMAILS empty now fails closed for mode toggling (operators must set it)
+- PostGrid `from` param uses inline contact fields (verify dedupe on live key)
+- Dead code remains: wizard/PhotoStep, wizard/MessageStep, address/AddressForm,
+  utils/postal, utils/imageProcessing, hooks/useAccessibility,
+  hooks/usePerformanceOptimizations, backend src/validation/postcard.ts
+- Coverage gap: CreatePage main flow (only stepper tests), server.ts routing
