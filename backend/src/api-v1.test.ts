@@ -350,7 +350,6 @@ describe('GET /api/postcards (JWT web route for history page)', () => {
   })
 })
 
-})
 
 describe('POST /api/postcards body size cap', () => {
   it('returns 413 for oversized payloads instead of hanging on parse', async () => {
@@ -363,4 +362,5 @@ describe('POST /api/postcards body size cap', () => {
     const res = await handleRequest(req)
     expect([413, 400]).toContain(res.status)
   })
+})
 })
