@@ -139,6 +139,20 @@ export default function CreatePage() {
     return () => { cancelled = true }
   }, [])
 
+  // Warn before leaving with an unfinished card (except during submission,
+  // which navigates on purpose).
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (submitting) return
+      const hasContent = !!(postcard.image || postcard.message.trim())
+      if (hasContent) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [postcard.image, postcard.message, submitting])
+
   // Keyboard shortcuts: ←/→ move between steps (when not typing), and
   // ⌘/Ctrl+Enter on the review step sends. Both are no-ops inside inputs.
   useEffect(() => {
