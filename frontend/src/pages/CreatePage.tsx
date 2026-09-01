@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
 import { usePostcard } from '../hooks/usePostcard'
+import type { Address } from '../types/address'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { CountryStep } from '../components/wizard/CountryStep'
@@ -114,7 +115,7 @@ export default function CreatePage() {
       try {
         await updateDraft(activeDraftId, {
           recipientAddress: postcard.address,
-          senderAddress: postcard.returnAddress ?? postcard.address,
+          senderAddress: (postcard.returnAddress ?? postcard.address) as Address,
           message: postcard.message || undefined,
           imageData: postcard.image?.preview.split(',')[1],
           size: postcard.size,
@@ -125,7 +126,7 @@ export default function CreatePage() {
       }
     }, 2500)
     return () => clearTimeout(timer)
-  }, [activeDraftId, postcard.address, postcard.message, postcard.image, postcard.size])
+  }, [activeDraftId, postcard.address, postcard.returnAddress, postcard.message, postcard.image, postcard.size])
 
   // Save the draft, then hand its send date to the backend dispatcher.
   const handleSchedule = useCallback(async (scheduledFor: string) => {
