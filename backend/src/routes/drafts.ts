@@ -2,12 +2,11 @@ import { Database } from '../database'
 import { AuthMiddleware } from '../middleware/auth'
 import type { Draft } from '../models/draft'
 import type { User } from '../models/user'
-import { jsonResponse } from '../middleware/headers'
+import { jsonResponse } from '../utils/response'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
 import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
-import { marked } from 'marked'
-import DOMPurify from 'isomorphic-dompurify'
+import { buildImageFrontHTML, buildMessageBackHTML, isCardSize } from '../utils/htmlSanitizer'
 
 // Draft sizes are already in PostGrid format (6x4, 9x6, 11x6)
 function draftSizeToPostGridSize(size: string): '6x4' | '9x6' | '11x6' {
@@ -197,8 +196,8 @@ export class DraftRoutes {
     }
 
     // Must have at least one content field
-    if (!draft.frontHTML && !draft.backHTML && !draft.message) {
-      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, or message is required' })
+    if (!draft.frontHTML && !draft.backHTML && !draft.message && !draft.imageData) {
+      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or an image is required' })
     }
 
     // Validate message if present
@@ -228,59 +227,22 @@ export class DraftRoutes {
     }
 
     try {
-      // Build backHTML from message if no explicit backHTML
-      let finalBackHTML = draft.backHTML
+      // Front artwork: explicit HTML wins; otherwise the draft's uploaded
+      // image becomes a full-bleed front canvas. imageData was previously
+      // ignored at publish time, mailing cards without their photo.
+      const draftSize = isCardSize(postGridSize) ? postGridSize : '6x4'
+      let finalFrontHTML = draft.frontHTML ? sanitizeHTML(draft.frontHTML) : undefined
+      if (!finalFrontHTML && draft.imageData) {
+        finalFrontHTML = buildImageFrontHTML(draft.imageData, draftSize)
+      }
+
+      // Back artwork: explicit HTML wins; otherwise render the markdown
+      // message onto a canvas sized for the actual card. The message was
+      // sanitized when the draft was saved, but sanitize again as
+      // defense-in-depth (buildMessageBackHTML re-sanitizes end to end).
+      let finalBackHTML = draft.backHTML ? sanitizeHTML(draft.backHTML) : undefined
       if (!finalBackHTML && draft.message) {
-        // The message was already sanitized when the draft was saved/updated,
-        // but sanitize again as a defense-in-depth measure
-        const sanitizedMessage = sanitizeMarkdown(draft.message)
-        const markedHTML = await marked(sanitizedMessage)
-        const messageHTML = DOMPurify.sanitize(markedHTML, {
-          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
-          ALLOWED_ATTR: ['class'],
-          FORBID_ATTR: ['onclick', 'onload', 'onerror', 'style'],
-        })
-        finalBackHTML = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                width: 1800px;
-                height: 1200px;
-                overflow: hidden;
-                position: relative;
-                background: white;
-                font-family: Arial, sans-serif;
-                padding: 60px;
-              }
-              .message {
-                position: absolute;
-                left: 60px;
-                top: 60px;
-                width: 840px;
-                height: 1080px;
-                font-size: 24px;
-                line-height: 1.6;
-                color: #333;
-              }
-              .message h1 { font-size: 36px; margin-bottom: 16px; }
-              .message h2 { font-size: 32px; margin-bottom: 14px; }
-              .message h3 { font-size: 28px; margin-bottom: 12px; }
-              .message p { margin-bottom: 12px; }
-              .message strong { font-weight: bold; }
-              .message em { font-style: italic; }
-            </style>
-          </head>
-          <body>
-            <div class="message">
-              ${messageHTML}
-            </div>
-          </body>
-          </html>
-        `.trim()
+        finalBackHTML = sanitizeHTML(buildMessageBackHTML(draft.message, draftSize))
       }
 
       // Call PostGrid API
@@ -288,8 +250,8 @@ export class DraftRoutes {
         to: draft.recipientAddress,
         from: draft.senderAddress,
         size: postGridSize,
-        frontHTML: draft.frontHTML ? sanitizeHTML(draft.frontHTML) : undefined,
-        backHTML: finalBackHTML ? sanitizeHTML(finalBackHTML) : undefined,
+        frontHTML: finalFrontHTML,
+        backHTML: finalBackHTML,
       }
 
       const result = await this.postgrid.createPostcard(postcardRequest)

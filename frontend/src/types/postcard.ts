@@ -1,31 +1,5 @@
 import type { Address } from './address'
 
-export interface PostcardSubmission {
-  to: Address
-  from: Address
-  frontHTML?: string
-  backHTML?: string
-  message?: string
-  size?: '6x4' | '9x6' | '11x6'
-}
-
-export interface PostcardResponse {
-  success: boolean
-  postcard?: {
-    id: string
-    status: string
-    size: string
-    live: boolean
-    testMode: boolean
-    url?: string
-    mailedDate?: string
-    expectedDeliveryDate?: string
-  }
-  error?: string
-  details?: unknown
-  selectedImage?: string
-}
-
 export interface Draft {
   id: string
   userId: string

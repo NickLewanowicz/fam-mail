@@ -41,8 +41,9 @@ describe('ProtectedRoute', () => {
   })
 
   it('shows loading spinner while auth is loading', () => {
-    renderProtectedRoute({ isLoading: true })
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    const { container } = renderProtectedRoute({ isLoading: true })
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
+    expect(screen.getByText('✉️')).toBeInTheDocument()
     expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
   })
 

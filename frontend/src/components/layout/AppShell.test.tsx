@@ -3,6 +3,15 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { AuthContextType } from '../../types/auth'
 
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => {
+      const { initial, animate, transition, ...rest } = props
+      return <div {...rest}>{children}</div>
+    },
+  },
+}))
+
 vi.mock('./PostGridModeBadge', () => ({
   PostGridModeBadge: () => <div data-testid="postgrid-mode-badge">PG</div>,
 }))
@@ -61,7 +70,7 @@ describe('AppShell', () => {
     expect(screen.getByText('Fam Mail')).toBeInTheDocument()
   })
 
-  it('renders New Postcard link', () => {
+  it('renders New link to create', () => {
     render(
       <MemoryRouter>
         <AppShell>
@@ -69,7 +78,7 @@ describe('AppShell', () => {
         </AppShell>
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: /New Postcard/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^New$/i })).toBeInTheDocument()
   })
 
   it('renders children content', () => {
@@ -108,7 +117,7 @@ describe('AppShell', () => {
     expect(screen.getByText('Sign out')).toBeInTheDocument()
   })
 
-  it('New Postcard link points to /create', () => {
+  it('New link points to /create', () => {
     render(
       <MemoryRouter>
         <AppShell>
@@ -116,7 +125,7 @@ describe('AppShell', () => {
         </AppShell>
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: /New Postcard/i })).toHaveAttribute('href', '/create')
+    expect(screen.getByRole('link', { name: /^New$/i })).toHaveAttribute('href', '/create')
   })
 
   it('Fam Mail link points to /', () => {

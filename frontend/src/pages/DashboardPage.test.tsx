@@ -5,6 +5,19 @@ import DashboardPage from './DashboardPage'
 import type { Draft } from '../types/postcard'
 import { listDrafts, deleteDraft } from '../utils/draftApi'
 
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => {
+      const {
+        initial, animate, exit, transition, variants, whileHover, whileTap, layout, layoutId,
+        ...rest
+      } = props
+      return <div {...rest}>{children}</div>
+    },
+  },
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+}))
+
 vi.mock('../utils/draftApi', () => ({
   listDrafts: vi.fn(),
   deleteDraft: vi.fn(),
@@ -74,32 +87,33 @@ describe('DashboardPage', () => {
         <DashboardPage />
       </MemoryRouter>,
     )
-    expect(container.querySelector('.loading-spinner')).toBeInTheDocument()
-    expect(screen.getByText('Send a Postcard')).toBeInTheDocument()
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toBeInTheDocument()
+    expect(screen.getByText('Send something real')).toBeInTheDocument()
     resolveList([])
     await waitFor(() => {
       expect(screen.getByText('No drafts yet')).toBeInTheDocument()
     })
   })
 
-  it('shows Send a Postcard CTA card', async () => {
+  it('shows hero CTA card', async () => {
     vi.mocked(listDrafts).mockResolvedValue([])
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
     )
-    expect(await screen.findByText('Send a Postcard')).toBeInTheDocument()
+    expect(await screen.findByText('Send something real')).toBeInTheDocument()
   })
 
-  it('shows Create New Postcard button linking to /create', async () => {
+  it('shows Create a Postcard button linking to /create', async () => {
     vi.mocked(listDrafts).mockResolvedValue([])
     render(
       <MemoryRouter>
         <DashboardPage />
       </MemoryRouter>,
     )
-    const cta = await screen.findByRole('link', { name: /Create New Postcard/i })
+    const cta = await screen.findByRole('link', { name: /Create a Postcard/i })
     expect(cta).toHaveAttribute('href', '/create')
   })
 

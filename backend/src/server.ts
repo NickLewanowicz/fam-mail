@@ -10,6 +10,7 @@ import { NotificationService } from './services/notifications'
 import { OIDCService } from './services/oidcService'
 import { JWTService } from './services/jwtService'
 import { AuthMiddleware } from './middleware/auth'
+import { ApiKeyMiddleware } from './middleware/apiKey'
 import { RateLimiter, getClientIp } from './middleware/rateLimit'
 import { jsonResponse } from './utils/response'
 import { applyHeaders, createCorsResponse } from './middleware/headers'
@@ -23,6 +24,7 @@ const authRateLimiter = new RateLimiter(10, 60_000) // 10/min auth
 const postcardRateLimiter = new RateLimiter(5, 60_000) // 5/min postcards (costs real money)
 const webhookRateLimiter = new RateLimiter(20, 60_000) // 20/min webhooks
 const draftRateLimiter = new RateLimiter(30, 60_000) // 30/min drafts
+const agentRateLimiter = new RateLimiter(10, 60_000) // 10/min agent API (costs real money)
 
 // Periodic cleanup of expired rate-limit entries and expired sessions
 // to prevent memory/DB bloat (#49)
@@ -34,6 +36,7 @@ function runPeriodicCleanup(): void {
   postcardRateLimiter.cleanup()
   webhookRateLimiter.cleanup()
   draftRateLimiter.cleanup()
+  agentRateLimiter.cleanup()
 
   // Session cleanup — delete expired sessions from DB
   try {
@@ -112,6 +115,9 @@ setPostgridService(postgrid)
 
 // Setup drafts routes
 const draftRoutes = new DraftRoutes(db, authMiddleware, postgrid)
+
+// Machine API key auth for the /api/v1 agent API
+const apiKeyMiddleware = new ApiKeyMiddleware(db, config.apiKeys)
 
 // Initialize notifications
 const notifications = new NotificationService({
@@ -417,9 +423,17 @@ export async function handleRequest(req: Request): Promise<Response> {
     if (authResult.error) {
       return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
     }
-    // #70: Only admins can toggle PostGrid test/live mode
+    // #70: Only admins can toggle PostGrid test/live mode. When
+    // ADMIN_EMAILS is unset we fail closed — an open toggle would let any
+    // account on the instance switch to live mailing and spend real money.
     const adminEmails = config.adminEmails
-    if (adminEmails.length > 0 && !adminEmails.includes(authResult.user!.email.toLowerCase())) {
+    if (adminEmails.length === 0) {
+      logger.warn('POST /api/postgrid/mode rejected: ADMIN_EMAILS is not configured')
+      return withSecurityHeaders(jsonResponse({
+        error: 'Forbidden: admin access required. Configure ADMIN_EMAILS to enable mode switching.',
+      }, 403, req), req)
+    }
+    if (!adminEmails.includes(authResult.user!.email.toLowerCase())) {
       return withSecurityHeaders(jsonResponse({ error: 'Forbidden: admin access required' }, 403, req), req)
     }
     let body: unknown
@@ -442,6 +456,72 @@ export async function handleRequest(req: Request): Promise<Response> {
       return withSecurityHeaders(jsonResponse({ error: message }, 400, req), req)
     }
     return withSecurityHeaders(jsonResponse(postgrid.getStatusPayload(), 200, req), req)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Agent API (/api/v1) — machine API key auth for integrations like Hermes,
+  // OpenClaw, and automation scripts. API keys only; JWTs are not accepted.
+  // Docs: docs/agent-api.md
+  // ---------------------------------------------------------------------------
+
+  if (url.pathname === '/api/v1/postcards' && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(agentRateLimiter, req)
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+
+    const keyAuth = apiKeyMiddleware.authenticate(req)
+    if (keyAuth.error) {
+      return withSecurityHeaders(jsonResponse({ error: keyAuth.error }, 401, req), req)
+    }
+    // Same validation + PostGrid pipeline as the interactive web route.
+    return withSecurityHeaders(await handlePostcardCreate(req, keyAuth.user, db), req)
+  }
+
+  if (url.pathname === '/api/v1/postcards' && req.method === 'GET') {
+    const keyAuth = apiKeyMiddleware.authenticate(req)
+    if (keyAuth.error) {
+      return withSecurityHeaders(jsonResponse({ error: keyAuth.error }, 401, req), req)
+    }
+    const limitParam = parseInt(new URL(req.url).searchParams.get('limit') ?? '50', 10)
+    const limit = Number.isNaN(limitParam) ? 50 : limitParam
+    const postcards = db.listPostcardsByUser(keyAuth.user.id, limit)
+    return withSecurityHeaders(jsonResponse({
+      data: postcards.map((card) => ({
+        id: card.id,
+        postgridId: card.postgridPostcardId,
+        recipientName: card.recipientName,
+        recipientAddress: card.recipientAddress,
+        status: card.status,
+        mode: card.postgridMode,
+        createdAt: card.createdAt,
+      })),
+    }, 200, req), req)
+  }
+
+  if (url.pathname.match(/^\/api\/v1\/postcards\/[^/]+$/) && req.method === 'GET') {
+    const keyAuth = apiKeyMiddleware.authenticate(req)
+    if (keyAuth.error) {
+      return withSecurityHeaders(jsonResponse({ error: keyAuth.error }, 401, req), req)
+    }
+    const id = url.pathname.split('/')[4]
+    const postcard = db.getPostcardForUser(id!, keyAuth.user.id)
+    if (!postcard) {
+      return withSecurityHeaders(jsonResponse({ error: 'Postcard not found' }, 404, req), req)
+    }
+    return withSecurityHeaders(jsonResponse({
+      data: {
+        id: postcard.id,
+        postgridId: postcard.postgridPostcardId,
+        recipientName: postcard.recipientName,
+        recipientAddress: postcard.recipientAddress,
+        status: postcard.status,
+        mode: postcard.postgridMode,
+        createdAt: postcard.createdAt,
+      },
+    }, 200, req), req)
+  }
+
+  if (url.pathname.startsWith('/api/v1/')) {
+    return withSecurityHeaders(jsonResponse({ error: 'Not Found' }, 404, req), req)
   }
 
   // Email webhook endpoints — rate limited (#42)
@@ -477,4 +557,4 @@ export async function handleRequest(req: Request): Promise<Response> {
 }
 
 // Export for testing
-export { db, jwtService, postgrid, notifications, imap }
+export { db, jwtService, postgrid, notifications, imap, config }

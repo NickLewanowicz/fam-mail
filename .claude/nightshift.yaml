@@ -48,6 +48,39 @@ qa:
       cmd: "cd frontend && pnpm build 2>&1"
       timeout: 60
 
+  # Visual QA: automated screenshot analysis using GLM-4.6V-Flash vision model
+  # Requires: ZAI_API_KEY env var, Chrome or Playwright installed, app running
+  visual_qa:
+    enabled: true
+    app_url: "http://localhost:5173"
+    model: "glm-4.6v-flash"
+    pass_threshold: 70
+    screenshot_dir: "logs/nightshift/visual-qa"
+    # Optional: script to start the app before screenshots
+    # setup_script: "cd frontend && pnpm preview &"
+
+    viewports:
+      - width: 1280
+        height: 800
+        label: desktop
+      - width: 375
+        height: 812
+        label: mobile
+
+    routes:
+      - path: "/"
+        name: "Login Page"
+        wait_ms: 2000
+      - path: "/dashboard"
+        name: "Dashboard"
+        wait_ms: 2000
+      - path: "/create"
+        name: "Create Postcard - Destination Step"
+        wait_ms: 2000
+      - path: "/create?step=1"
+        name: "Create Postcard - Photo Upload"
+        wait_ms: 2000
+
 # Verify all QA checks pass before starting the orchestration loop.
 # Prevents nightshift from wasting cycles on a broken baseline.
 qa_gate_on_start: true

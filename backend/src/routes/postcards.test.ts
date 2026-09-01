@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, beforeAll } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll, spyOn } from 'bun:test'
 import { handlePostcardCreate } from './postcards'
 import type { User } from '../models/user'
 import { Database } from '../database'
+import { PostGridService, setPostgridService } from '../services/postgrid'
 
 /** Safe base64 encoding for Uint8Array of any size (avoids stack overflow from spread operator). */
 function bytesToBase64(bytes: Uint8Array): string {
@@ -1339,15 +1340,33 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     expect(data.errors!.some(e => e.field === 'image')).toBe(true)
   })
 
-  it('accepts WebP image at route level', async () => {
+  it('accepts WebP image at route level and builds front artwork from it', async () => {
     const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
     const webp = bytesToBase64(webpBytes)
-    const req = makeRequest({
-      to: validUSAddress,
-      image: webp,
+    // Mock-mode service: no real PostGrid call. The uploaded image becomes
+    // the front artwork instead of being silently dropped.
+    const svc = new PostGridService({
+      mode: 'test', testApiKey: 't', liveApiKey: 'l',
+      forceTestMode: false, mockMode: true, webhookSecret: '', size: '6x4', senderId: '',
     })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    expect(res.status).toBe(401) // PostGrid API call attempted (mock key → 401)
+    const spy = spyOn(svc, 'createPostcard').mockImplementation(async (request) => ({
+      id: 'pc_webp_test', object: 'postcard', live: false, status: 'ready',
+      to: request.to, size: request.size ?? '6x4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }) as never)
+    setPostgridService(svc)
+    try {
+      const req = makeRequest({
+        to: validUSAddress,
+        image: webp,
+      })
+      const res = await handlePostcardCreate(req, mockUser, db)
+      expect(res.status).toBe(200)
+      const request = spy.mock.calls[0][0]
+      expect(request.frontHTML).toContain('data:image/webp;base64,')
+    } finally {
+      setPostgridService(null as unknown as PostGridService)
+    }
   })
 
   it('rejects oversized image (>10MB) at route level', async () => {

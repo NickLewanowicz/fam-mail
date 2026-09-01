@@ -21,6 +21,42 @@ export const POSTCARD_6X4_DIMENSIONS: PostcardDimensions = {
   safeMargin: 37.5,   // 0.125" safe inset from trim at 300 DPI
 }
 
+/** Supported print sizes (width × height in inches). */
+export type PostcardSize = '6x4' | '9x6' | '11x6'
+
+/**
+ * 9×6" postcard at 300 DPI.
+ * Trim size is 9×6" = 2700×1800 px.
+ */
+export const POSTCARD_9X6_DIMENSIONS: PostcardDimensions = {
+  width: 2700,   // 9" trim
+  height: 1800,  // 6" trim
+  bleedMargin: 37.5,
+  safeMargin: 37.5,
+}
+
+/**
+ * 11×6" postcard at 300 DPI.
+ * Trim size is 11×6" = 3300×1800 px.
+ */
+export const POSTCARD_11X6_DIMENSIONS: PostcardDimensions = {
+  width: 3300,   // 11" trim
+  height: 1800,  // 6" trim
+  bleedMargin: 37.5,
+  safeMargin: 37.5,
+}
+
+const POSTCARD_SIZE_DIMENSIONS: Record<PostcardSize, PostcardDimensions> = {
+  '6x4': POSTCARD_6X4_DIMENSIONS,
+  '9x6': POSTCARD_9X6_DIMENSIONS,
+  '11x6': POSTCARD_11X6_DIMENSIONS,
+}
+
+/** Real trim dimensions for a postcard size (px at 300 DPI). */
+export function getPostcardDimensions(size: PostcardSize): PostcardDimensions {
+  return POSTCARD_SIZE_DIMENSIONS[size] ?? POSTCARD_6X4_DIMENSIONS
+}
+
 export interface Rect {
   x: number
   y: number

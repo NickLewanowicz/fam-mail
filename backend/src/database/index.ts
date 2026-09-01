@@ -214,6 +214,35 @@ export class Database {
   }
 
   /**
+   * Retrieves a postcard by ID, scoped to a user.
+   * @param id - Postcard ID
+   * @param userId - Owning user ID
+   * @returns Postcard record if found and owned by the user, undefined otherwise
+   */
+  getPostcardForUser(id: string, userId: string): PostcardRecord | undefined {
+    const stmt = this.db.prepare(
+      "SELECT * FROM postcards WHERE id = ? AND user_id = ?"
+    );
+    const row = stmt.get(id, userId) as PostcardRow | undefined;
+    if (!row) return undefined;
+    return this.rowToPostcardRecord(row);
+  }
+
+  /**
+   * Lists a user's postcards, newest first.
+   * @param userId - Owning user ID
+   * @param limit - Maximum number of records (default 50, max 200)
+   */
+  listPostcardsByUser(userId: string, limit = 50): PostcardRecord[] {
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+    const stmt = this.db.prepare(
+      "SELECT * FROM postcards WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
+    );
+    const rows = stmt.all(userId, safeLimit) as PostcardRow[];
+    return rows.map((row) => this.rowToPostcardRecord(row));
+  }
+
+  /**
    * Checks if an email has already been processed.
    * @param messageId - Email message ID to check
    * @returns true if the email has been processed, false otherwise

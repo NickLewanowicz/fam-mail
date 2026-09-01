@@ -1,15 +1,21 @@
 import { useMemo, useRef, useCallback, useState } from 'react'
-import DOMPurify from 'dompurify'
-import { marked } from 'marked'
+import { motion } from 'framer-motion'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
-import type { CountryCode } from '../../utils/postcardTemplate'
-import { POSTCARD_6X4_DIMENSIONS, calculateSafeZones, getCountrySpec } from '../../utils/postcardTemplate'
+import type { CountryCode, PostcardSize } from '../../utils/postcardTemplate'
+import { calculateSafeZones, getCountrySpec, getPostcardDimensions } from '../../utils/postcardTemplate'
+import { renderMessageHtml } from '../../utils/messageSanitizer'
 import { InlineMessageEditor } from './InlineMessageEditor'
 import { InlineAddressForm } from './InlineAddressForm'
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+
+const SIZE_LABELS: Record<PostcardSize, string> = {
+  '6x4': '6×4″',
+  '9x6': '9×6″',
+  '11x6': '11×6″',
+}
 
 export type ActiveZone = 'photo' | 'message' | 'address' | null
 
@@ -24,19 +30,12 @@ interface Props {
   onMessageChange?: (msg: string) => void
   onAddressChange?: (addr: Address) => void
   countryCode?: CountryCode
+  size?: PostcardSize
 }
 
 export function PostcardPreview({
-  image,
-  message,
-  address,
-  showBack,
-  onFlip,
-  activeZone,
-  onImageChange,
-  onMessageChange,
-  onAddressChange,
-  countryCode,
+  image, message, address, showBack, onFlip,
+  activeZone, onImageChange, onMessageChange, onAddressChange, countryCode, size = '6x4',
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragOver, setDragOver] = useState(false)
@@ -44,11 +43,7 @@ export function PostcardPreview({
   const [editingAddress, setEditingAddress] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
 
-  const messageHtml = useMemo(() => {
-    if (!message.trim()) return ''
-    const raw = marked.parse(message, { async: false }) as string
-    return DOMPurify.sanitize(raw)
-  }, [message])
+  const messageHtml = useMemo(() => renderMessageHtml(message), [message])
 
   const processFile = useCallback((file: File) => {
     setPhotoError(null)
@@ -61,16 +56,12 @@ export function PostcardPreview({
       return
     }
     const reader = new FileReader()
-    reader.onload = () => {
-      onImageChange?.({ file, preview: reader.result as string })
-    }
+    reader.onload = () => { onImageChange?.({ file, preview: reader.result as string }) }
     reader.readAsDataURL(file)
   }, [onImageChange])
 
   const handleFrontClick = useCallback(() => {
-    if (activeZone === 'photo') {
-      inputRef.current?.click()
-    }
+    if (activeZone === 'photo') inputRef.current?.click()
   }, [activeZone])
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -83,69 +74,64 @@ export function PostcardPreview({
   }, [activeZone, processFile])
 
   const handleMessageClick = useCallback(() => {
-    if (activeZone === 'message' && !editingMessage) {
-      setEditingMessage(true)
-    }
+    if (activeZone === 'message' && !editingMessage) setEditingMessage(true)
   }, [activeZone, editingMessage])
 
   const handleAddressClick = useCallback(() => {
-    if (activeZone === 'address' && !editingAddress) {
-      setEditingAddress(true)
-    }
+    if (activeZone === 'address' && !editingAddress) setEditingAddress(true)
   }, [activeZone, editingAddress])
 
   const isPhotoActive = activeZone === 'photo'
   const isMessageActive = activeZone === 'message'
   const isAddressActive = activeZone === 'address'
 
-  // Calculate country-specific safe zones for dynamic layout
-  const safeZones = useMemo(() => {
-    return calculateSafeZones(POSTCARD_6X4_DIMENSIONS, true, countryCode ?? 'US')
-  }, [countryCode])
+  const aspectRatio = size === '11x6' ? '11/6' : '3/2'
 
-  const countrySpec = useMemo(() => {
-    return getCountrySpec(countryCode ?? 'US')
-  }, [countryCode])
+  const dimensions = useMemo(() => getPostcardDimensions(size), [size])
+  const safeZones = useMemo(() => calculateSafeZones(dimensions, true, countryCode ?? 'US'), [dimensions, countryCode])
+  const countrySpec = useMemo(() => getCountrySpec(countryCode ?? 'US'), [countryCode])
 
-  // Calculate percentages from pixel dimensions
   const messageWidthPercent = useMemo(() => {
-    if (!safeZones.messageArea) return 60 // fallback
-    return (safeZones.messageArea.width / POSTCARD_6X4_DIMENSIONS.width) * 100
-  }, [safeZones])
+    if (!safeZones.messageArea) return 60
+    return (safeZones.messageArea.width / dimensions.width) * 100
+  }, [safeZones, dimensions])
 
   const addressWidthPercent = useMemo(() => {
-    if (!safeZones.addressBlock) return 40 // fallback
-    return (safeZones.addressBlock.width / POSTCARD_6X4_DIMENSIONS.width) * 100
-  }, [safeZones])
+    if (!safeZones.addressBlock) return 40
+    return (safeZones.addressBlock.width / dimensions.width) * 100
+  }, [safeZones, dimensions])
 
-  const dividerLeftPercent = useMemo(() => {
-    return (1 - countrySpec.addressWidthRatio) * 100
-  }, [countrySpec])
+  const dividerLeftPercent = useMemo(() => (1 - countrySpec.addressWidthRatio) * 100, [countrySpec])
 
-  // Barcode zone indicator (US only)
   const barcodeZonePercent = useMemo(() => {
     if (!safeZones.barcodeZone) return 0
-    return (safeZones.barcodeZone.height / POSTCARD_6X4_DIMENSIONS.height) * 100
-  }, [safeZones])
+    return (safeZones.barcodeZone.height / dimensions.height) * 100
+  }, [safeZones, dimensions])
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-base-content/60 uppercase tracking-wide">Preview</h3>
-        <button onClick={onFlip} className="btn btn-ghost btn-xs gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          {showBack ? 'Back' : 'Front'} — {SIZE_LABELS[size]}
+        </span>
+        <button
+          onClick={onFlip}
+          className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
           Flip
         </button>
       </div>
 
       {photoError && (
-        <div className="alert alert-error text-sm py-1">
+        <div className="flex items-center justify-between px-3 py-2 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
           <span>{photoError}</span>
-          <button onClick={() => setPhotoError(null)} className="btn btn-ghost btn-xs">Dismiss</button>
+          <button onClick={() => setPhotoError(null)} className="text-xs font-medium text-red-500">Dismiss</button>
         </div>
       )}
 
-      {/* Hidden file input for photo upload */}
       <input
         ref={inputRef}
         type="file"
@@ -158,22 +144,17 @@ export function PostcardPreview({
         }}
       />
 
-      {/* Card container with perspective */}
       <div className="relative w-full" style={{ perspective: '1200px' }}>
-        <div
-          className="relative w-full transition-transform duration-500"
-          style={{
-            aspectRatio: '3/2',
-            transformStyle: 'preserve-3d',
-            transform: showBack ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          }}
+        <motion.div
+          className="relative w-full"
+          animate={{ rotateY: showBack ? 180 : 0 }}
+          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          style={{ aspectRatio, transformStyle: 'preserve-3d' }}
         >
           {/* Front */}
           <div
-            className={`absolute inset-0 rounded-xl shadow-lg overflow-hidden border-2 transition-colors duration-200 ${
-              isPhotoActive
-                ? 'border-primary shadow-primary/20 shadow-lg'
-                : 'border-base-300'
+            className={`absolute inset-0 rounded-lg overflow-hidden transition-shadow duration-200 ${
+              isPhotoActive ? 'shadow-xl ring-2 ring-blue-400' : 'shadow-lg'
             } ${isPhotoActive ? 'cursor-pointer' : ''}`}
             style={{ backfaceVisibility: 'hidden' }}
             onClick={handleFrontClick}
@@ -187,39 +168,38 @@ export function PostcardPreview({
               <>
                 <img src={image} alt="Postcard front" className="w-full h-full object-cover" />
                 {isPhotoActive && (
-                  <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition-colors flex items-center justify-center opacity-0 hover:opacity-100">
-                    <span className="btn btn-sm btn-ghost bg-white/80 text-black">Change photo</span>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-5">
+                    <span className="px-3 py-1.5 bg-white text-sm font-medium rounded-md text-zinc-700">
+                      Change photo
+                    </span>
                   </div>
                 )}
                 {isPhotoActive && (
                   <button
-                    className="absolute top-2 right-2 btn btn-xs btn-error btn-circle opacity-70 hover:opacity-100"
+                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
                     onClick={(e) => { e.stopPropagation(); onImageChange?.(null) }}
-                    title="Remove photo"
+                    title="Remove"
                   >
-                    ✕
+                    ×
                   </button>
                 )}
               </>
             ) : (
               <div className={`w-full h-full flex flex-col items-center justify-center transition-colors ${
-                dragOver ? 'bg-primary/10 border-primary' : isPhotoActive ? 'bg-gradient-to-br from-primary/5 to-primary/10' : 'bg-gradient-to-br from-base-200 to-base-300'
+                dragOver ? 'bg-blue-50' : isPhotoActive ? 'bg-zinc-50' : 'bg-zinc-100'
               }`}>
-                {isPhotoActive && (
-                  <div className={`border-2 border-dashed rounded-xl w-[85%] h-[85%] flex flex-col items-center justify-center transition-colors ${
-                    dragOver ? 'border-primary bg-primary/5' : 'border-primary/40'
+                {isPhotoActive ? (
+                  <div className={`border-2 border-dashed rounded-lg w-[80%] h-[75%] flex flex-col items-center justify-center gap-2 transition-colors ${
+                    dragOver ? 'border-blue-400 bg-blue-50' : 'border-zinc-300'
                   }`}>
-                    <span className="text-4xl mb-2 opacity-60">📷</span>
-                    <span className="text-sm font-medium text-base-content/60">Click to upload photo</span>
-                    <span className="text-xs text-base-content/40 mt-1">or drag and drop</span>
-                    <span className="text-xs text-base-content/30 mt-2">JPEG, PNG, or WebP up to 10MB</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-zinc-400">
+                      <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-sm font-medium text-zinc-500">Upload your photo</span>
+                    <span className="text-xs text-zinc-400">or drag and drop</span>
                   </div>
-                )}
-                {!isPhotoActive && (
-                  <>
-                    <span className="text-5xl mb-2">&#x1F5BC;&#xFE0F;</span>
-                    <span className="text-sm text-base-content/30">Upload a photo</span>
-                  </>
+                ) : (
+                  <span className="text-sm text-zinc-300">Photo</span>
                 )}
               </div>
             )}
@@ -227,23 +207,22 @@ export function PostcardPreview({
 
           {/* Back */}
           <div
-            className="absolute inset-0 rounded-xl shadow-lg overflow-hidden border border-base-300 bg-white"
+            className="absolute inset-0 rounded-lg overflow-hidden shadow-lg bg-[#fffef8]"
             style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
           >
             <div className="h-full flex relative">
-              {/* Message side */}
+              {/* Message area */}
               <div
-                className={`relative p-4 overflow-hidden transition-all duration-300 ease-in-out ${
-                  isMessageActive ? 'border-primary/60' : ''
-                } ${isMessageActive && !editingMessage ? 'cursor-pointer' : ''}`}
+                className={`relative p-4 overflow-hidden transition-all duration-200 ${
+                  isMessageActive && !editingMessage ? 'cursor-pointer' : ''
+                }`}
                 style={{ width: `${messageWidthPercent}%` }}
                 onClick={handleMessageClick}
                 role={isMessageActive && !editingMessage ? 'button' : undefined}
                 tabIndex={isMessageActive && !editingMessage ? 0 : undefined}
               >
-                {/* Active zone glow */}
                 {isMessageActive && (
-                  <div className="absolute inset-0 rounded-lg ring-2 ring-primary/30 pointer-events-none" />
+                  <div className="absolute inset-1 rounded ring-2 ring-blue-400 pointer-events-none" />
                 )}
                 {editingMessage && onMessageChange ? (
                   <InlineMessageEditor
@@ -252,17 +231,17 @@ export function PostcardPreview({
                     onClose={() => setEditingMessage(false)}
                   />
                 ) : messageHtml ? (
-                  <div className="prose prose-sm max-w-none text-gray-800" style={{ fontSize: '11px', lineHeight: 1.4 }} dangerouslySetInnerHTML={{ __html: messageHtml }} />
+                  <div className="prose prose-sm max-w-none text-stone-700" style={{ fontSize: '11px', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: messageHtml }} />
                 ) : (
-                  <p className="text-gray-300 text-xs italic">
-                    {isMessageActive ? 'Click to write your message...' : 'Your message here...'}
+                  <p className="text-stone-400 text-xs italic">
+                    {isMessageActive ? 'Click to write...' : 'Your message'}
                   </p>
                 )}
               </div>
 
-              {/* Address side */}
+              {/* Address area */}
               <div
-                className={`relative p-4 flex flex-col justify-between overflow-hidden transition-all duration-300 ease-in-out ${
+                className={`relative p-4 flex flex-col justify-between overflow-hidden transition-all duration-200 ${
                   isAddressActive && !editingAddress ? 'cursor-pointer' : ''
                 }`}
                 style={{ width: `${addressWidthPercent}%` }}
@@ -270,9 +249,8 @@ export function PostcardPreview({
                 role={isAddressActive && !editingAddress ? 'button' : undefined}
                 tabIndex={isAddressActive && !editingAddress ? 0 : undefined}
               >
-                {/* Active zone glow */}
                 {isAddressActive && (
-                  <div className="absolute inset-0 rounded-lg ring-2 ring-primary/30 pointer-events-none" />
+                  <div className="absolute inset-1 rounded ring-2 ring-blue-400 pointer-events-none" />
                 )}
                 {editingAddress && onAddressChange ? (
                   <InlineAddressForm
@@ -283,27 +261,23 @@ export function PostcardPreview({
                   />
                 ) : (
                   <>
-                    {/* Stamp placeholder */}
                     <div className="flex justify-end">
-                      <div className="w-12 h-14 border-2 border-dashed border-gray-300 rounded flex items-center justify-center">
-                        <span className="text-gray-300 text-xs">STAMP</span>
+                      <div className="w-11 h-12 border border-dashed border-stone-300 rounded flex items-center justify-center">
+                        <span className="text-stone-300 text-[9px] font-medium">STAMP</span>
                       </div>
                     </div>
-                    {/* Address block with quiet zone indicator */}
                     <div className="mt-auto relative">
-                      {/* Faint dotted border showing address quiet zone boundary */}
-                      <div className="absolute inset-0 border border-dashed border-gray-200/50 rounded pointer-events-none" />
                       {address ? (
-                        <div className="font-mono text-xs leading-relaxed text-gray-800 relative z-10">
-                          <p>{address.firstName} {address.lastName}</p>
+                        <div className="font-mono text-[10px] leading-relaxed text-stone-600">
+                          <p className="font-semibold">{address.firstName} {address.lastName}</p>
                           <p>{address.addressLine1}</p>
                           {address.addressLine2 && <p>{address.addressLine2}</p>}
                           <p>{address.city}, {address.provinceOrState} {address.postalOrZip}</p>
-                          <p>{address.countryCode}</p>
+                          <p className="text-stone-400">{address.countryCode}</p>
                         </div>
                       ) : (
-                        <p className="text-gray-300 text-xs italic font-mono relative z-10">
-                          {isAddressActive ? 'Click to add address...' : 'Recipient address...'}
+                        <p className="text-stone-400 text-xs italic font-mono">
+                          {isAddressActive ? 'Click to add...' : 'Address'}
                         </p>
                       )}
                     </div>
@@ -311,26 +285,25 @@ export function PostcardPreview({
                 )}
               </div>
 
-              {/* Vertical divider */}
+              {/* Divider line */}
               <div
-                className="absolute top-4 bottom-4 border-r border-dashed border-gray-300 transition-all duration-300 ease-in-out pointer-events-none"
+                className="absolute top-3 bottom-3 border-r border-dashed border-stone-200 pointer-events-none"
                 style={{ left: `${dividerLeftPercent}%` }}
               />
 
-              {/* US Barcode zone indicator (US only) */}
+              {/* US barcode zone */}
               {countryCode === 'US' && barcodeZonePercent > 0 && (
                 <div
-                  className="absolute left-0 right-0 bg-red-50/30 border-t border-dashed border-red-300/50 flex items-start justify-center transition-all duration-300 ease-in-out"
+                  className="absolute left-0 right-0 bg-red-50/30 border-t border-dashed border-red-200/50 flex items-center justify-center"
                   style={{ bottom: 0, height: `${barcodeZonePercent}%` }}
                 >
-                  <span className="text-[9px] text-red-400/70 mt-0.5 tracking-wide">USPS Barcode Zone</span>
+                  <span className="text-[8px] text-red-300 tracking-wider">BARCODE ZONE</span>
                 </div>
               )}
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
-      <p className="text-xs text-center text-base-content/40">6" x 4" postcard &bull; {showBack ? 'Back' : 'Front'}</p>
     </div>
   )
 }
