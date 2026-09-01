@@ -232,8 +232,8 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
               style={{ width: `${charRatio * 100}%` }}
             />
           </div>
-          <span className={`text-[10px] ${charRatio > 0.8 ? 'text-amber-600' : 'text-zinc-400'}`}>
-            {message.length}/{MAX_LENGTH}
+          <span className={`text-[10px] ${charRatio > 0.9 ? 'text-red-600' : charRatio > 0.8 ? 'text-amber-600' : 'text-zinc-400'}`} aria-live="off">
+            {message.length}/{MAX_LENGTH} · {message.trim() ? message.trim().split(/\s+/).length : 0} words
           </span>
         </div>
         <span className="text-[10px] text-zinc-400">Markdown</span>
