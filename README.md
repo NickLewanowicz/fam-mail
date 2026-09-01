@@ -200,6 +200,22 @@ The image installs workspace dependencies, runs `pnpm build` in `frontend`, bund
 
 See `.env.example` and `backend/.env.example`. Groupings include PostGrid, OIDC/JWT, server port and database path, optional IMAP and LLM settings for the email pipeline, and webhook secrets.
 
+## Honest limits & alternatives
+
+Fam-mail is a small, single-maintainer tool with a narrow focus: composing
+postcards and handing them to PostGrid. It is deliberately **not**:
+
+- a CRM or full address book (recipients are entered per card),
+- a marketing/bulk-mail tool (rate limits are intentionally tight — it costs
+  real money per card),
+- an email-to-postcard automation platform (the IMAP/LLM pipeline is paused),
+- a hosted service — you run it, you own the database and the PostGrid bill.
+
+If you need bulk mail merges, address verification APIs, or template-heavy
+campaigns, look at PostGrid's own dashboard tools or a marketing-mail platform
+instead. If you want a tiny, honest postcard app you can read the whole source
+of in an afternoon — welcome, this is it.
+
 ## Contributing
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
