@@ -1,4 +1,4 @@
-import { useMemo, useRef, useCallback, useState } from 'react'
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
@@ -42,6 +42,13 @@ export function PostcardPreview({
   const [editingMessage, setEditingMessage] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+
+  // Leaving a step must close its inline editor — otherwise the overlay
+  // stays stacked on top of the card while a different step is active.
+  useEffect(() => {
+    setEditingMessage(false)
+    setEditingAddress(false)
+  }, [activeZone])
 
   const messageHtml = useMemo(() => renderMessageHtml(message), [message])
 
@@ -185,14 +192,14 @@ export function PostcardPreview({
                 )}
               </>
             ) : (
-              <div className={`w-full h-full flex flex-col items-center justify-center transition-colors ${
+              <div className={`group w-full h-full flex flex-col items-center justify-center transition-colors ${
                 dragOver ? 'bg-blue-50' : isPhotoActive ? 'bg-zinc-50' : 'bg-zinc-100'
               }`}>
                 {isPhotoActive ? (
-                  <div className={`border-2 border-dashed rounded-lg w-[80%] h-[75%] flex flex-col items-center justify-center gap-2 transition-colors ${
+                  <div className={`border-2 border-dashed rounded-lg w-[80%] h-[75%] flex flex-col items-center justify-center gap-2 transition-colors group-hover:border-zinc-400 group-hover:bg-zinc-50 ${
                     dragOver ? 'border-blue-400 bg-blue-50' : 'border-zinc-300'
                   }`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-zinc-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-zinc-400 group-hover:text-zinc-500 transition-colors">
                       <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
                     </svg>
                     <span className="text-sm font-medium text-zinc-500">Upload your photo</span>
@@ -213,7 +220,7 @@ export function PostcardPreview({
             <div className="h-full flex relative">
               {/* Message area */}
               <div
-                className={`relative p-4 overflow-hidden transition-all duration-200 ${
+                className={`relative z-10 p-4 overflow-hidden transition-all duration-200 ${
                   isMessageActive && !editingMessage ? 'cursor-pointer' : ''
                 }`}
                 style={{ width: `${messageWidthPercent}%` }}
@@ -231,7 +238,7 @@ export function PostcardPreview({
                     onClose={() => setEditingMessage(false)}
                   />
                 ) : messageHtml ? (
-                  <div className="prose prose-sm max-w-none text-stone-700" style={{ fontSize: '11px', lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: messageHtml }} />
+                  <div className="prose prose-sm max-w-none text-stone-800" style={{ fontSize: '12px', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: messageHtml }} />
                 ) : (
                   <p className="text-stone-400 text-xs italic">
                     {isMessageActive ? 'Click to write...' : 'Your message'}
@@ -241,10 +248,14 @@ export function PostcardPreview({
 
               {/* Address area */}
               <div
-                className={`relative p-4 flex flex-col justify-between overflow-hidden transition-all duration-200 ${
+                className={`relative z-10 flex flex-col justify-between overflow-hidden transition-all duration-200 ${
                   isAddressActive && !editingAddress ? 'cursor-pointer' : ''
                 }`}
-                style={{ width: `${addressWidthPercent}%` }}
+                style={{
+                  width: `${addressWidthPercent}%`,
+                  // Keep address text clear of the US barcode strip
+                  paddingBottom: countryCode === 'US' && barcodeZonePercent > 0 ? `${barcodeZonePercent}%` : undefined,
+                }}
                 onClick={handleAddressClick}
                 role={isAddressActive && !editingAddress ? 'button' : undefined}
                 tabIndex={isAddressActive && !editingAddress ? 0 : undefined}
@@ -268,15 +279,15 @@ export function PostcardPreview({
                     </div>
                     <div className="mt-auto relative">
                       {address ? (
-                        <div className="font-mono text-[10px] leading-relaxed text-stone-600">
-                          <p className="font-semibold">{address.firstName} {address.lastName}</p>
+                        <div className="text-[12px] leading-relaxed text-stone-700">
+                          <p className="font-semibold text-stone-800">{address.firstName} {address.lastName}</p>
                           <p>{address.addressLine1}</p>
                           {address.addressLine2 && <p>{address.addressLine2}</p>}
                           <p>{address.city}, {address.provinceOrState} {address.postalOrZip}</p>
                           <p className="text-stone-400">{address.countryCode}</p>
                         </div>
                       ) : (
-                        <p className="text-stone-400 text-xs italic font-mono">
+                        <p className="text-stone-400 text-xs italic">
                           {isAddressActive ? 'Click to add...' : 'Address'}
                         </p>
                       )}
@@ -294,10 +305,10 @@ export function PostcardPreview({
               {/* US barcode zone */}
               {countryCode === 'US' && barcodeZonePercent > 0 && (
                 <div
-                  className="absolute left-0 right-0 bg-red-50/30 border-t border-dashed border-red-200/50 flex items-center justify-center"
+                  className="absolute left-0 right-0 bg-red-50/30 border-t border-dashed border-red-200/50 flex items-center pointer-events-none"
                   style={{ bottom: 0, height: `${barcodeZonePercent}%` }}
                 >
-                  <span className="text-[8px] text-red-300 tracking-wider">BARCODE ZONE</span>
+                  <span className="text-[7px] text-red-300/80 tracking-wider pl-2">BARCODE ZONE</span>
                 </div>
               )}
             </div>

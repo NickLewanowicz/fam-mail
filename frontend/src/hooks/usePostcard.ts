@@ -24,7 +24,7 @@ export function usePostcard(initial?: Partial<PostcardState>) {
   const [address, setAddress] = useState<Address | null>(initial?.address ?? null)
   const [returnAddress, setReturnAddress] = useState<Address | null>(initial?.returnAddress ?? null)
   const [size, setSize] = useState<PostcardSize>(initial?.size ?? '6x4')
-  const [countryCode, setCountryCode] = useState<CountryCode>(initial?.countryCode ?? 'US')
+  const [countryCode, setCountryCode] = useState<CountryCode | null>(initial?.countryCode ?? null)
 
   const reset = useCallback(() => {
     setImage(null)
@@ -32,7 +32,7 @@ export function usePostcard(initial?: Partial<PostcardState>) {
     setAddress(null)
     setReturnAddress(null)
     setSize('6x4')
-    setCountryCode('US')
+    setCountryCode(null)
   }, [])
 
   const isComplete = !!(image && message.trim() && address?.firstName && address?.lastName && address?.addressLine1 && address?.city && address?.provinceOrState && address?.postalOrZip && returnAddress?.firstName && returnAddress?.lastName && returnAddress?.addressLine1 && returnAddress?.city && returnAddress?.provinceOrState && returnAddress?.postalOrZip)

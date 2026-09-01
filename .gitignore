@@ -90,3 +90,6 @@ logs/
 agent-progress.json
 nightshift-progress.json
 CHANGELOG_AGENT.md
+qa/
+.playwright-mcp/
+pale-variants.png

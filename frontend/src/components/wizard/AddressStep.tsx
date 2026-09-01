@@ -79,24 +79,30 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
   }
 
   const field = (label: string, key: keyof Address, placeholder: string, half = false, isReturn = false) => (
-    <div className={`form-control ${half ? 'w-full' : ''}`}>
-      <label className="label py-1"><span className="label-text text-sm">{label}</span></label>
+    <div className={half ? 'w-full' : 'w-full'}>
+      <label className="block py-1 text-xs font-medium text-zinc-600">{label}</label>
       <input
         type="text"
-        className={`input input-bordered input-sm ${isReturn ? (returnErrors[key] ? 'input-error' : '') : (errors[key] ? 'input-error' : '')}`}
+        className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
+          isReturn
+            ? returnErrors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
+            : errors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
+        }`}
         placeholder={placeholder}
         value={isReturn ? returnForm[key] : form[key]}
         onChange={e => isReturn ? updateReturn(key, e.target.value) : update(key, e.target.value)}
       />
-      {(isReturn ? returnErrors[key] : errors[key]) && <label className="label py-0"><span className="label-text-alt text-error">{(isReturn ? returnErrors[key] : errors[key])}</span></label>}
+      {(isReturn ? returnErrors[key] : errors[key]) && (
+        <p className="mt-1 text-xs text-red-600">{(isReturn ? returnErrors[key] : errors[key])}</p>
+      )}
     </div>
   )
 
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-xl font-bold">Recipient Address</h2>
-        <p className="text-base-content/60 text-sm mt-1">Where should we send this postcard?</p>
+        <h2 className="text-xl font-bold text-zinc-900">Recipient Address</h2>
+        <p className="text-zinc-600 text-sm mt-1">Where should we send this postcard?</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
@@ -111,46 +117,47 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       </div>
       <div className="grid grid-cols-2 gap-3">
         {field('ZIP/Postal Code', 'postalOrZip', 'M5V 2T6', true)}
-        <div className="form-control">
-          <label className="label py-1"><span className="label-text text-sm">Country</span></label>
+        <div>
+          <label className="block py-1 text-xs font-medium text-zinc-600">Country</label>
           {countryCode ? (
-            <div className="select select-bordered select-sm bg-base-200">
+            <div className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-sm text-zinc-700">
               {countryCode === 'US' ? 'United States' : countryCode === 'CA' ? 'Canada' : countryCode === 'GB' ? 'United Kingdom' : countryCode}
             </div>
           ) : (
-            <select className="select select-bordered select-sm" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
+            <select
+              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+              value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
               <option value="US">United States</option>
               <option value="CA">Canada</option>
               <option value="GB">United Kingdom</option>
-              <option value="AU">Australia</option>
             </select>
           )}
         </div>
       </div>
 
-      <div className="divider"></div>
+      <div className="border-t border-zinc-200 my-2" />
 
       {/* Return address toggle */}
-      <div className="form-control">
-        <label className="label cursor-pointer justify-start gap-3">
+      <div>
+        <label className="flex items-center gap-3 cursor-pointer">
           <input
             type="checkbox"
-            className="checkbox checkbox-sm checkbox-primary"
+            className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
             checked={showReturn}
             onChange={e => setShowReturn(e.target.checked)}
           />
-          <span className="label-text">Use a different return address</span>
+          <span className="text-sm text-zinc-800">Use a different return address</span>
         </label>
         {!showReturn && (
-          <p className="text-base-content/50 text-xs mt-1 ml-8">If unchecked, the recipient address will also be used as the return address.</p>
+          <p className="text-zinc-500 text-xs mt-1 ml-7">If unchecked, the recipient address will also be used as the return address.</p>
         )}
       </div>
 
       {showReturn && (
         <>
           <div>
-            <h3 className="text-lg font-semibold">Return Address</h3>
-            <p className="text-base-content/60 text-sm mt-1">Where should the postcard be returned from?</p>
+            <h3 className="text-lg font-semibold text-zinc-900">Return Address</h3>
+            <p className="text-zinc-600 text-sm mt-1">Where should the postcard be returned from?</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -165,13 +172,14 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
           </div>
           <div className="grid grid-cols-2 gap-3">
             {field('ZIP/Postal Code', 'postalOrZip', 'M5V 2T6', true, true)}
-            <div className="form-control">
-              <label className="label py-1"><span className="label-text text-sm">Country</span></label>
-              <select className="select select-bordered select-sm" value={returnForm.countryCode} onChange={e => updateReturn('countryCode', e.target.value)}>
+            <div>
+              <label className="block py-1 text-xs font-medium text-zinc-600">Country</label>
+              <select
+                className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+                value={returnForm.countryCode} onChange={e => updateReturn('countryCode', e.target.value)}>
                 <option value="US">United States</option>
                 <option value="CA">Canada</option>
                 <option value="GB">United Kingdom</option>
-                <option value="AU">Australia</option>
               </select>
             </div>
           </div>
@@ -179,8 +187,18 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       )}
 
       <div className="flex justify-between pt-4">
-        <button className="btn btn-ghost" onClick={onBack}>Back</button>
-        <button className="btn btn-primary" onClick={handleSubmit}>Next: Review</button>
+        <button
+          className="px-4 h-10 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+          onClick={onBack}
+        >
+          Back
+        </button>
+        <button
+          className="px-4 h-10 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors"
+          onClick={handleSubmit}
+        >
+          Next: Review
+        </button>
       </div>
     </div>
   )

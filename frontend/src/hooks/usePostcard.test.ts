@@ -23,14 +23,14 @@ function fullAddress(overrides: Partial<Address> = {}): Address {
 }
 
 describe('usePostcard', () => {
-  it('default state: image null, message empty, address null, isComplete false, currentStep 1, countryCode US', () => {
+  it('default state: image null, message empty, address null, isComplete false, currentStep 1, countryCode unselected', () => {
     const { result } = renderHook(() => usePostcard())
     expect(result.current.image).toBeNull()
     expect(result.current.message).toBe('')
     expect(result.current.address).toBeNull()
     expect(result.current.isComplete).toBe(false)
     expect(result.current.currentStep).toBe(1)
-    expect(result.current.countryCode).toBe('US')
+    expect(result.current.countryCode).toBeNull()
   })
 
   it('setting image updates state and moves currentStep to 2 when no message', () => {
@@ -152,9 +152,9 @@ describe('usePostcard', () => {
     expect(result.current.isComplete).toBe(false)
   })
 
-  it('countryCode defaults to US', () => {
+  it('countryCode defaults to unselected (no pre-chosen country)', () => {
     const { result } = renderHook(() => usePostcard())
-    expect(result.current.countryCode).toBe('US')
+    expect(result.current.countryCode).toBeNull()
   })
 
   it('setCountryCode updates countryCode', () => {
@@ -182,7 +182,7 @@ describe('usePostcard', () => {
     expect(result.current.countryCode).toBe('CA')
   })
 
-  it('reset() resets countryCode to US', () => {
+  it('reset() clears countryCode back to unselected', () => {
     const { result } = renderHook(() => usePostcard())
     act(() => {
       result.current.setCountryCode('GB')
@@ -191,6 +191,6 @@ describe('usePostcard', () => {
     act(() => {
       result.current.reset()
     })
-    expect(result.current.countryCode).toBe('US')
+    expect(result.current.countryCode).toBeNull()
   })
 })

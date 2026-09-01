@@ -49,29 +49,36 @@ describe('CreatePage step indicator', () => {
     vi.clearAllMocks()
   })
 
-  it('starts on the Destination step without marking later steps done', () => {
+  it('starts on the Destination step with no country pre-selected and nothing done', () => {
     renderWizard()
-    expect(screen.getByRole('button', { name: /Destination/ })).toBeInTheDocument()
-    // No green check circles on photo/message/address steps
+    expect(screen.getByRole('heading', { name: 'Where is this going?' })).toBeVisible()
+    // No step shows ✓ on first paint — not even Destination (no choice made)
     expect(screen.queryByText('✓')).not.toBeInTheDocument()
   })
 
-  it('does not mark Photo complete when the user jumps ahead to Message', () => {
+  it('marks Destination done and advances after picking a country', () => {
     renderWizard()
-    // Jump straight to the Message step (skipping Photo)
-    fireEvent.click(screen.getByRole('button', { name: /^3 Message/ }))
-    const photoStep = screen.getByRole('button', { name: /Photo/ })
-    // Photo was skipped with no image: it must NOT show the ✓ state
-    expect(photoStep.textContent).not.toContain('✓')
-    // Destination is satisfied by the default country: it may show ✓
+    fireEvent.click(screen.getByRole('button', { name: /United States/ }))
+    // Auto-advanced to Photo; Destination is now ✓
+    expect(screen.getByText('Upload your photo')).toBeVisible()
     expect(screen.getByRole('button', { name: /Destination/ }).textContent).toContain('✓')
   })
 
-  it('marks Message complete only once the message is non-empty', () => {
+  it('blocks jumping ahead to Message until the Photo step is done', () => {
     renderWizard()
+    fireEvent.click(screen.getByRole('button', { name: /United States/ }))
+    expect(screen.getByText('Upload your photo')).toBeVisible()
+    // Photo has no image yet: jumping to Message must be a no-op
     fireEvent.click(screen.getByRole('button', { name: /^3 Message/ }))
-    // Jump to Address without writing a message: Message must not show ✓
-    fireEvent.click(screen.getByRole('button', { name: /^4 Address/ }))
-    expect(screen.getByRole('button', { name: /^3 Message/ }).textContent).not.toContain('✓')
+    expect(screen.getByText('Upload your photo')).toBeVisible()
+    expect(screen.getByRole('button', { name: /^2 Photo/ }).textContent).not.toContain('✓')
+  })
+
+  it('always allows jumping backwards', () => {
+    renderWizard()
+    fireEvent.click(screen.getByRole('button', { name: /United States/ }))
+    expect(screen.getByText('Upload your photo')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: /Destination/ }))
+    expect(screen.getByRole('heading', { name: 'Where is this going?' })).toBeVisible()
   })
 })

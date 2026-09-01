@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { InlineMessageEditor } from './InlineMessageEditor'
+import { renderMessageHtml } from '../../utils/messageSanitizer'
 
 describe('InlineMessageEditor', () => {
   const onMessageChange = vi.fn()
@@ -122,5 +123,48 @@ describe('InlineMessageEditor', () => {
     renderEditor()
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Hello' } })
     expect(onMessageChange).toHaveBeenCalledWith('Hello')
+  })
+})
+
+describe('formatting chain (regression: bold then color)', () => {
+  const renderEditor = (initial = 'Happy birthday Grace and family!') => {
+    const onChange = vi.fn()
+    const utils = render(<InlineMessageEditor message={initial} onMessageChange={onChange} onClose={() => {}} />)
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
+    return { onChange, textarea, ...utils }
+  }
+
+  it('re-selects the wrapped word so color wraps it too, not an empty span', async () => {
+    const { onChange, textarea, rerender } = renderEditor('Happy birthday Grace and family!')
+    // user selects "Grace" (chars 15..20)
+    textarea.setSelectionRange(15, 20)
+    fireEvent.click(screen.getByRole('button', { name: 'Bold' }))
+    // onMessageChange fired with **Grace** wrapped in; parent feeds value back
+    const afterBold = '**Happy birthday **Grace** and family!**'.length // sanity only
+    void afterBold
+    const bolded = onChange.mock.calls[0][0] as string
+    expect(bolded).toBe('Happy birthday **Grace** and family!')
+    rerender(<InlineMessageEditor message={bolded} onMessageChange={onChange} onClose={() => {}} />)
+    // selection is restored over the inner word by the component (raf); emulate it
+    // exactly: '**' inserted at 15 puts the inner word at 17..22
+    textarea.setSelectionRange(17, 22)
+    fireEvent.click(screen.getByRole('button', { name: 'Text color' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Blue/ }))
+    const colored = onChange.mock.calls[onChange.mock.calls.length - 1][0] as string
+    // the span must wrap the whole emphasized run, asterisks inside the span
+    expect(colored).toBe('Happy birthday <span style="color:#2563eb">**Grace**</span> and family!')
+    // and marked must render both strong and span from it
+    const html = renderMessageHtml(colored)
+    expect(html).toContain('<strong>')
+    expect(html).toContain('color:#2563eb')
+  })
+
+  it('color with no selection inserts a pair around the cursor, not inside text', () => {
+    const { onChange, textarea } = renderEditor('Hello world')
+    fireEvent.click(screen.getByRole('button', { name: 'Text color' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: /Red/ }))
+    const value = onChange.mock.calls[0][0] as string
+    expect(value).toContain('<span style="color:#dc2626"></span>')
+    void textarea
   })
 })

@@ -1,7 +1,7 @@
 import type { CountryCode } from '../../utils/postcardTemplate'
 
 interface Props {
-  countryCode: CountryCode
+  countryCode?: CountryCode | null
   onCountryChange: (code: CountryCode) => void
   onNext: () => void
 }

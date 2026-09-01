@@ -75,13 +75,14 @@ test.describe('Postcard Creation Flow', () => {
     await expect(page.getByRole('button', { name: 'Create Another' })).toBeVisible()
   })
 
-  test('wizard: skipping a step does not mark it complete', async ({ page }) => {
+  test('wizard: jumping ahead past an unfinished step is blocked', async ({ page }) => {
     await page.goto('/create')
     await page.getByRole('button', { name: /United States/ }).click()
-    // Jump straight to Message, skipping Photo. On mobile the step labels
-    // are hidden (hidden sm:block), so the accessible name is just the number.
+    await expect(page.getByText('Upload your photo')).toBeVisible()
+    // Photo has no image yet: tapping "3 Message" must not navigate
     await page.getByRole('button', { name: /^3( Message)?$/ }).click()
-    const photoStep = page.getByRole('button', { name: /^2( Photo)?$/ })
-    await expect(photoStep).not.toHaveText('✓')
+    await expect(page.getByText('Upload your photo')).toBeVisible()
+    // And the Photo step must not show ✓
+    await expect(page.getByRole('button', { name: /^2( Photo)?$/ })).not.toHaveText('✓')
   })
 })

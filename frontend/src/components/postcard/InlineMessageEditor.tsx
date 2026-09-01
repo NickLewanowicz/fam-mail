@@ -50,32 +50,55 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
     const textarea = textareaRef.current
     if (!textarea) return
 
-    const start = textarea.selectionStart
-    const end = textarea.selectionEnd
-    const selected = message.slice(start, end)
-
-    let newText: string
-    let cursorPos: number
+    let start = textarea.selectionStart
+    let end = textarea.selectionEnd
+    let selected = message.slice(start, end)
 
     if (action.block) {
       const lineStart = message.lastIndexOf('\n', start - 1) + 1
-      newText = message.slice(0, lineStart) + action.prefix + message.slice(lineStart)
-      cursorPos = start + action.prefix.length
-    } else if (selected) {
-      newText = message.slice(0, start) + action.prefix + selected + action.suffix + message.slice(end)
-      cursorPos = end + action.prefix.length + action.suffix.length
-    } else {
-      newText = message.slice(0, start) + action.prefix + action.suffix + message.slice(end)
-      cursorPos = start + action.prefix.length
+      const blockText = message.slice(0, lineStart) + action.prefix + message.slice(lineStart)
+      const blockCursor = start + action.prefix.length
+      if (blockText.length <= MAX_LENGTH) {
+        onMessageChange(blockText)
+        requestAnimationFrame(() => {
+          textarea.focus()
+          textarea.setSelectionRange(blockCursor, blockCursor)
+        })
+      }
+      return
     }
 
-    if (newText.length <= MAX_LENGTH) {
-      onMessageChange(newText)
-      requestAnimationFrame(() => {
-        textarea.focus()
-        textarea.setSelectionRange(cursorPos, cursorPos)
-      })
+    // Coloring a word that is already wrapped in markdown emphasis must
+    // color the whole emphasized run — otherwise the span lands inside the
+    // delimiters (`**<span>word</span>**`), where marked no longer parses
+    // the emphasis and literal asterisks print on the card.
+    const isColorAction = action.prefix.startsWith('<span')
+    if (isColorAction && selected) {
+      const hug = (open: string, close: string) => {
+        if (message.slice(start - open.length, start) === open && message.slice(end, end + close.length) === close) {
+          start -= open.length
+          end += close.length
+          selected = message.slice(start, end)
+          return true
+        }
+        return false
+      }
+      while (hug('**', '**') || hug('~~', '~~') || hug('*', '*') || hug('_', '_')) {
+        // keep expanding while emphasis delimiters hug the selection
+      }
     }
+
+    const newText = message.slice(0, start) + action.prefix + selected + action.suffix + message.slice(end)
+    if (newText.length > MAX_LENGTH) return
+    onMessageChange(newText)
+    const wrapStart = start + action.prefix.length
+    const wrapEnd = wrapStart + selected.length
+    requestAnimationFrame(() => {
+      textarea.focus()
+      // Re-select the wrapped content so a follow-up action (Bold then
+      // Color) restyles the same words instead of inserting an empty pair.
+      textarea.setSelectionRange(wrapStart, wrapEnd)
+    })
   }, [message, onMessageChange])
 
   const applyTextColor = useCallback((hex: string) => {
@@ -92,12 +115,12 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
       exit={{ opacity: 0 }}
       className="absolute inset-0 bg-white flex flex-col rounded-xl overflow-hidden z-10"
     >
-      <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-zinc-100 shrink-0">
+      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-zinc-100 shrink-0">
         {TOOLBAR_ACTIONS.map((action) => (
           <button
             key={action.label}
             type="button"
-            className={`w-6 h-6 rounded-md text-xs font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 transition-colors flex items-center justify-center ${action.iconClass ?? ''}`}
+            className={`w-8 h-8 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center ${action.iconClass ?? ''}`}
             title={action.label}
             aria-label={action.label}
             // Keep focus (and any text selection) in the textarea — clicking a
@@ -108,10 +131,10 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
             {action.icon}
           </button>
         ))}
-        <div className="relative">
+        <div>
           <button
             type="button"
-            className="w-6 h-6 rounded-md text-xs font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 transition-colors flex items-center justify-center"
+            className="w-8 h-8 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center"
             title="Text color"
             aria-label="Text color"
             aria-haspopup="true"
@@ -125,7 +148,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
             <div
               role="menu"
               aria-label="Text color palette"
-              className="absolute top-full left-0 mt-1 z-20 flex items-center gap-1 p-1.5 bg-white border border-zinc-200 rounded-lg shadow-md"
+              className="absolute top-full left-2 mt-1 z-30 flex items-center gap-1.5 px-2 py-1.5 bg-white border border-zinc-200 rounded-lg shadow-lg"
             >
               {TEXT_COLORS.map((color) => (
                 <button
@@ -134,7 +157,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
                   role="menuitem"
                   aria-label={`${color.name} (${color.hex})`}
                   title={color.name}
-                  className="w-4 h-4 rounded-full border border-zinc-300 hover:ring-2 hover:ring-zinc-300 transition-shadow"
+                  className="w-6 h-6 rounded-full border border-zinc-200 hover:ring-2 hover:ring-offset-1 hover:ring-zinc-300 transition-shadow"
                   style={{ backgroundColor: color.hex }}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyTextColor(color.hex)}
@@ -146,7 +169,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div className="flex-1" />
         <button
           type="button"
-          className="px-2.5 py-1 rounded-lg font-medium bg-zinc-900 text-white text-[10px] hover:bg-zinc-800 transition-colors"
+          className="px-3 py-1.5 rounded-lg font-medium bg-zinc-900 text-white text-xs hover:bg-zinc-800 transition-colors"
           onClick={onClose}
         >
           Done
@@ -154,7 +177,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
       </div>
       <textarea
         ref={textareaRef}
-        className="flex-1 w-full p-3 text-[11px] leading-relaxed font-mono text-zinc-700 bg-transparent border-0 outline-none resize-none placeholder:text-zinc-400"
+        className="flex-1 w-full p-3 text-[13px] leading-relaxed font-serif text-stone-800 bg-transparent border-0 outline-none resize-none placeholder:text-zinc-400"
         placeholder="Dear friend,&#10;&#10;Thinking of you..."
         value={message}
         onChange={(e) => onMessageChange(e.target.value)}
