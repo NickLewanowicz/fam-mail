@@ -101,7 +101,7 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, postcard.returnAddress, postcard.size, activeDraftId])
+  }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
 
   // Save the draft, then hand its send date to the backend dispatcher.
   const handleSchedule = useCallback(async (scheduledFor: string) => {
