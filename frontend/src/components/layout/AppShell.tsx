@@ -61,6 +61,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {user && <PostGridModeBadge />}
             <Link
               to="/create"
+              aria-current={location.pathname === '/create' ? 'page' : undefined}
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                 location.pathname === '/create'
                   ? 'bg-zinc-900 text-white'
