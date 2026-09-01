@@ -151,3 +151,14 @@ export async function cancelDraftSchedule(id: string): Promise<void> {
   })
   await handleResponse<{ message: string }>(response)
 }
+
+/** Download a draft as JSON — data portability for self-hosters. */
+export function exportDraftJson(draft: Draft): void {
+  const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `fam-mail-draft-${draft.id.slice(0, 8)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}
