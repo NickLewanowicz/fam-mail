@@ -22,7 +22,7 @@ export function VersionFooter() {
   if (!version) return null
   return (
     <footer className="py-6 text-center text-[11px] text-zinc-400">
-      Fam Mail v{version}
+      fam-mail v{version}
     </footer>
   )
 }
