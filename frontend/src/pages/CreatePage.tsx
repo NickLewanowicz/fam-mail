@@ -8,7 +8,8 @@ import { PostcardPreview, type ActiveZone } from '../components/postcard/Postcar
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
-import { getDraft, createDraft, updateDraft, scheduleDraft } from '../utils/draftApi'
+import { getDraft, createDraft, updateDraft, scheduleDraft, listDrafts } from '../utils/draftApi'
+import type { Address } from '../types/address'
 import { submitPostcard, type PostcardResponse } from '../utils/api'
 
 const STEPS = [
@@ -41,6 +42,7 @@ export default function CreatePage() {
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<PostcardResponse | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(draftId ?? null)
+  const [recentRecipients, setRecentRecipients] = useState<Address[]>([])
 
   useEffect(() => {
     if (!draftId) return
@@ -103,6 +105,29 @@ export default function CreatePage() {
       setSaving(false)
     }
   }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
+
+  // Recent recipients: unique recipient addresses from past drafts
+  useEffect(() => {
+    let cancelled = false
+    listDrafts()
+      .then((drafts) => {
+        if (cancelled) return
+        const seen = new Set<string>()
+        const recipients: Address[] = []
+        for (const d of drafts) {
+          const a = d.recipientAddress as Address | undefined
+          if (!a?.firstName || !a.addressLine1) continue
+          const key = `${a.firstName}|${a.lastName}|${a.addressLine1}`.toLowerCase()
+          if (seen.has(key)) continue
+          seen.add(key)
+          recipients.push(a)
+          if (recipients.length >= 5) break
+        }
+        setRecentRecipients(recipients)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   // Autosave: debounce-persist an already-saved draft as the user edits.
   const firstRun = useRef(true)
@@ -331,6 +356,7 @@ export default function CreatePage() {
               <div className="bg-white rounded-lg border border-zinc-200 p-5">
                 <CountryStep
                   countryCode={postcard.countryCode ?? undefined}
+                  recent={recentRecipients}
                   onCountryChange={setCountryCode}
                   onNext={handleNext}
                 />
@@ -349,6 +375,7 @@ export default function CreatePage() {
                   onNext={handleNext}
                   onBack={handleBack}
                   countryCode={postcard.countryCode ?? undefined}
+                  recent={recentRecipients}
                 />
               </div>
             </motion.div>

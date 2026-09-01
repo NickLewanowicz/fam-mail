@@ -9,6 +9,7 @@ interface Props {
   onNext: () => void
   onBack: () => void
   countryCode?: string
+  recent?: Address[]
 }
 
 const EMPTY_ADDRESS: Address = {
@@ -16,7 +17,7 @@ const EMPTY_ADDRESS: Address = {
   city: '', provinceOrState: '', postalOrZip: '', countryCode: 'US',
 }
 
-export function AddressStep({ address, returnAddress, onAddressChange, onReturnAddressChange, onNext, onBack, countryCode }: Props) {
+export function AddressStep({ address, returnAddress, onAddressChange, onReturnAddressChange, onNext, onBack, countryCode, recent = [] }: Props) {
   const [form, setForm] = useState<Address>(address ?? { ...EMPTY_ADDRESS, countryCode: countryCode ?? 'US' })
   const [returnForm, setReturnForm] = useState<Address>(returnAddress ?? { ...EMPTY_ADDRESS, countryCode: countryCode ?? 'US' })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -104,6 +105,24 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
         <h2 className="text-xl font-bold text-zinc-900">Recipient Address</h2>
         <p className="text-zinc-600 text-sm mt-1">Where should we send this postcard?</p>
       </div>
+
+      {recent.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-zinc-500 mb-1.5">Send to a recent recipient</p>
+          <div className="flex flex-wrap gap-1.5">
+            {recent.map((r, i) => (
+              <button
+                key={`${r.firstName}-${r.addressLine1}-${i}`}
+                type="button"
+                onClick={() => setForm({ ...EMPTY_ADDRESS, ...r })}
+                className="px-2.5 py-1 rounded-full border border-zinc-200 bg-white text-xs text-zinc-700 hover:border-zinc-500 hover:bg-zinc-50 transition-colors"
+              >
+                {r.firstName} {r.lastName} · {r.city}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3">
         {field('First Name', 'firstName', 'Jane', true)}
