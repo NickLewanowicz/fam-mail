@@ -91,18 +91,18 @@ describe('AddressStep', () => {
     fireEvent.change(screen.getByPlaceholderText('Jane'), { target: { value: 'Jane' } })
     fireEvent.change(screen.getByPlaceholderText('Doe'), { target: { value: 'Doe' } })
     fireEvent.change(screen.getByPlaceholderText('123 Main Street'), { target: { value: '1 Main' } })
-    fireEvent.change(screen.getByPlaceholderText('Toronto'), { target: { value: 'Toronto' } })
-    fireEvent.change(screen.getByPlaceholderText('ON'), { target: { value: 'ON' } })
-    fireEvent.change(screen.getByPlaceholderText('M5V 2T6'), { target: { value: 'M5V2T6' } })
+    fireEvent.change(screen.getByPlaceholderText('Toronto'), { target: { value: 'New Haven' } })
+    fireEvent.change(screen.getByPlaceholderText('ON'), { target: { value: 'CT' } })
+    fireEvent.change(screen.getByPlaceholderText('M5V 2T6'), { target: { value: '06510' } })
     fireEvent.click(screen.getByRole('button', { name: /Next: Review/i }))
     expect(onAddressChange).toHaveBeenCalledWith(
       expect.objectContaining({
         firstName: 'Jane',
         lastName: 'Doe',
         addressLine1: '1 Main',
-        city: 'Toronto',
-        provinceOrState: 'ON',
-        postalOrZip: 'M5V2T6',
+        city: 'New Haven',
+        provinceOrState: 'CT',
+        postalOrZip: '06510',
         countryCode: 'US',
       }),
     )
@@ -112,9 +112,9 @@ describe('AddressStep', () => {
         firstName: 'Jane',
         lastName: 'Doe',
         addressLine1: '1 Main',
-        city: 'Toronto',
-        provinceOrState: 'ON',
-        postalOrZip: 'M5V2T6',
+        city: 'New Haven',
+        provinceOrState: 'CT',
+        postalOrZip: '06510',
         countryCode: 'US',
       }),
     )
@@ -136,9 +136,9 @@ describe('AddressStep', () => {
     fireEvent.change(screen.getByPlaceholderText('Jane'), { target: { value: 'Jane' } })
     fireEvent.change(screen.getByPlaceholderText('Doe'), { target: { value: 'Doe' } })
     fireEvent.change(screen.getByPlaceholderText('123 Main Street'), { target: { value: '1 Main' } })
-    fireEvent.change(screen.getByPlaceholderText('Toronto'), { target: { value: 'Toronto' } })
-    fireEvent.change(screen.getByPlaceholderText('ON'), { target: { value: 'ON' } })
-    fireEvent.change(screen.getByPlaceholderText('M5V 2T6'), { target: { value: 'M5V2T6' } })
+    fireEvent.change(screen.getByPlaceholderText('Toronto'), { target: { value: 'New Haven' } })
+    fireEvent.change(screen.getByPlaceholderText('ON'), { target: { value: 'CT' } })
+    fireEvent.change(screen.getByPlaceholderText('M5V 2T6'), { target: { value: '06510' } })
     fireEvent.click(screen.getByRole('button', { name: /Next: Review/i }))
     expect(onNext).toHaveBeenCalled()
   })
@@ -213,5 +213,41 @@ describe('AddressStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /Next: Review/i }))
     expect(onNext).not.toHaveBeenCalled()
     expect(onAddressChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('address preflight validation', () => {
+  const renderForm = () => {
+    render(
+      <AddressStep address={null} returnAddress={null} onAddressChange={() => {}} onReturnAddressChange={() => {}} onNext={() => {}} onBack={() => {}} />,
+    )
+    const fill = (placeholder: string, value: string) => {
+      fireEvent.change(screen.getByPlaceholderText(placeholder), { target: { value } })
+    }
+    return { fill }
+  }
+
+  it('flags a malformed US ZIP before submission', () => {
+    const { fill } = renderForm()
+    fill('Jane', 'Grace')
+    fill('Doe', 'Hopper')
+    fill('123 Main Street', '1 Way')
+    fill('Toronto', 'New Haven')
+    fill('ON', 'CT')
+    fill('M5V 2T6', 'ABC')
+    fireEvent.click(screen.getByRole('button', { name: /Next: Review/ }))
+    expect(screen.getByText(/ZIP must be 5 digits/)).toBeInTheDocument()
+  })
+
+  it('flags a non-2-letter state code', () => {
+    const { fill } = renderForm()
+    fill('Jane', 'Grace')
+    fill('Doe', 'Hopper')
+    fill('123 Main Street', '1 Way')
+    fill('Toronto', 'New Haven')
+    fill('ON', 'Connecticut')
+    fill('M5V 2T6', '06510')
+    fireEvent.click(screen.getByRole('button', { name: /Next: Review/ }))
+    expect(screen.getByText(/2-letter code/)).toBeInTheDocument()
   })
 })
