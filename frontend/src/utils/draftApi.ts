@@ -133,3 +133,21 @@ export async function publishDraft(id: string): Promise<PublishResponse> {
 }
 
 export { DraftApiError }
+
+export async function scheduleDraft(id: string, scheduledFor: string): Promise<void> {
+  const response = await authFetch(`${API_BASE}/${id}/schedule`, {
+    method: 'POST',
+    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scheduledFor }),
+  })
+  await handleResponse<{ message: string }>(response)
+}
+
+/** Cancel a scheduled send; the draft returns to normal draft state */
+export async function cancelDraftSchedule(id: string): Promise<void> {
+  const response = await authFetch(`${API_BASE}/${id}/cancel-schedule`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  })
+  await handleResponse<{ message: string }>(response)
+}
