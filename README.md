@@ -3,49 +3,66 @@
 [![CI](https://github.com/NickLewanowicz/fam-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/NickLewanowicz/fam-mail/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Send physical postcards through a web UI backed by [PostGrid](https://www.postgrid.com/) (printing and USPS delivery).
+Send physical postcards through a web UI backed by [PostGrid](https://www.postgrid.com/) (printing and USPS/Canada Post/Royal Mail delivery).
 
 ## What it does
 
-Fam Mail is a small full-stack app for composing a postcard (photo, message, addresses), previewing front and back, and submitting it to PostGrid. An optional **email-to-postcard** mode can watch an IMAP mailbox, parse requests with an LLM, and create mail automatically when that stack is configured.
+Fam Mail is a full-stack app for composing postcards (photo, Markdown message, addresses), previewing front and back with country-specific safe zones, and submitting them to PostGrid for real printing and mailing. An optional **email-to-postcard** mode can watch an IMAP mailbox, parse requests with an LLM, and create mail automatically.
 
 ## Features
 
-- [x] **Postcard builder** — Image upload, Markdown message, US/CA address validation, live preview
-- [x] **Drafts API** — Save and resume work via the REST API (used by the UI)
-- [x] **OIDC sign-in** — Google or any OIDC provider, with JWT access and refresh cookies
-- [x] **PostGrid** — Test mode for development, live mode for real mail, optional mock mode
-- [x] **Hardening** — Central security headers, CORS, rate limits on auth and costly routes
-- [x] **SQLite** — Users, drafts, sessions, and (when enabled) email pipeline state
-- [x] **Docker** — One image: API plus built static frontend on a single port
-- [x] **Tests** — Backend (`bun test`) and frontend (`vitest`) unit tests; Playwright E2E
+- [x] **5-step postcard wizard** — Destination, photo upload, rich text message, address entry, review & send
+- [x] **Live preview** — Interactive 3D-flip postcard with country-specific safe zones (US, CA, GB) and real card sizes (6×4″, 9×6″, 11×6″)
+- [x] **Rich text messages** — Bold, italic, underline, strikethrough, headings, lists, and text colors that render on the printed card
+- [x] **Drafts** — Save and resume work; managed via the REST API
+- [x] **OIDC sign-in** — Any OIDC provider (Pocket ID, Google, etc.) with JWT access/refresh tokens
+- [x] **Agent API** — Static API keys (`/api/v1`) so Hermes, OpenClaw, or scripts can send postcards on your behalf
+- [x] **PostGrid integration** — Test mode, live mode, or mock mode for printing and mailing
+- [x] **Security** — CORS, rate limits, security headers, XSS-sanitized Markdown
+- [x] **SQLite** — Users, drafts, sessions, and email pipeline state
+- [x] **Docker** — Single image serving API and static frontend on one port
+- [x] **Tests** — Backend (`bun test`) and frontend (`vitest`) unit tests
+- [x] **Responsive** — Fully functional on mobile and desktop
 
 ## Tech stack
 
 | Layer | Technology |
 |-------|------------|
 | Backend | Bun, TypeScript, SQLite |
-| Frontend | Vite, React 18, TypeScript, Tailwind CSS, DaisyUI |
+| Frontend | Vite, React 18, TypeScript, Tailwind CSS, DaisyUI 5, Framer Motion |
 | Auth | OIDC + JWT |
 | Mail | PostGrid |
-| E2E | Playwright |
 | Package manager | pnpm workspaces |
 
 ## Screenshots
 
-### Dashboard
+### Desktop (1280×800)
 
-![Dashboard](docs/screenshots/dashboard.png)
+| Photo Upload | Message Editor |
+|:---:|:---:|
+| ![Photo](docs/screenshots/desktop-04-photo-uploaded.png) | ![Message](docs/screenshots/desktop-05-message-editor.png) |
 
-### Create postcard
+| Address Form | Review & Send |
+|:---:|:---:|
+| ![Address](docs/screenshots/desktop-06-address-form.png) | ![Review](docs/screenshots/desktop-07-review.png) |
 
-![Photo upload](docs/screenshots/create-photo.png)
+| Sent! |
+|:---:|
+| ![Success](docs/screenshots/desktop-08-sent-success.png) |
 
-![Message editor](docs/screenshots/create-message.png)
+### Mobile (375×812)
 
-### Login
+| Login | Dashboard | Destination |
+|:---:|:---:|:---:|
+| ![Login](docs/screenshots/mobile-01-login.png) | ![Dashboard](docs/screenshots/mobile-02-dashboard.png) | ![Destination](docs/screenshots/mobile-03-destination.png) |
 
-![Login](docs/screenshots/login.png)
+| Photo | Message | Address |
+|:---:|:---:|:---:|
+| ![Photo](docs/screenshots/mobile-05-photo-uploaded.png) | ![Message](docs/screenshots/mobile-06-message.png) | ![Address](docs/screenshots/mobile-07-address.png) |
+
+| Review | Sent! |
+|:---:|:---:|
+| ![Review](docs/screenshots/mobile-08-review.png) | ![Sent](docs/screenshots/mobile-09-sent.png) |
 
 ## Documentation
 
@@ -112,6 +129,8 @@ OIDC_REDIRECT_URI=http://localhost:8484/api/auth/callback
 JWT_SECRET=your-secret-at-least-32-characters-long
 ```
 
+For quick local testing without an OIDC provider, set `DEV_MODE=true` to bypass authentication and auto-create a dev user.
+
 See `backend/.env.example` and the root `.env.example` for the full variable list (IMAP, LLM, webhooks, etc.).
 
 ### Run
@@ -135,10 +154,11 @@ Responses are JSON unless the server is serving static assets. Authenticated rou
 | Auth | OIDC login, token management, user info |
 | Postcards | Direct postcard creation and sending |
 | Drafts | Draft CRUD, publish, schedule management |
-| PostGrid | Service status and mode toggling |
+| PostGrid | Service status and mode toggling (admins only) |
 | Webhooks | Email-to-postcard webhook processing |
+| **Agent API** | `/api/v1` — API-key auth for machine integrations (Hermes, OpenClaw) |
 
-See [docs/API.md](docs/API.md) for full request/response schemas, authentication details, and error codes.
+See [docs/API.md](docs/API.md) for full request/response schemas, authentication details, and error codes. Agents and automations: see [docs/agent-api.md](docs/agent-api.md).
 
 ## Commands
 
@@ -164,7 +184,7 @@ fam-mail/
 └── pnpm-workspace.yaml
 ```
 
-Project-specific OpenCode / Claude Code configuration lives under `.opencode/` for contributors who use those tools.
+Agent configuration lives under `.claude/` for contributors who use AI coding tools.
 
 ## Docker (details)
 

@@ -1,6 +1,5 @@
 import { useRef, useCallback, useMemo } from 'react'
-import DOMPurify from 'dompurify'
-import { marked } from 'marked'
+import { renderMessageHtml } from '../../utils/messageSanitizer'
 
 interface Props {
   message: string
@@ -64,11 +63,7 @@ export function MessageStep({ message, onMessageChange, onNext, onBack }: Props)
     }
   }, [message, onMessageChange])
 
-  const previewHtml = useMemo(() => {
-    if (!message.trim()) return ''
-    const raw = marked.parse(message, { async: false }) as string
-    return DOMPurify.sanitize(raw)
-  }, [message])
+  const previewHtml = useMemo(() => renderMessageHtml(message), [message])
 
   return (
     <div className="space-y-4">

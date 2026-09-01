@@ -50,55 +50,33 @@ export function PostGridModeBadge() {
   }
 
   if (!token) return null
-
-  if (error && mode === null) {
-    return (
-      <span className="badge badge-ghost badge-sm text-white/90 border border-white/30" title={error}>
-        PostGrid ?
-      </span>
-    )
-  }
-
-  if (mode === null && loading) {
-    return (
-      <span className="badge badge-ghost badge-sm text-white/80 border border-white/20">
-        <span className="loading loading-spinner loading-xs" />
-      </span>
-    )
-  }
-
+  if (mode === null && loading) return null
+  if (mode === null && error) return null
   if (mode === null) return null
 
-  const label = mode === 'live' ? 'LIVE' : mode === 'test' ? 'TEST' : 'MOCK'
-  const badgeClass =
-    mode === 'live'
-      ? 'badge-error text-white border-0'
-      : mode === 'test'
-        ? 'badge-warning text-warning-content border-0'
-        : 'badge-neutral text-neutral-content border border-white/20'
-
-  const canToggle = !mockMode && mode !== 'mock'
-
-  if (!canToggle) {
-    return (
-      <span
-        className={`badge badge-sm font-semibold tracking-wide ${badgeClass}`}
-        title="PostGrid mock mode — no API keys; mode cannot be changed here."
-      >
-        {label}
-      </span>
-    )
+  const styles: Record<string, string> = {
+    live: 'bg-red-100 text-red-700 border-red-200',
+    test: 'bg-amber-50 text-amber-700 border-amber-200',
+    mock: 'bg-zinc-100 text-zinc-500 border-zinc-200',
   }
 
+  const cls = styles[mode] || styles.mock
+  const label = mode.toUpperCase()
+  const canToggle = !mockMode && mode !== 'mock'
+
+  const Tag = canToggle ? 'button' : 'span'
   return (
-    <button
-      type="button"
-      className={`badge badge-sm font-semibold tracking-wide cursor-pointer hover:opacity-90 ${badgeClass}`}
-      disabled={loading}
-      title={mode === 'live' ? 'Click to switch to test mode' : 'Click to switch to live mode (confirmation required)'}
-      onClick={() => void toggle()}
+    <Tag
+      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border ${cls} ${canToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
+      {...(canToggle ? {
+        onClick: () => void toggle(),
+        disabled: loading,
+        title: mode === 'live' ? 'Switch to test' : 'Switch to live',
+      } : {
+        title: 'Mock mode',
+      })}
     >
-      {loading ? <span className="loading loading-spinner loading-xs" /> : label}
-    </button>
+      {loading ? '...' : label}
+    </Tag>
   )
 }

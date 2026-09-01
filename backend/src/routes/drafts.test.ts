@@ -711,8 +711,9 @@ describe("DraftRoutes", () => {
       const response = await routes.publish(req, user1);
 
       expect(response.status).toBe(200);
-      // sanitizeHTML strips <html>/<body> wrappers; only body content remains
-      expect(capturedRequest.backHTML).toBe("Custom back");
+      // Full-document back HTML is preserved intact (WHOLE_DOCUMENT sanitizing)
+      expect(capturedRequest.backHTML).toContain("<html>");
+      expect(capturedRequest.backHTML).toContain("Custom back");
     });
 
     it("should map draft size to PostGrid size format", async () => {

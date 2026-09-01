@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CountryStep } from './CountryStep'
 
@@ -19,8 +19,8 @@ describe('CountryStep', () => {
         onNext={mockOnNext}
       />
     )
-    expect(screen.getByText('Where are you sending this?')).toBeInTheDocument()
-    expect(screen.getByText('Choose the destination country for your postcard')).toBeInTheDocument()
+    expect(screen.getByText('Where is this going?')).toBeInTheDocument()
+    expect(screen.getByText('Choose the destination country')).toBeInTheDocument()
   })
 
   it('renders 3 country options', () => {
@@ -49,7 +49,7 @@ describe('CountryStep', () => {
     expect(screen.getByText('🇬🇧')).toBeInTheDocument()
   })
 
-  it('highlights selected country with border-primary class', () => {
+  it('highlights selected country with border-zinc-900 in className', () => {
     const { container } = render(
       <CountryStep
         countryCode="CA"
@@ -57,13 +57,12 @@ describe('CountryStep', () => {
         onNext={mockOnNext}
       />
     )
-    const cards = container.querySelectorAll('.card')
-    // Second card should be Canada (CA)
-    const caCard = cards[1]
-    expect(caCard).toHaveClass('border-primary')
+    const buttons = container.querySelectorAll('button')
+    const caButton = buttons[1]
+    expect(caButton?.className).toContain('border-zinc-900')
   })
 
-  it('non-selected countries have border-base-300', () => {
+  it('non-selected countries use border-zinc-200, not the selected border', () => {
     const { container } = render(
       <CountryStep
         countryCode="US"
@@ -71,10 +70,11 @@ describe('CountryStep', () => {
         onNext={mockOnNext}
       />
     )
-    const cards = container.querySelectorAll('.card')
-    // Second card (CA) should not have border-primary
-    expect(cards[1]).not.toHaveClass('border-primary')
-    expect(cards[1]).toHaveClass('border-base-300')
+    const buttons = container.querySelectorAll('button')
+    const caButton = buttons[1]
+    const caClasses = caButton?.className.split(/\s+/) ?? []
+    expect(caClasses).toContain('border-zinc-200')
+    expect(caClasses).not.toContain('border-zinc-900')
   })
 
   it('calls onCountryChange and onNext when US is clicked', () => {
@@ -130,7 +130,7 @@ describe('CountryStep', () => {
         onNext={mockOnNext}
       />
     )
-    expect(screen.getByText('USA postal service')).toBeInTheDocument()
+    expect(screen.getByText('USPS delivery')).toBeInTheDocument()
     expect(screen.getByText('Canada Post')).toBeInTheDocument()
     expect(screen.getByText('Royal Mail')).toBeInTheDocument()
   })

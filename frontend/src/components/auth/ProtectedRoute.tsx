@@ -11,13 +11,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200" data-theme="light">
-        <div className="card w-full max-w-md bg-base-100 shadow-xl">
-          <div className="card-body items-center text-center">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
-            <h2 className="text-xl font-semibold mt-4">Loading...</h2>
-          </div>
-        </div>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 gap-3" data-theme="fammail">
+        <span className="text-2xl">✉️</span>
+        <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
       </div>
     )
   }

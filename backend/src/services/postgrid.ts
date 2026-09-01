@@ -133,6 +133,21 @@ export class PostGridService {
       formData.append('to[postalOrZip]', request.to.postalOrZip)
       formData.append('to[countryCode]', request.to.countryCode)
 
+      // Return address — without it, undeliverable mail is destroyed instead
+      // of returned to the sender.
+      if (request.from) {
+        formData.append('from[firstName]', request.from.firstName)
+        formData.append('from[lastName]', request.from.lastName)
+        formData.append('from[addressLine1]', request.from.addressLine1)
+        if (request.from.addressLine2) {
+          formData.append('from[addressLine2]', request.from.addressLine2)
+        }
+        formData.append('from[city]', request.from.city)
+        formData.append('from[provinceOrState]', request.from.provinceOrState)
+        formData.append('from[postalOrZip]', request.from.postalOrZip)
+        formData.append('from[countryCode]', request.from.countryCode)
+      }
+
       if (request.frontHTML) {
         formData.append('frontHTML', request.frontHTML)
       }

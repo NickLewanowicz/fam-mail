@@ -3,7 +3,8 @@ import { JWTService } from '../services/jwtService'
 import { AuthMiddleware } from '../middleware/auth'
 import { Database } from '../database'
 import type { User } from '../models/user'
-import { jsonResponse, applyHeaders } from '../middleware/headers'
+import { jsonResponse } from '../utils/response'
+import { applyHeaders } from '../middleware/headers'
 import { logger } from '../utils/logger'
 
 /** TTL-based state store for OIDC PKCE code verifiers.

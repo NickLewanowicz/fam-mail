@@ -6,6 +6,19 @@ import { LoginPage } from './LoginPage'
 import { AuthContext } from './AuthContext'
 import type { AuthContextType } from '../../types/auth'
 
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: any) => {
+      const { initial, animate, transition, whileHover, whileTap, ...rest } = props
+      return <div {...rest}>{children}</div>
+    },
+    button: ({ children, ...props }: any) => {
+      const { whileHover, whileTap, initial, animate, transition, ...rest } = props
+      return <button {...rest}>{children}</button>
+    },
+  },
+}))
+
 const defaultAuthContext: AuthContextType = {
   user: null,
   token: null,
@@ -33,8 +46,9 @@ describe('LoginPage', () => {
 
   it('renders the login page', () => {
     renderLoginPage()
-    expect(screen.getByText('📮 Fam Mail')).toBeInTheDocument()
-    expect(screen.getByText('Sign in with OAuth')).toBeInTheDocument()
+    expect(screen.getByText('✉️')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Fam Mail' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument()
   })
 
   it('displays the tagline', () => {
@@ -47,14 +61,14 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderLoginPage({ login: mockLogin })
 
-    await user.click(screen.getByText('Sign in with OAuth'))
+    await user.click(screen.getByRole('button', { name: 'Sign In' }))
     expect(mockLogin).toHaveBeenCalledOnce()
   })
 
   it('shows loading state when isLoading is true', () => {
     renderLoginPage({ isLoading: true })
     expect(screen.getByText('Redirecting...')).toBeInTheDocument()
-    expect(screen.queryByText('Sign in with OAuth')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sign In' })).not.toBeInTheDocument()
   })
 
   it('disables button when loading', () => {
@@ -68,7 +82,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup()
     renderLoginPage({ login: mockLogin })
 
-    await user.click(screen.getByText('Sign in with OAuth'))
+    await user.click(screen.getByRole('button', { name: 'Sign In' }))
     await waitFor(() => {
       expect(screen.getByText('Failed to start login. Please try again.')).toBeInTheDocument()
     })
@@ -81,11 +95,6 @@ describe('LoginPage', () => {
 
   it('shows the helper text', () => {
     renderLoginPage()
-    expect(screen.getByText('Sign in to create and send postcards')).toBeInTheDocument()
-  })
-
-  it('shows Get Started divider', () => {
-    renderLoginPage()
-    expect(screen.getByText('Get Started')).toBeInTheDocument()
+    expect(screen.getByText('Secured with OAuth')).toBeInTheDocument()
   })
 })
