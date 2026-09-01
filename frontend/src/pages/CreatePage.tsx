@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
@@ -37,6 +37,7 @@ export default function CreatePage() {
   const [showBack, setShowBack] = useState(false)
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
   const [saving, setSaving] = useState(false)
+  const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<PostcardResponse | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(draftId ?? null)
@@ -102,6 +103,29 @@ export default function CreatePage() {
       setSaving(false)
     }
   }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
+
+  // Autosave: debounce-persist an already-saved draft as the user edits.
+  const firstRun = useRef(true)
+  useEffect(() => {
+    if (!activeDraftId || !postcard.address?.firstName) return
+    if (firstRun.current) { firstRun.current = false; return }
+    setAutosaveState('saving')
+    const timer = setTimeout(async () => {
+      try {
+        await updateDraft(activeDraftId, {
+          recipientAddress: postcard.address,
+          senderAddress: postcard.returnAddress ?? postcard.address,
+          message: postcard.message || undefined,
+          imageData: postcard.image?.preview.split(',')[1],
+          size: postcard.size,
+        })
+        setAutosaveState('saved')
+      } catch {
+        setAutosaveState('idle')
+      }
+    }, 2500)
+    return () => clearTimeout(timer)
+  }, [activeDraftId, postcard.address, postcard.message, postcard.image, postcard.size])
 
   // Save the draft, then hand its send date to the backend dispatcher.
   const handleSchedule = useCallback(async (scheduledFor: string) => {
@@ -270,6 +294,14 @@ export default function CreatePage() {
           })}
         </div>
 
+
+        {autosaveState !== 'idle' && (
+          <div className="flex justify-end px-2 mb-1" aria-live="polite">
+            <span className="text-[11px] text-zinc-400">
+              {autosaveState === 'saving' ? 'Saving…' : 'Draft saved'}
+            </span>
+          </div>
+        )}
 
         {/* Postcard preview */}
         <div className="flex justify-center">
