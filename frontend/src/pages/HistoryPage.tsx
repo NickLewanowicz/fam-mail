@@ -50,6 +50,7 @@ export default function HistoryPage() {
             </Link>
           </div>
         ) : (
+          <>
           <ul className="space-y-2">
             {postcards.map((card) => (
               <li
@@ -100,6 +101,7 @@ export default function HistoryPage() {
               </button>
             </div>
           )}
+          </>
         )}
       </div>
     </AppShell>
