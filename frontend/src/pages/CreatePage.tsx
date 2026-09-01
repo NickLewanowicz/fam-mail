@@ -356,6 +356,7 @@ export default function CreatePage() {
           <div className="w-full max-w-[640px]">
             <PostcardPreview
               image={postcard.image?.preview ?? null}
+              imageFile={postcard.image?.file ?? null}
               message={postcard.message}
               address={postcard.address}
               showBack={showBack}
