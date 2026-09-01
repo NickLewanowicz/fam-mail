@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
-import { listDrafts, deleteDraft } from '../utils/draftApi'
+import { listDrafts, deleteDraft, exportDraftJson } from '../utils/draftApi'
 import type { Draft } from '../types/postcard'
 
 export default function DashboardPage() {
@@ -152,6 +152,13 @@ export default function DashboardPage() {
                       {new Date(draft.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
                     <button
+                        onClick={(e) => { e.stopPropagation(); exportDraftJson(draft) }}
+                        className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+                        title="Export draft as JSON"
+                      >
+                        Export
+                      </button>
+                      <button
                       className="text-xs text-zinc-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget(draft) }}
                     >
