@@ -13,17 +13,18 @@ const STATUS_STYLES: Record<string, string> = {
 export default function HistoryPage() {
   const navigate = useNavigate()
   const [postcards, setPostcards] = useState<SentPostcard[]>([])
+  const [limit, setLimit] = useState(25)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    listSentPostcards()
+    listSentPostcards(limit)
       .then((data) => { if (!cancelled) setPostcards(data) })
       .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load history') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [limit])
 
   return (
     <AppShell>
@@ -89,6 +90,16 @@ export default function HistoryPage() {
               </li>
             ))}
           </ul>
+          {postcards.length >= limit && (
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setLimit((l) => l + 25)}
+                className="px-4 h-9 rounded-md border border-zinc-300 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                Load more
+              </button>
+            </div>
+          )}
         )}
       </div>
     </AppShell>
