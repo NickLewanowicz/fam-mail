@@ -51,7 +51,24 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
     if (!addr.addressLine1.trim()) e.addressLine1 = 'Required'
     if (!addr.city.trim()) e.city = 'Required'
     if (!addr.provinceOrState.trim()) e.provinceOrState = 'Required'
-    if (!addr.postalOrZip.trim()) e.postalOrZip = 'Required'
+    if (!addr.postalOrZip.trim()) {
+      e.postalOrZip = 'Required'
+      return e
+    }
+    // Preflight the postal format per destination — mirrors backend rules so
+    // users learn about a bad ZIP before reaching the review step.
+    const country = (addr.countryCode || 'US').toUpperCase()
+    const country_ = country === addr.countryCode ? addr.countryCode : addr.countryCode.toUpperCase()
+    if (country_ === 'US' && !/^\d{5}(-\d{4})?$/.test(addr.postalOrZip)) {
+      e.postalOrZip = 'ZIP must be 5 digits or 5+4 (e.g. 12345)'
+    } else if (country_ === 'CA' && !/^[A-Za-z]\d[A-Za-z][\s-]?\d[A-Za-z]\d$/.test(addr.postalOrZip)) {
+      e.postalOrZip = 'Postal code must look like A1A 1A1'
+    } else if (country_ === 'GB' && !/^[A-Za-z]{1,2}\d[A-Za-z\d]?\s?\d[A-Za-z]{2}$/.test(addr.postalOrZip)) {
+      e.postalOrZip = 'Postcode must look like SW1A 1AA'
+    }
+    if (!/^[A-Za-z]{2}$/.test(addr.provinceOrState)) {
+      e.provinceOrState = 'Use a 2-letter code (e.g. CT, ON)'
+    }
     return e
   }
 
