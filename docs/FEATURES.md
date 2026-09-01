@@ -38,3 +38,39 @@ small self-hosted projects handle the same needs — see
 | 28 | feat/28-support | SUPPORT.md with expectations | docs | ✅ |
 | 29 | feat/29-contributing-refresh | CONTRIBUTING: commands + conventions | docs | ✅ |
 | 30 | feat/30-release-1-1-0 | v1.1.0 release: versions, changelog, board | release | ✅ |
+
+
+## Second pass — Sept 2026 (31–60)
+
+| # | Feature | Category |
+|---|---------|----------|
+| 31 | Repo voice pass + AI-assistance disclosure | docs |
+| 32 | .nvmrc, engines pinned to Node 20 / pnpm 9 | dx |
+| 33 | Real 404 page | product |
+| 34 | Per-route tab titles | product |
+| 35 | Envelope favicon + theme-color | product |
+| 36 | Create accepts prefill recipient | product |
+| 37 | Copy-address / send-again on history | product |
+| 38 | Past-date schedule guard | product |
+| 39 | Draft search | product |
+| 40 | 30s PostGrid call timeout | ops |
+| 41 | Playwright e2e job in CI | ci |
+| 42 | `pnpm shots` screenshot regeneration | dx |
+| 43 | History link on the success screen | product |
+| 44 | FAQ + SECURITY supported versions | docs |
+| 45 | beforeunload guard for unfinished cards | product |
+| 46 | ErrorBoundary restyle + friendlier copy | product |
+| 47 | History load-more pagination | product |
+| 48 | aria-current on nav links | a11y |
+| 49 | PR template with testing checklist | docs |
+| 50 | Compose labels + no-new-privileges | ops |
+| 51 | Backup/restore section in DEPLOYMENT | docs |
+| 52 | prefers-reduced-motion respected | a11y |
+| 53 | README screenshots regenerated | docs |
+| 54 | Screenshot table points at fresh captures | docs |
+| 55 | Relative timestamps (drafts + history) | product |
+| 56 | FAQ/UPGRADING/SUPPORT surfaced in README | docs |
+| 57 | maxLength caps on address inputs | product |
+| 58 | 413 cap on oversized postcard payloads | ops |
+| 59 | Commit message cleanup on unpushed history | dx |
+| 60 | v1.2.0 release | release |

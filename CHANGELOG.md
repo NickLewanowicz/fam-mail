@@ -23,6 +23,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - ADR 0001 library strategy: sonner, radix-ui, react-dropzone adopted; ~1,200 LOC dead code removed
 
+## [1.2.0] — 2026-09-01
+
+### Added
+- 404 page, per-route tab titles, dark mode toggle, reduced-motion support
+- Postcard history: copy-address, send-again, load-more pagination
+- Draft autosave, search, JSON export, scheduled-date badges
+- Occasion templates, keyboard shortcuts, address preflight validation
+- Ops: backup script, graceful shutdown, version in /api/health, Dependabot, e2e in CI
+
+### Docs
+- Troubleshooting, environment reference, FAQ, UPGRADING, SUPPORT, API examples
+- ADR 0001: frontend library strategy (sonner, radix-ui, react-dropzone, TipTap planned)
+
 ## [Unreleased]
 
 ### Added
