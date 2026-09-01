@@ -121,6 +121,8 @@ export class PostGridService {
 
     try {
       const formData = new URLSearchParams()
+      // Don't let a hung PostGrid connection stall the request forever
+      const timeout = AbortSignal.timeout(30_000)
 
       formData.append('to[firstName]', request.to.firstName)
       formData.append('to[lastName]', request.to.lastName)
@@ -160,6 +162,7 @@ export class PostGridService {
           'x-api-key': this.apiKey,
         },
         body: formData,
+        signal: timeout,
       })
 
       if (!response.ok) {
