@@ -146,6 +146,11 @@ export default function DashboardPage() {
                     }`}>
                       {draft.state}
                     </span>
+                    {draft.scheduledFor && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700" title={`Scheduled for ${new Date(draft.scheduledFor).toLocaleString()}`}>
+                        📅 {new Date(draft.scheduledFor).toLocaleDateString()}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-100">
                     <span className="text-xs text-zinc-400">
