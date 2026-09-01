@@ -40,15 +40,11 @@ Fam Mail is a full-stack app for composing postcards (photo, Markdown message, a
 
 | Photo Upload | Message Editor |
 |:---:|:---:|
-| ![Photo](docs/screenshots/desktop-04-photo-uploaded.png) | ![Message](docs/screenshots/desktop-05-message-editor.png) |
+| ![Photo](docs/screenshots/desktop-photo.png) | ![Message](docs/screenshots/desktop-message.png) |
 
-| Address Form | Review & Send |
-|:---:|:---:|
-| ![Address](docs/screenshots/desktop-06-address-form.png) | ![Review](docs/screenshots/desktop-07-review.png) |
-
-| Sent! |
+| Review & Send |
 |:---:|
-| ![Success](docs/screenshots/desktop-08-sent-success.png) |
+| ![Review](docs/screenshots/desktop-review.png) |
 
 ### Mobile (375×812)
 
