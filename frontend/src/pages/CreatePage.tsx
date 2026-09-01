@@ -356,7 +356,6 @@ export default function CreatePage() {
               <div className="bg-white rounded-lg border border-zinc-200 p-5">
                 <CountryStep
                   countryCode={postcard.countryCode ?? undefined}
-                  recent={recentRecipients}
                   onCountryChange={setCountryCode}
                   onNext={handleNext}
                 />
