@@ -129,6 +129,27 @@ export default function CreatePage() {
     return () => { cancelled = true }
   }, [])
 
+  // Keyboard shortcuts: ←/→ move between steps (when not typing), and
+  // ⌘/Ctrl+Enter on the review step sends. Both are no-ops inside inputs.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)
+      if (typing) return
+      if (e.key === 'ArrowRight' && step < STEPS.length - 1) {
+        const next = step + 1
+        const prerequisiteDone = stepComplete[next]
+        if (prerequisiteDone || next === step + 1) setStep(next)
+      } else if (e.key === 'ArrowLeft' && step > 0) {
+        setStep(step - 1)
+      } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && step === 4) {
+        handleSend()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   // Autosave: debounce-persist an already-saved draft as the user edits.
   const firstRun = useRef(true)
   useEffect(() => {
@@ -403,6 +424,7 @@ export default function CreatePage() {
                   onBack={handleBack}
                   onSend={handleSend}
                   onSaveDraft={handleSaveDraft}
+                  keyboardHint="⌘/Ctrl+Enter to send"
                   onSchedule={handleSchedule}
                   sending={submitting}
                   saving={saving}
