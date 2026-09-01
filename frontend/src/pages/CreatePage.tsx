@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
 import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
@@ -38,7 +39,6 @@ export default function CreatePage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState<PostcardResponse | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(draftId ?? null)
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function CreatePage() {
         }
         setActiveDraftId(draft.id)
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load draft')
+        if (!cancelled) toast.error(err instanceof Error ? err.message : 'Failed to load draft')
       } finally {
         if (!cancelled) setLoadingDraft(false)
       }
@@ -83,7 +83,6 @@ export default function CreatePage() {
   const handleSaveDraft = useCallback(async () => {
     if (!postcard.address) return
     setSaving(true)
-    setError(null)
     try {
       const payload = {
         recipientAddress: postcard.address,
@@ -98,7 +97,7 @@ export default function CreatePage() {
         setActiveDraftId(draft.id)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save draft')
+      toast.error(err instanceof Error ? err.message : 'Failed to save draft')
     } finally {
       setSaving(false)
     }
@@ -107,7 +106,6 @@ export default function CreatePage() {
   const handleSend = useCallback(async () => {
     if (!postcard.address || !postcard.image) return
     setSubmitting(true)
-    setError(null)
     try {
       const response = await submitPostcard(
         postcard.address,
@@ -118,7 +116,7 @@ export default function CreatePage() {
       )
       setResult(response)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send postcard')
+      toast.error(err instanceof Error ? err.message : 'Failed to send postcard')
     } finally {
       setSubmitting(false)
     }
@@ -240,19 +238,6 @@ export default function CreatePage() {
           })}
         </div>
 
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex items-center justify-between px-3 py-2 mb-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm"
-            >
-              <span>{error}</span>
-              <button onClick={() => setError(null)} className="text-xs font-medium text-red-500 hover:text-red-700">Dismiss</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Postcard preview */}
         <div className="flex justify-center">

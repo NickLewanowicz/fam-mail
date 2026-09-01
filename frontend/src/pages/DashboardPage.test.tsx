@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import DashboardPage from './DashboardPage'
 import type { Draft } from '../types/postcard'
 import { listDrafts, deleteDraft } from '../utils/draftApi'
@@ -85,6 +86,7 @@ describe('DashboardPage', () => {
     const { container } = render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     const spinner = container.querySelector('.animate-spin')
@@ -101,6 +103,7 @@ describe('DashboardPage', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     expect(await screen.findByText('Send something real')).toBeInTheDocument()
@@ -111,6 +114,7 @@ describe('DashboardPage', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     const cta = await screen.findByRole('link', { name: /Create a Postcard/i })
@@ -122,6 +126,7 @@ describe('DashboardPage', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     expect(await screen.findByText('No drafts yet')).toBeInTheDocument()
@@ -132,6 +137,7 @@ describe('DashboardPage', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     expect(await screen.findByText('Sam Lee')).toBeInTheDocument()
@@ -143,6 +149,7 @@ describe('DashboardPage', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     expect(await screen.findByText('Sam Lee')).toBeInTheDocument()
@@ -153,21 +160,26 @@ describe('DashboardPage', () => {
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     expect(await screen.findByText('ready')).toBeInTheDocument()
   })
 
-  it('delete button removes draft from list', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('delete button opens confirm dialog, then removes draft on confirm', async () => {
     vi.mocked(listDrafts).mockResolvedValue([makeDraft()])
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
     expect(await screen.findByText('Sam Lee')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /Delete/i }))
+    // dialog appears; draft is not yet removed
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    expect(deleteDraft).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete', exact: true }))
     await waitFor(() => {
       expect(deleteDraft).toHaveBeenCalledWith('draft-1')
     })
@@ -175,16 +187,17 @@ describe('DashboardPage', () => {
       expect(screen.queryByText('Sam Lee')).not.toBeInTheDocument()
     })
     expect(screen.getByText('No drafts yet')).toBeInTheDocument()
-    confirmSpy.mockRestore()
   })
 
-  it('shows error message on API failure', async () => {
+  it('shows toast on API failure', async () => {
     vi.mocked(listDrafts).mockRejectedValue(new Error('API unavailable'))
     render(
       <MemoryRouter>
         <DashboardPage />
+        <Toaster position="top-center" />
       </MemoryRouter>,
     )
+    // sonner renders toasts into a portal outside the router tree
     expect(await screen.findByText('API unavailable')).toBeInTheDocument()
   })
 })

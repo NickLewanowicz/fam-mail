@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { AuthProvider } from './components/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
@@ -27,6 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
+          <Toaster richColors position="top-center" />
         </AuthProvider>
       </BrowserRouter>
     </ErrorBoundary>
