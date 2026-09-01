@@ -22,3 +22,10 @@ If you discover a security vulnerability, please report it responsibly:
 - All API endpoints require authentication except health checks
 - Rate limiting is applied to postcard submission and webhook endpoints
 - CORS is configured to restrict origins in production
+
+## Supported versions
+
+| Version | Supported |
+|---------|-----------|
+| 1.1.x   | ✅ |
+| < 1.1   | Best effort — upgrade if you can |
