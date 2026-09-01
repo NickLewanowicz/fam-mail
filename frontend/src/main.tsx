@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { AuthProvider } from './components/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
