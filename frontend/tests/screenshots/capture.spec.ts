@@ -1,118 +1,71 @@
-import { test, expect, type Page } from '@playwright/test'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
-import fs from 'node:fs'
+import { test, expect } from '@playwright/test'
+import { setupMockAuth, setupMockApi } from '../e2e/helpers'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const screenshotDir = path.resolve(__dirname, '../../../docs/screenshots')
+const IMAGE_PATH = path.join(__dirname, '../e2e/fixtures/test-postcard.jpg')
+const OUT_DIR = path.join(__dirname, '../../docs/screenshots')
 
-const DEMO_USER = {
-  id: 'demo-user',
-  oidcSub: 'demo-sub',
-  oidcIssuer: 'https://auth.example.com',
-  email: 'demo@fammail.app',
-  emailVerified: true,
-  firstName: 'Demo',
-  lastName: 'User',
-  createdAt: '2024-01-01T00:00:00.000Z',
-  updatedAt: '2024-01-01T00:00:00.000Z',
-}
-
-const demoDraft = {
-  id: 'draft-demo-1',
-  userId: 'demo-user',
-  recipientAddress: {
-    firstName: 'Mom',
-    lastName: 'Fam',
-    addressLine1: '123 Maple Ave',
-    city: 'Austin',
-    provinceOrState: 'TX',
-    postalOrZip: '78701',
-    countryCode: 'US',
-  },
-  message: 'Happy Birthday! 🎂',
-  state: 'draft' as const,
-  size: '6x4' as const,
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-}
-
-async function mockAuth(page: Page) {
-  await page.addInitScript(() => {
-    localStorage.setItem('fam_mail_token', 'mock-token-for-screenshots')
-  })
-}
-
-async function mockAPIs(page: Page) {
-  await page.route('**/api/auth/me', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ user: DEMO_USER }),
-    })
-  })
-
-  await page.route('**/api/health', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ status: 'healthy', version: '1.0.0', timestamp: new Date().toISOString() }),
-    })
-  })
-
-  await page.route('**/api/drafts', route => {
-    if (route.request().method() === 'GET') {
-      return route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ drafts: [demoDraft] }),
-      })
-    }
-    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
-  })
-
-  await page.route('**/api/postgrid/status', route => {
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ mode: 'test', mockMode: false }),
-    })
-  })
-}
-
-test.beforeAll(() => {
-  fs.mkdirSync(screenshotDir, { recursive: true })
+test.beforeEach(async ({ page }) => {
+  await setupMockAuth(page)
+  await setupMockApi(page)
 })
 
+async function walkToReview(page: import('@playwright/test').Page) {
+  await page.goto('/create')
+  await page.getByRole('button', { name: /United States/ }).click()
+  await page.locator('input[type="file"]').setInputFiles(IMAGE_PATH)
+  await page.getByRole('button', { name: /Write Message/ }).click()
+  await page.getByRole('button', { name: 'Click to write...' }).click()
+  await page.getByRole('textbox').fill('Happy birthday Grace! Wishing you a wonderful year ahead.')
+  await page.getByRole('button', { name: 'Done' }).click()
+  await page.getByRole('button', { name: /Add Address/ }).click()
+  await page.getByPlaceholder('Jane').fill('Grace')
+  await page.getByPlaceholder('Doe').fill('Hopper')
+  await page.getByPlaceholder('123 Main Street').fill('1 Spectacular Way')
+  await page.getByPlaceholder('Toronto').fill('New Haven')
+  await page.getByPlaceholder('ON', { exact: true }).fill('CT')
+  await page.getByPlaceholder('M5V 2T6').fill('06510')
+  await page.getByRole('button', { name: /Next: Review/ }).click()
+}
+
 test('capture dashboard screenshot', async ({ page }) => {
-  await mockAPIs(page)
-  await mockAuth(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/')
-  await expect(page.getByText('Send a Postcard')).toBeVisible()
-  await expect(page.getByText('Mom Fam')).toBeVisible()
-  await page.screenshot({ path: path.join(screenshotDir, 'dashboard.png'), fullPage: false })
+  await expect(page.getByRole('heading', { name: 'Send something real' })).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'desktop-dashboard.png') })
 })
 
 test('capture create postcard - photo step', async ({ page }) => {
-  await mockAPIs(page)
-  await mockAuth(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/create')
-  await expect(page.getByText('Choose a Photo')).toBeVisible()
-  await page.screenshot({ path: path.join(screenshotDir, 'create-photo.png'), fullPage: false })
+  await page.getByRole('button', { name: /United States/ }).click()
+  await expect(page.getByText('Upload your photo')).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'desktop-photo.png') })
 })
 
 test('capture create postcard - message step', async ({ page }) => {
-  await mockAPIs(page)
-  await mockAuth(page)
+  await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/create')
-  await expect(page.getByText('Choose a Photo')).toBeVisible()
-  await page.locator('.steps .step').nth(1).click()
-  await expect(page.getByText('Write Your Message')).toBeVisible()
-  await page.screenshot({ path: path.join(screenshotDir, 'create-message.png'), fullPage: false })
+  await page.getByRole('button', { name: /United States/ }).click()
+  await page.locator('input[type="file"]').setInputFiles(IMAGE_PATH)
+  await page.getByRole('button', { name: /Write Message/ }).click()
+  await page.getByRole('button', { name: 'Click to write...' }).click()
+  await page.getByRole('textbox').fill('Happy birthday Grace! Wishing you a wonderful year ahead.')
+  await page.screenshot({ path: path.join(OUT_DIR, 'desktop-message.png') })
 })
 
-test('capture login page', async ({ page }) => {
-  await page.goto('/login')
-  await expect(page.getByRole('heading', { name: /Fam Mail/ })).toBeVisible()
-  await page.screenshot({ path: path.join(screenshotDir, 'login.png'), fullPage: false })
+test('capture review screenshot', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 })
+  await walkToReview(page)
+  await expect(page.getByRole('heading', { name: 'Review & Send' })).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'desktop-review.png') })
+})
+
+test('capture mobile dashboard screenshot', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Send something real' })).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'mobile-dashboard.png') })
 })

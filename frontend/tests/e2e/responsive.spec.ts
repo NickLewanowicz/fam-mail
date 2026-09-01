@@ -33,9 +33,9 @@ test.describe('Responsive Layout', () => {
   })
 
   test('step labels show on desktop and collapse to numbers on mobile', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
     await page.goto('/create')
     const label = page.locator('span.hidden', { hasText: 'Destination' })
-    // Desktop default (1280x720): label text visible
     await expect(label).toBeVisible()
 
     await page.setViewportSize({ width: 375, height: 667 })
