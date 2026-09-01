@@ -14,3 +14,13 @@
     @apply bg-zinc-50 text-zinc-900;
   }
 }
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid #18181b;
+    outline-offset: 2px;
+  }
+  .dark :focus-visible {
+    outline-color: #e4e4e7;
+  }
+}
