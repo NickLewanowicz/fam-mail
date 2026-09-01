@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { UsePostcardReturn } from '../../hooks/usePostcard'
+import { toast } from 'sonner'
 import { fetchPostgridStatus, type PostgridApiMode } from '../../utils/postgridApi'
 
 interface Props {
@@ -122,6 +123,11 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               className="h-9 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 transition-colors disabled:opacity-50"
               disabled={!scheduleAt || !isComplete || scheduling}
               onClick={async () => {
+                const when = new Date(scheduleAt)
+                if (Number.isNaN(when.getTime()) || when.getTime() <= Date.now()) {
+                  toast.error('Pick a date and time in the future')
+                  return
+                }
                 setScheduling(true)
                 try {
                   await onSchedule(new Date(scheduleAt).toISOString())
