@@ -1,8 +1,9 @@
-# Feature Board — 30 Iterations
+# Feature Board
 
-Working log for the 30-iteration enhancement run (Sept 2026). Each feature ships
-on its own branch, merged to `main` only when lint, tests, and build pass.
-Inspiration: `docs/research-oss-comforts.md` (single-maintainer OSS study).
+A running log of small improvements, one branch each. Nothing merges until
+lint, tests, and build pass. Many of these came out of studying how other
+small self-hosted projects handle the same needs — see
+`docs/research-oss-comforts.md` for the notes.
 
 | # | Branch | Feature | Category | Status |
 |---|--------|---------|----------|--------|

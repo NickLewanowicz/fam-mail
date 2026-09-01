@@ -218,7 +218,11 @@ of in an afternoon — welcome, this is it.
 
 ## Contributing
 
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+PRs welcome. Development happens with AI assistance under human review — see
+[CONTRIBUTING](docs/CONTRIBUTING.md) for the workflow and conventions.
+
+See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Development is AI-assisted
+under human review — details in the contributing guide.
 
 ## License
 
