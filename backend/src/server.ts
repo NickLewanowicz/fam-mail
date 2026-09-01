@@ -404,7 +404,16 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   // #30: Postcard creation requires authentication (PostGrid costs real money)
   // #42: Rate limited to prevent financial exposure
+  // Oversized payloads (giant base64 images) would otherwise allocate before
+  // validation runs — enforce a hard cap up front.
   if (url.pathname === '/api/postcards' && req.method === 'POST') {
+    const contentLength = parseInt(req.headers.get('content-length') ?? '0', 10)
+    if (contentLength > 14 * 1024 * 1024) {
+      return withSecurityHeaders(
+        jsonResponse({ error: 'Request too large — images must be 10 MB or smaller' }, 413, req),
+        req,
+      )
+    }
     const rateLimitResponse = checkRateLimit(postcardRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
