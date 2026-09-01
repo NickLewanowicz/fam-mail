@@ -28,6 +28,14 @@ const TOOLBAR_ACTIONS: MarkdownAction[] = [
   { label: 'Quote', icon: '"', prefix: '> ', suffix: '', block: true },
 ]
 
+/** Occasion presets — a starting point, never sent as-is without the user editing. */
+const TEMPLATES: { label: string; text: string }[] = [
+  { label: 'Birthday', text: 'Happy birthday! Wishing you a wonderful year ahead.\n\n' },
+  { label: 'Thank you', text: 'Thank you so much for everything — it meant a lot to me.\n\n' },
+  { label: 'Congratulations', text: 'Congratulations! So proud of you and everything you have achieved.\n\n' },
+  { label: 'Thinking of you', text: 'Just a little note to say I am thinking of you.\n\n' },
+]
+
 /** Preset text colors — part of the inline formatting subset supported end-to-end. */
 const TEXT_COLORS = [
   { hex: '#0f172a', name: 'Ink' },
@@ -101,6 +109,20 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
     })
   }, [message, onMessageChange])
 
+  const insertAtCursor = useCallback((text: string) => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const pos = textarea.selectionStart ?? message.length
+    const next = message.slice(0, pos) + text + message.slice(pos)
+    if (next.length > MAX_LENGTH) return
+    onMessageChange(next)
+    requestAnimationFrame(() => {
+      textarea.focus()
+      const cursor = pos + text.length
+      textarea.setSelectionRange(cursor, cursor)
+    })
+  }, [message, onMessageChange])
+
   const applyTextColor = useCallback((hex: string) => {
     applyFormat({ prefix: `<span style="color:${hex}">`, suffix: '</span>' })
     setColorOpen(false)
@@ -166,6 +188,23 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
             </div>
           )}
         </div>
+        <select
+          className="ml-1 h-8 rounded-md border border-zinc-200 bg-white px-1.5 text-xs text-zinc-600 outline-none hover:border-zinc-300 focus:border-zinc-400"
+          title="Insert an occasion template at the cursor"
+          aria-label="Insert occasion template"
+          value=""
+          onChange={(e) => {
+            const template = TEMPLATES.find((t) => t.label === e.target.value)
+            if (!template) return
+            insertAtCursor(template.text)
+            e.target.value = ''
+          }}
+        >
+          <option value="" disabled>Templates…</option>
+          {TEMPLATES.map((t) => (
+            <option key={t.label} value={t.label}>{t.label}</option>
+          ))}
+        </select>
         <div className="flex-1" />
         <button
           type="button"
