@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const IMAGE_PATH = path.join(__dirname, '../e2e/fixtures/test-postcard.jpg')
-const OUT_DIR = path.join(__dirname, '../../docs/screenshots')
+const OUT_DIR = path.join(__dirname, '../../../docs/screenshots')
 
 test.beforeEach(async ({ page }) => {
   await setupMockAuth(page)
