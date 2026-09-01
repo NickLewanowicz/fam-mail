@@ -85,3 +85,26 @@ async function fileToBase64(file: File): Promise<string> {
     reader.readAsDataURL(file)
   })
 }
+
+export interface SentPostcard {
+  id: string
+  postgridId?: string
+  recipientName: string
+  recipientAddress: string
+  status: string
+  mode: 'test' | 'live' | string
+  createdAt: string
+}
+
+/** List the signed-in user's sent postcards, newest first. */
+export async function listSentPostcards(limit = 50): Promise<SentPostcard[]> {
+  const response = await authFetch(`${API_BASE_URL}/api/postcards?limit=${limit}`)
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error((errorData as { error?: string }).error || 'Failed to load postcards')
+  }
+
+  const body = (await response.json()) as { data: SentPostcard[] }
+  return body.data
+}

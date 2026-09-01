@@ -332,4 +332,22 @@ describe('Agent API /api/v1', () => {
       expect(res.status).toBe(403)
     })
   })
+describe('GET /api/postcards (JWT web route for history page)', () => {
+  it('lists the authenticated user postcards', async () => {
+    const admin = db.getUserByEmail('admin@example.com')!
+    const token = await jwtService.generateAccessToken(admin)
+    const res = await handleRequest(new Request('http://localhost:8484/api/postcards', {
+      headers: { authorization: `Bearer ${token}` },
+    }))
+    expect(res.status).toBe(200)
+    const data = await res.json() as { data: unknown[] }
+    expect(Array.isArray(data.data)).toBe(true)
+  })
+
+  it('returns 401 without a token', async () => {
+    const res = await handleRequest(new Request('http://localhost:8484/api/postcards'))
+    expect(res.status).toBe(401)
+  })
+})
+
 })
