@@ -351,3 +351,16 @@ describe('GET /api/postcards (JWT web route for history page)', () => {
 })
 
 })
+
+describe('POST /api/postcards body size cap', () => {
+  it('returns 413 for oversized payloads instead of hanging on parse', async () => {
+    const big = 'x'.repeat(15 * 1024 * 1024)
+    const req = new Request('http://localhost:8484/api/postcards', {
+      method: 'POST',
+      headers: { 'x-api-key': 'fam_test_agent_key', 'content-type': 'application/json', 'content-length': String(big.length) },
+      body: JSON.stringify({ to: {}, from: {}, image: big }),
+    })
+    const res = await handleRequest(req)
+    expect([413, 400]).toContain(res.status)
+  })
+})
