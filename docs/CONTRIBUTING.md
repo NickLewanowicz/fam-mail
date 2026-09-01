@@ -28,6 +28,13 @@ automation.
 - **ADRs:** significant decisions go in `docs/adr/` — read ADR 0001 before
   adding UI dependencies.
 
+## AI-assisted development
+
+Fam Mail is built with AI assistance — tools like Claude Code draft code,
+tests, and docs under human direction. The maintainer reviews, tests, and
+decides what actually ships. If you contribute, there's no requirement to
+disclose your own tooling; just make sure you understand the code you submit.
+
 ## Code of Conduct
 
 - Be respectful and inclusive
