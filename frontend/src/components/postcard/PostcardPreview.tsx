@@ -161,6 +161,12 @@ export function PostcardPreview({
           >
             {image ? (
               <>
+                <div
+                  className="absolute bottom-2 left-2 z-10 px-2 py-0.5 rounded-full bg-zinc-950/60 text-[10px] text-white"
+                  title={`${image.file.name} · ${(image.file.size / 1024 / 1024).toFixed(2)} MB`}
+                >
+                  {image.file.name.length > 24 ? image.file.name.slice(0, 21) + '…' : image.file.name} · {(image.file.size / 1024 / 1024).toFixed(1)} MB
+                </div>
                 <img src={image} alt="Postcard front" className="w-full h-full object-cover" />
                 {isPhotoActive && (
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-5">
