@@ -7,6 +7,7 @@ interface Props {
   onBack: () => void
   onSend: () => void
   onSaveDraft: () => void
+  onSchedule: (scheduledFor: string) => Promise<void> | void
   sending: boolean
   saving: boolean
 }
@@ -24,7 +25,9 @@ function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: st
   )
 }
 
-export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, saving }: Props) {
+export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving }: Props) {
+  const [scheduleAt, setScheduleAt] = useState('')
+  const [scheduling, setScheduling] = useState(false)
   const { image, message, address, returnAddress, size, setSize, isComplete } = postcard
   const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
 
@@ -102,6 +105,37 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, sav
       </div>
 
       <div className="pt-2 space-y-2">
+        {/* Schedule for later — uses the drafts schedule API; the backend
+            dispatcher mails the draft when the date passes */}
+        <details className="rounded-md border border-zinc-200 px-3 py-2">
+          <summary className="text-sm text-zinc-600 cursor-pointer select-none">Schedule for later…</summary>
+          <div className="flex items-center gap-2 mt-2">
+            <input
+              type="datetime-local"
+              className="flex-1 h-9 rounded-md border border-zinc-300 bg-white px-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
+              value={scheduleAt}
+              min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+              onChange={(e) => setScheduleAt(e.target.value)}
+            />
+            <button
+              className="h-9 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 transition-colors disabled:opacity-50"
+              disabled={!scheduleAt || !isComplete || scheduling}
+              onClick={async () => {
+                setScheduling(true)
+                try {
+                  await onSchedule(new Date(scheduleAt).toISOString())
+                  setScheduleAt('')
+                } finally {
+                  setScheduling(false)
+                }
+              }}
+            >
+              {scheduling ? 'Scheduling...' : 'Save & schedule'}
+            </button>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1.5">The card is saved now and mailed automatically when the date arrives.</p>
+        </details>
+
         <button
           className="w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           disabled={!isComplete || sending}
