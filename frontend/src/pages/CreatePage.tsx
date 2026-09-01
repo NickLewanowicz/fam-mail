@@ -108,14 +108,16 @@ export default function CreatePage() {
   // Autosave: debounce-persist an already-saved draft as the user edits.
   const firstRun = useRef(true)
   useEffect(() => {
-    if (!activeDraftId || !postcard.address?.firstName) return
+    if (!activeDraftId || !postcard.address) return
     if (firstRun.current) { firstRun.current = false; return }
+    const recipient = postcard.address
+    const sender = postcard.returnAddress ?? postcard.address
     setAutosaveState('saving')
     const timer = setTimeout(async () => {
       try {
         await updateDraft(activeDraftId, {
-          recipientAddress: postcard.address,
-          senderAddress: (postcard.returnAddress ?? postcard.address) as Address,
+          recipientAddress: recipient,
+          senderAddress: sender,
           message: postcard.message || undefined,
           imageData: postcard.image?.preview.split(',')[1],
           size: postcard.size,
