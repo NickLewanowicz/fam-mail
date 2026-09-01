@@ -75,6 +75,7 @@ Fam Mail is a full-stack app for composing postcards (photo, Markdown message, a
 | [Security Policy](SECURITY.md) | Security guidelines and vulnerability reporting |
 | [Agent API](docs/agent-api.md) | Machine API keys for Hermes/OpenClaw/automation |
 | [Troubleshooting](docs/troubleshooting.md) | Common self-hosting issues and fixes |
+| [Environment Reference](docs/environment.md) | Every env var, default, and requirement |
 | [Changelog](CHANGELOG.md) | Version history and notable changes |
 | [Feature Board](docs/FEATURES.md) | Roadmap and 30-iteration enhancement log |
 | [ADR Index](docs/adr/) | Architecture decision records |
