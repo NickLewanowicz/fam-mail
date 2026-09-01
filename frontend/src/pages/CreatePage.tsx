@@ -293,6 +293,9 @@ export default function CreatePage() {
               <button onClick={() => navigate('/')} className="text-sm text-zinc-500 hover:text-zinc-700 py-2">
                 Back to Dashboard
               </button>
+              <button onClick={() => navigate('/history')} className="text-sm text-zinc-500 hover:text-zinc-700 py-2">
+                View postcard history
+              </button>
             </div>
           </motion.div>
         </div>
