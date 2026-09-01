@@ -30,7 +30,7 @@ describe('InlineMessageEditor', () => {
   it('has textarea with maxLength 500 and shows char count', () => {
     renderEditor('Hello')
     expect(screen.getByRole('textbox')).toHaveAttribute('maxLength', '500')
-    expect(screen.getByText('5/500')).toBeInTheDocument()
+    expect(screen.getByText(/5\/500 · \d+ words/)).toBeInTheDocument()
   })
 
   it('wraps selected text with <u> on Underline click', () => {
