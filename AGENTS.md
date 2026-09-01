@@ -71,8 +71,13 @@ Detailed matrices and field rules: `.claude/skills/postcard-validation/SKILL.md`
 
 - **TypeScript strict**; avoid `any`.
 - **DaisyUI** for UI primitives; avoid one-off raw Tailwind form controls where a Daisy component exists.
-- **Controlled inputs** in the wizard (no react-hook-form in this codebase).
+- **react-hook-form + zod is the standard for multi-field forms** (address forms); plain controlled inputs remain fine for 1–2-field forms (country picker, login). Zod address schemas should mirror backend validation. (ADR 0001)
 - Wizard steps live under `frontend/src/components/wizard/` (e.g. photo, message, address, review); postcard preview under `frontend/src/components/postcard/`.
+- **UI layering** (ADR 0001): DaisyUI for styled primitives and theme tokens; `radix-ui` headless primitives for dialogs/popovers/menus; never add a second styled component kit.
+- **Message editing** uses TipTap 3 constrained to the message HTML contract (ADR 0001, Phase 3); editor output is untrusted input — server-side DOMPurify (`backend/src/utils/htmlSanitizer.ts`) is the only sanitization authority.
+- **File uploads** go through react-dropzone + shared validation — do not hand-roll drag/drop or FileReader plumbing.
+- **Destructive actions** use `ConfirmDialog` (radix-ui AlertDialog, `frontend/src/components/ui/ConfirmDialog.tsx`); user feedback uses sonner toasts — no `window.confirm`, no per-page error banners.
+- Architecture decisions live in `docs/adr/` — read ADR 0001 before adding UI dependencies.
 
 ## Key files
 

@@ -12,9 +12,6 @@ import { PostGridModeBadge } from './PostGridModeBadge'
 import { useAuth } from '../auth/AuthContext'
 import { fetchPostgridStatus, setPostgridMode } from '../../utils/postgridApi'
 
-const LIVE_CONFIRM =
-  'Switching to LIVE mode means postcards will actually be printed and mailed. Continue?'
-
 function baseAuth(overrides: Partial<AuthContextType> = {}): AuthContextType {
   return {
     user: {
@@ -76,27 +73,28 @@ describe('PostGridModeBadge', () => {
   })
 
   it('asks for confirmation before switching to live', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
     render(<PostGridModeBadge />)
     await waitFor(() => screen.getByRole('button', { name: /^TEST$/ }))
     fireEvent.click(screen.getByRole('button', { name: /^TEST$/ }))
-    expect(confirmSpy).toHaveBeenCalledWith(LIVE_CONFIRM)
+    // Radix dialog opens; mode unchanged until confirmed
+    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    expect(screen.getByText(/Switch to live mode/)).toBeInTheDocument()
     expect(setPostgridMode).not.toHaveBeenCalled()
-    confirmSpy.mockRestore()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(setPostgridMode).not.toHaveBeenCalled()
   })
 
   it('calls setPostgridMode when switching to live after confirm', async () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
     vi.mocked(setPostgridMode).mockResolvedValue({ mode: 'live', mockMode: false })
     render(<PostGridModeBadge />)
     await waitFor(() => screen.getByRole('button', { name: /^TEST$/ }))
     fireEvent.click(screen.getByRole('button', { name: /^TEST$/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Go live' }))
     await waitFor(() => {
       expect(setPostgridMode).toHaveBeenCalledWith('live')
     })
-    confirmSpy.mockRestore()
   })
 
   it('switches to test from live without confirmation', async () => {

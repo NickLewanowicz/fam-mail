@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthContext'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { fetchPostgridStatus, setPostgridMode, type PostgridApiMode } from '../../utils/postgridApi'
-
-const LIVE_CONFIRM =
-  'Switching to LIVE mode means postcards will actually be printed and mailed. Continue?'
 
 export function PostGridModeBadge() {
   const { token } = useAuth()
@@ -11,6 +10,7 @@ export function PostGridModeBadge() {
   const [mockMode, setMockMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingLive, setConfirmingLive] = useState(false)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -32,16 +32,23 @@ export function PostGridModeBadge() {
     void load()
   }, [load])
 
-  const toggle = async () => {
+  const requestToggle = () => {
     if (!mode || mode === 'mock' || mockMode) return
-    const next: 'test' | 'live' = mode === 'live' ? 'test' : 'live'
-    if (next === 'live' && !window.confirm(LIVE_CONFIRM)) return
+    if (mode === 'test') {
+      setConfirmingLive(true)
+    } else {
+      void applyMode('test')
+    }
+  }
+
+  const applyMode = async (next: 'test' | 'live') => {
     setLoading(true)
     setError(null)
     try {
       const s = await setPostgridMode(next)
       setMode(s.mode)
       setMockMode(s.mockMode)
+      toast.success(s.mode === 'live' ? 'Live mode — postcards will be mailed' : 'Test mode — nothing will be mailed')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update mode')
     } finally {
@@ -66,17 +73,28 @@ export function PostGridModeBadge() {
 
   const Tag = canToggle ? 'button' : 'span'
   return (
-    <Tag
-      className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border ${cls} ${canToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
-      {...(canToggle ? {
-        onClick: () => void toggle(),
-        disabled: loading,
-        title: mode === 'live' ? 'Switch to test' : 'Switch to live',
-      } : {
-        title: 'Mock mode',
-      })}
-    >
-      {loading ? '...' : label}
-    </Tag>
+    <>
+      <Tag
+        className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border ${cls} ${canToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
+        {...(canToggle ? {
+          onClick: requestToggle,
+          disabled: loading,
+          title: mode === 'live' ? 'Switch to test' : 'Switch to live',
+        } : {
+          title: 'Mock mode',
+        })}
+      >
+        {loading ? '...' : label}
+      </Tag>
+      <ConfirmDialog
+        open={confirmingLive}
+        onOpenChange={setConfirmingLive}
+        title="Switch to live mode?"
+        description="Postcards will actually be printed and mailed, and your PostGrid account will be charged."
+        confirmLabel="Go live"
+        destructive
+        onConfirm={() => void applyMode('live')}
+      />
+    </>
   )
 }

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
+import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { listDrafts, deleteDraft } from '../utils/draftApi'
 import type { Draft } from '../types/postcard'
 
@@ -9,16 +11,15 @@ export default function DashboardPage() {
   const navigate = useNavigate()
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<Draft | null>(null)
 
   const loadDrafts = async () => {
     try {
       setLoading(true)
       const data = await listDrafts()
       setDrafts(data)
-      setError(null)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load drafts')
+      toast.error(err instanceof Error ? err.message : 'Failed to load drafts')
     } finally {
       setLoading(false)
     }
@@ -26,13 +27,16 @@ export default function DashboardPage() {
 
   useEffect(() => { loadDrafts() }, [])
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Delete this draft?')) return
+  const handleDelete = async () => {
+    if (!deleteTarget) return
     try {
-      await deleteDraft(id)
-      setDrafts(prev => prev.filter(d => d.id !== id))
+      await deleteDraft(deleteTarget.id)
+      setDrafts(prev => prev.filter(d => d.id !== deleteTarget.id))
+      toast.success('Draft deleted')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete draft')
+      toast.error(err instanceof Error ? err.message : 'Failed to delete draft')
+    } finally {
+      setDeleteTarget(null)
     }
   }
 
@@ -81,19 +85,15 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="flex items-center justify-between px-3 py-2 mb-4 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm"
-            >
-              <span>{error}</span>
-              <button onClick={() => setError(null)} className="text-xs font-medium text-red-500 hover:text-red-700">Dismiss</button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <ConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}
+          title="Delete this draft?"
+          description={deleteTarget ? `"${deleteTarget.message?.slice(0, 60) || 'Untitled draft'}" will be permanently removed.` : undefined}
+          confirmLabel="Delete"
+          destructive
+          onConfirm={handleDelete}
+        />
 
         {loading ? (
           <div className="flex justify-center py-16">
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                     </span>
                     <button
                       className="text-xs text-zinc-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
-                      onClick={(e) => { e.stopPropagation(); handleDelete(draft.id) }}
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(draft) }}
                     >
                       Delete
                     </button>

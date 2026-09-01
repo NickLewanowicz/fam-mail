@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useCallback, useState } from 'react'
+import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useDropzone, type FileRejection } from 'react-dropzone'
 import { motion } from 'framer-motion'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
@@ -9,7 +10,6 @@ import { InlineMessageEditor } from './InlineMessageEditor'
 import { InlineAddressForm } from './InlineAddressForm'
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 const SIZE_LABELS: Record<PostcardSize, string> = {
   '6x4': '6×4″',
@@ -37,11 +37,13 @@ export function PostcardPreview({
   image, message, address, showBack, onFlip,
   activeZone, onImageChange, onMessageChange, onAddressChange, countryCode, size = '6x4',
 }: Props) {
-  const inputRef = useRef<HTMLInputElement>(null)
-  const [dragOver, setDragOver] = useState(false)
   const [editingMessage, setEditingMessage] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+
+  const isPhotoActive = activeZone === 'photo'
+  const isMessageActive = activeZone === 'message'
+  const isAddressActive = activeZone === 'address'
 
   // Leaving a step must close its inline editor — otherwise the overlay
   // stays stacked on top of the card while a different step is active.
@@ -52,33 +54,35 @@ export function PostcardPreview({
 
   const messageHtml = useMemo(() => renderMessageHtml(message), [message])
 
-  const processFile = useCallback((file: File) => {
-    setPhotoError(null)
-    if (!ALLOWED_TYPES.includes(file.type)) {
-      setPhotoError('Please upload a JPEG, PNG, or WebP image')
-      return
-    }
-    if (file.size > MAX_PHOTO_SIZE) {
-      setPhotoError('Image must be under 10MB')
-      return
-    }
+  // Upload plumbing lives in react-dropzone (accept + size validation and
+  // drag/drop); we only convert the accepted file to a preview data URL.
+  const onDropAccepted = useCallback((files: File[]) => {
+    const file = files[0]
+    if (!file) return
     const reader = new FileReader()
     reader.onload = () => { onImageChange?.({ file, preview: reader.result as string }) }
     reader.readAsDataURL(file)
   }, [onImageChange])
 
-  const handleFrontClick = useCallback(() => {
-    if (activeZone === 'photo') inputRef.current?.click()
-  }, [activeZone])
+  const onDropRejected = useCallback((rejections: FileRejection[]) => {
+    const code = rejections[0]?.errors[0]?.code
+    setPhotoError(code === 'file-too-large' ? 'Image must be under 10MB' : 'Please upload a JPEG, PNG, or WebP image')
+  }, [])
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setDragOver(false)
-    if (activeZone === 'photo') {
-      const file = e.dataTransfer.files[0]
-      if (file) processFile(file)
-    }
-  }, [activeZone, processFile])
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+    multiple: false,
+    disabled: !isPhotoActive,
+    accept: { 'image/jpeg': [], 'image/png': [], 'image/webp': [] },
+    maxSize: MAX_PHOTO_SIZE,
+    noClick: true,
+    noKeyboard: true,
+    onDropAccepted,
+    onDropRejected,
+  })
+
+  const handleFrontClick = useCallback(() => {
+    if (isPhotoActive) open()
+  }, [isPhotoActive, open])
 
   const handleMessageClick = useCallback(() => {
     if (activeZone === 'message' && !editingMessage) setEditingMessage(true)
@@ -87,10 +91,6 @@ export function PostcardPreview({
   const handleAddressClick = useCallback(() => {
     if (activeZone === 'address' && !editingAddress) setEditingAddress(true)
   }, [activeZone, editingAddress])
-
-  const isPhotoActive = activeZone === 'photo'
-  const isMessageActive = activeZone === 'message'
-  const isAddressActive = activeZone === 'address'
 
   const aspectRatio = size === '11x6' ? '11/6' : '3/2'
 
@@ -139,17 +139,7 @@ export function PostcardPreview({
         </div>
       )}
 
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0]
-          if (f) processFile(f)
-          e.target.value = ''
-        }}
-      />
+      <input {...getInputProps()} className="hidden" />
 
       <div className="relative w-full" style={{ perspective: '1200px' }}>
         <motion.div
@@ -164,10 +154,8 @@ export function PostcardPreview({
               isPhotoActive ? 'shadow-xl ring-2 ring-blue-400' : 'shadow-lg'
             } ${isPhotoActive ? 'cursor-pointer' : ''}`}
             style={{ backfaceVisibility: 'hidden' }}
+            {...getRootProps()}
             onClick={handleFrontClick}
-            onDragOver={(e) => { if (isPhotoActive) { e.preventDefault(); setDragOver(true) } }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={handleDrop}
             role={isPhotoActive ? 'button' : undefined}
             tabIndex={isPhotoActive ? 0 : undefined}
           >
@@ -193,11 +181,11 @@ export function PostcardPreview({
               </>
             ) : (
               <div className={`group w-full h-full flex flex-col items-center justify-center transition-colors ${
-                dragOver ? 'bg-blue-50' : isPhotoActive ? 'bg-zinc-50' : 'bg-zinc-100'
+                isDragActive ? 'bg-blue-50' : isPhotoActive ? 'bg-zinc-50' : 'bg-zinc-100'
               }`}>
                 {isPhotoActive ? (
                   <div className={`border-2 border-dashed rounded-lg w-[80%] h-[75%] flex flex-col items-center justify-center gap-2 transition-colors group-hover:border-zinc-400 group-hover:bg-zinc-50 ${
-                    dragOver ? 'border-blue-400 bg-blue-50' : 'border-zinc-300'
+                    isDragActive ? 'border-blue-400 bg-blue-50' : 'border-zinc-300'
                   }`}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-zinc-400 group-hover:text-zinc-500 transition-colors">
                       <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
