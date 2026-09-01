@@ -71,6 +71,9 @@ Fam Mail is a full-stack app for composing postcards (photo, Markdown message, a
 | [Security Policy](SECURITY.md) | Security guidelines and vulnerability reporting |
 | [Agent API](docs/agent-api.md) | Machine API keys for Hermes/OpenClaw/automation |
 | [Troubleshooting](docs/troubleshooting.md) | Common self-hosting issues and fixes |
+| [FAQ](docs/FAQ.md) | Quick answers to common questions |
+| [Upgrading](UPGRADING.md) | Backup → pull → restart, rollback |
+| [Support](SUPPORT.md) | How to get help (and what best-effort means) |
 | [Environment Reference](docs/environment.md) | Every env var, default, and requirement |
 | [Backups](scripts/backup.sh) | SQLite-safe backup script (Database not found: /data/fammail.db) |
 | [Changelog](CHANGELOG.md) | Version history and notable changes |
