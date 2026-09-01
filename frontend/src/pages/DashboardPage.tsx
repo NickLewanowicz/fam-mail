@@ -6,6 +6,7 @@ import { AppShell } from '../components/layout/AppShell'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { listDrafts, deleteDraft, exportDraftJson } from '../utils/draftApi'
 import type { Draft } from '../types/postcard'
+import { timeAgo } from '../utils/time'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
