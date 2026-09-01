@@ -19,6 +19,7 @@ import { DraftRoutes } from './routes/drafts'
 import { startScheduledDraftDispatcher } from './services/scheduler'
 import type { LLMConfig } from './services/llm'
 import { logger } from './utils/logger'
+import pkg from '../../package.json'
 
 // Rate limiters — per-endpoint tuning to balance UX and abuse prevention
 const authRateLimiter = new RateLimiter(10, 60_000) // 10/min auth
@@ -379,7 +380,7 @@ export async function handleRequest(req: Request): Promise<Response> {
       jsonResponse(
         {
           status: overallStatus,
-          version: '1.0.0',
+          version: pkg.version,
           timestamp: new Date().toISOString(),
           dependencies: {
             database: dbHealth,
