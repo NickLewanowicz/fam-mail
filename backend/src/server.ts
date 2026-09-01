@@ -16,6 +16,7 @@ import { jsonResponse } from './utils/response'
 import { applyHeaders, createCorsResponse } from './middleware/headers'
 import { setupAuthRoutes } from './routes/auth'
 import { DraftRoutes } from './routes/drafts'
+import { startScheduledDraftDispatcher } from './services/scheduler'
 import type { LLMConfig } from './services/llm'
 import { logger } from './utils/logger'
 
@@ -118,6 +119,9 @@ const draftRoutes = new DraftRoutes(db, authMiddleware, postgrid)
 
 // Machine API key auth for the /api/v1 agent API
 const apiKeyMiddleware = new ApiKeyMiddleware(db, config.apiKeys)
+
+// Fire scheduled postcards (birthdays, anniversaries) on a short interval
+startScheduledDraftDispatcher(db, draftRoutes)
 
 // Initialize notifications
 const notifications = new NotificationService({

@@ -5,17 +5,16 @@ import { MemoryRouter } from 'react-router-dom'
 import { LoginPage } from './LoginPage'
 import { AuthContext } from './AuthContext'
 import type { AuthContextType } from '../../types/auth'
+import type { ButtonHTMLAttributes, HTMLAttributes } from 'react'
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, ...props }: any) => {
-      const { initial, animate, transition, whileHover, whileTap, ...rest } = props
-      return <div {...rest}>{children}</div>
-    },
-    button: ({ children, ...props }: any) => {
-      const { whileHover, whileTap, initial, animate, transition, ...rest } = props
-      return <button {...rest}>{children}</button>
-    },
+    div: ({ children, initial: _initial, animate: _animate, transition: _transition, whileHover: _whileHover, whileTap: _whileTap, ...props }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
+      <div {...props}>{children}</div>
+    ),
+    button: ({ children, initial: _initial, animate: _animate, transition: _transition, whileHover: _whileHover, whileTap: _whileTap, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => (
+      <button {...props}>{children}</button>
+    ),
   },
 }))
 
