@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import('./components/auth/LoginPage').then(m => ({ 
 const AuthCallbackPage = lazy(() => import('./components/auth/AuthCallbackPage').then(m => ({ default: m.AuthCallbackPage })))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const CreatePage = lazy(() => import('./pages/CreatePage'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -25,6 +26,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
               <Route path="/create" element={<ProtectedRoute><CreatePage /></ProtectedRoute>} />
               <Route path="/drafts/:id" element={<ProtectedRoute><CreatePage /></ProtectedRoute>} />
+              <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
