@@ -7,6 +7,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Added
+- Agent API (`/api/v1`) with API-key auth for machine integrations (Hermes, OpenClaw)
+- Scheduled postcards now dispatch automatically when their send date arrives
+- Rich text messages: underline, strikethrough, and text colors that print
+- Size-accurate preview for 6x4 / 9x6 / 11x6 cards
+
+### Fixed
+- Return address is now actually sent to PostGrid (was validated then dropped)
+- Uploaded photos are used as front artwork (were silently ignored, draft path too)
+- Card canvas dimensions now match the selected card size at print time
+- PostGrid mode toggle no longer usable when ADMIN_EMAILS is unset (fail closed)
+- Toolbar formatting no longer clears the text selection
+- Address form renders correctly under OS dark mode
+
+### Changed
+- Adopted frontend library strategy (ADR 0001): sonner toasts, radix-ui dialogs,
+  react-dropzone uploads; removed ~1,200 LOC of dead/duplicated code
+
+### Added
 - Multi-step postcard creation wizard (Country → Photo → Message → Address → Review)
 - Interactive postcard preview with dynamic safe zones (US, CA, UK)
 - Draft save/load system with SQLite persistence
