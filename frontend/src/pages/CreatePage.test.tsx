@@ -20,6 +20,7 @@ vi.mock('../utils/draftApi', () => ({
   getDraft: vi.fn(),
   createDraft: vi.fn(),
   updateDraft: vi.fn(),
+  listDrafts: vi.fn().mockResolvedValue([]),
 }))
 
 vi.mock('../components/auth/AuthContext', () => ({
