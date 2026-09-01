@@ -10,6 +10,7 @@ interface Props {
   onSchedule: (scheduledFor: string) => Promise<void> | void
   sending: boolean
   saving: boolean
+  keyboardHint?: string
 }
 
 function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }) {
@@ -25,7 +26,7 @@ function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: st
   )
 }
 
-export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving }: Props) {
+export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint }: Props) {
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const { image, message, address, returnAddress, size, setSize, isComplete } = postcard
@@ -150,6 +151,9 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             'Send Postcard'
           )}
         </button>
+        {keyboardHint && !sending && (
+          <p className="text-center text-[11px] text-zinc-400">{keyboardHint}</p>
+        )}
         <div className="flex gap-2">
           <button className="flex-1 h-9 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors" onClick={onBack}>
             Back
