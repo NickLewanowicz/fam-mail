@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import { AppShell } from '../components/layout/AppShell'
@@ -32,6 +32,7 @@ const pageTransition = {
 export default function CreatePage() {
   const { id: draftId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const postcard = usePostcard()
   const { setAddress, setReturnAddress, setMessage, setImage, setCountryCode, setSize } = postcard
   const [step, setStep] = useState(0)
@@ -43,6 +44,15 @@ export default function CreatePage() {
   const [result, setResult] = useState<PostcardResponse | null>(null)
   const [activeDraftId, setActiveDraftId] = useState<string | null>(draftId ?? null)
   const [recentRecipients, setRecentRecipients] = useState<Address[]>([])
+
+  useEffect(() => {
+    const prefill = (location.state as { prefillRecipient?: Address } | null)?.prefillRecipient
+    if (prefill?.firstName) {
+      postcard.setAddress({ ...prefill, city: '', provinceOrState: '', postalOrZip: '', countryCode: 'US' })
+      setStep(3)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!draftId) return
