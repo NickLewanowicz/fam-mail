@@ -147,7 +147,7 @@ describe('ReviewStep', () => {
       container = result.container
     })
     expect(container!.textContent).toContain('!')
-    expect(screen.getByText(/No message \(optional\)/i)).toBeInTheDocument()
+    expect(screen.getByText(/Message missing — required to send/i)).toBeInTheDocument()
   })
 
   it('shows checkmark for non-empty message with char count', async () => {

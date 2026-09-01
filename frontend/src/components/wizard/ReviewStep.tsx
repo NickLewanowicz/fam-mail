@@ -66,7 +66,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, sending, sav
 
       <div className="bg-zinc-50 rounded-md border border-zinc-200 p-3">
         <CheckItem ok={!!image} label={image ? 'Photo uploaded' : 'Photo missing'} />
-        <CheckItem ok={!!message.trim()} warn={!message.trim()} label={message.trim() ? `Message (${message.length} chars)` : 'No message (optional)'} />
+        <CheckItem ok={!!message.trim()} warn={!message.trim()} label={message.trim() ? `Message (${message.length} chars)` : 'Message missing — required to send'} />
         <CheckItem
           ok={!!address?.firstName}
           label={address?.firstName ? `To: ${address.firstName} ${address.lastName}, ${address.city}` : 'Recipient address missing'}

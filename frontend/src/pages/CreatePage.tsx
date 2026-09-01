@@ -193,7 +193,7 @@ export default function CreatePage() {
   // A step shows ✓ only when its content is actually satisfied — jumping
   // ahead must not mark skipped steps (e.g. Photo) as complete.
   const stepComplete: boolean[] = [
-    true, // Destination: countryCode has a valid default
+    postcard.countryCode !== null,
     postcard.image !== null,
     postcard.message.trim().length > 0,
     postcard.address !== null,
@@ -211,14 +211,17 @@ export default function CreatePage() {
             return (
               <div key={s.key} className="flex items-center">
                 <button
-                  onClick={() => setStep(i)}
+                  onClick={() => {
+                    // Can't jump past steps whose prerequisites are missing
+                    if (i <= step || stepComplete[i] || stepComplete[i - 1]) setStep(i)
+                  }}
                   className="flex flex-col items-center gap-1"
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                     isActive
                       ? 'bg-zinc-900 text-white'
                       : isDone
-                        ? 'bg-green-600 text-white'
+                        ? 'bg-zinc-900 text-white'
                         : 'border-2 border-zinc-300 text-zinc-400'
                   }`}>
                     {isDone ? '✓' : i + 1}
@@ -230,7 +233,7 @@ export default function CreatePage() {
                   </span>
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-8 md:w-12 h-px mx-1 ${i < step ? 'bg-green-400' : 'bg-zinc-200'}`} />
+                  <div className={`w-8 md:w-12 h-px mx-1 ${i < step ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
                 )}
               </div>
             )
@@ -264,7 +267,7 @@ export default function CreatePage() {
               onImageChange={setImage}
               onMessageChange={setMessage}
               onAddressChange={setAddress}
-              countryCode={postcard.countryCode}
+              countryCode={postcard.countryCode ?? undefined}
               size={postcard.size}
             />
           </div>
@@ -276,7 +279,7 @@ export default function CreatePage() {
             <motion.div key="dest" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
               <div className="bg-white rounded-lg border border-zinc-200 p-5">
                 <CountryStep
-                  countryCode={postcard.countryCode}
+                  countryCode={postcard.countryCode ?? undefined}
                   onCountryChange={setCountryCode}
                   onNext={handleNext}
                 />
@@ -294,7 +297,7 @@ export default function CreatePage() {
                   onReturnAddressChange={setReturnAddress}
                   onNext={handleNext}
                   onBack={handleBack}
-                  countryCode={postcard.countryCode}
+                  countryCode={postcard.countryCode ?? undefined}
                 />
               </div>
             </motion.div>

@@ -143,7 +143,7 @@ describe('AddressStep', () => {
     expect(onNext).toHaveBeenCalled()
   })
 
-  it('country can be changed to CA, GB, AU', () => {
+  it('country can be changed to CA or GB (supported countries only)', () => {
     render(
       <AddressStep address={null} returnAddress={null} onAddressChange={onAddressChange} onReturnAddressChange={onReturnAddressChange} onNext={onNext} onBack={onBack} />,
     )
@@ -152,8 +152,8 @@ describe('AddressStep', () => {
     expect(country).toHaveValue('CA')
     fireEvent.change(country, { target: { value: 'GB' } })
     expect(country).toHaveValue('GB')
-    fireEvent.change(country, { target: { value: 'AU' } })
-    expect(country).toHaveValue('AU')
+    // Unsupported destinations (e.g. AU) are not offered
+    expect(screen.queryByRole('option', { name: 'Australia' })).toBeNull()
   })
 
   it('shows return address section when checkbox is checked', () => {
