@@ -12,7 +12,8 @@
     "clean": "rm -rf dist",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "shots": "playwright test tests/screenshots && git add ../docs/screenshots || true"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
