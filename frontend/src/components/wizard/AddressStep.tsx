@@ -101,6 +101,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       <label className="block py-1 text-xs font-medium text-zinc-600">{label}</label>
       <input
         type="text"
+        maxLength={key === 'provinceOrState' ? 2 : key === 'postalOrZip' ? 10 : 120}
         className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
           isReturn
             ? returnErrors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
