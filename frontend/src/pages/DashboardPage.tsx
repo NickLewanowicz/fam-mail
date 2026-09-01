@@ -167,12 +167,18 @@ export default function DashboardPage() {
                       {draft.state}
                     </span>
                     {draft.scheduledFor && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" title={`Scheduled for ${new Date(draft.scheduledFor).toLocaleString()}`}>
+                        📅 {new Date(draft.scheduledFor).toLocaleDateString()}
+                      </span>
+                    )}
+                    {draft.scheduledFor && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700" title={`Scheduled for ${new Date(draft.scheduledFor).toLocaleString()}`}>
                         📅 {new Date(draft.scheduledFor).toLocaleDateString()}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-100">
+                    <span className="text-[11px] text-zinc-400">{timeAgo(draft.updatedAt)}</span>
                     <span className="text-xs text-zinc-400">
                       {new Date(draft.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
