@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../auth/AuthContext'
 import { PostGridModeBadge } from './PostGridModeBadge'
+import { VersionFooter } from './VersionFooter'
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth()
@@ -57,6 +58,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {children}
         </motion.div>
       </main>
+      <VersionFooter />
     </div>
   )
 }
