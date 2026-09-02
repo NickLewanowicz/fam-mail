@@ -20,20 +20,6 @@ CREATE INDEX IF NOT EXISTS idx_postcards_email_message_id ON postcards(email_mes
 CREATE INDEX IF NOT EXISTS idx_postcards_status ON postcards(status);
 CREATE INDEX IF NOT EXISTS idx_postcards_created_at ON postcards(created_at);
 
-CREATE TABLE IF NOT EXISTS email_processing (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email_message_id TEXT UNIQUE NOT NULL,
-  subject TEXT NOT NULL,
-  sender_email TEXT NOT NULL,
-  has_image BOOLEAN NOT NULL DEFAULT 0,
-  processed_at TEXT NOT NULL DEFAULT (datetime('now')),
-  status TEXT NOT NULL CHECK(status IN ('pending', 'processing', 'completed', 'failed')),
-  error_message TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_email_processing_email_message_id ON email_processing(email_message_id);
-CREATE INDEX IF NOT EXISTS idx_email_processing_status ON email_processing(status);
 
 -- ============================================================================
 -- Users Table (New for Beta 1.0.0)

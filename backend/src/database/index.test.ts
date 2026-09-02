@@ -19,7 +19,6 @@ describe("Database", () => {
   it("should create schema on initialization", () => {
     const tables = db.getTables();
     expect(tables).toContain("postcards");
-    expect(tables).toContain("email_processing");
   });
 
   it("should insert and retrieve postcard record", () => {
