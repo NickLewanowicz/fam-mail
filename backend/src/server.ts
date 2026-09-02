@@ -6,7 +6,6 @@ import { getConfig } from './config'
 import { Database } from './database'
 import { IMAPService } from './services/imap'
 import { PostGridService, setPostgridService } from './services/postgrid'
-import { NotificationService } from './services/notifications'
 import { OIDCService } from './services/oidcService'
 import { JWTService } from './services/jwtService'
 import { AuthMiddleware } from './middleware/auth'
@@ -123,17 +122,6 @@ const apiKeyMiddleware = new ApiKeyMiddleware(db, config.apiKeys)
 
 // Fire scheduled postcards (birthdays, anniversaries) on a short interval
 startScheduledDraftDispatcher(db, draftRoutes)
-
-// Initialize notifications
-const notifications = new NotificationService({
-  smtp: {
-    host: config.smtp.host,
-    port: config.smtp.port,
-    user: config.smtp.user,
-    password: config.smtp.password,
-  },
-  from: config.smtp.from,
-})
 
 // Initialize IMAP service (optional — only if IMAP_HOST is configured)
 let imap: IMAPService | null = null
