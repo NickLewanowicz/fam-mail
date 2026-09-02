@@ -7,6 +7,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 7 | single devLoginResponse helper (was copy-pasted in two routes) | -25 |
 | 6 | requireAuth helper replaces 12 copied auth blocks in server.ts | -35 |
 | 5 | removed never-wired notifications service + SMTP config | -172 |
 | 4 | dropped generateBackHTML/generatePreviewHTML dead exports | -240 |
