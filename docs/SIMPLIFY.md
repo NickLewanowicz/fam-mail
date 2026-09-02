@@ -7,5 +7,6 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 3 | deleted orphaned root e2e specs (dead /postcard-editor route) | -516 |
 | 2 | dropped AddressForm (superseded by InlineAddressForm) | -733 |
 | 1 | dropped unused parallel validation module (backend/src/validation/postcard) | -1,123 |
