@@ -50,13 +50,6 @@ export interface Config {
   database: {
     path: string;
   };
-  smtp: {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    from: string;
-  };
   adminEmails: string[];
   server: {
     port: number;
@@ -238,13 +231,6 @@ export function getConfig(): Config {
     },
     database: {
       path: getEnv("DATABASE_PATH", "/data/fammail.db"),
-    },
-    smtp: {
-      host: getEnv("SMTP_HOST", "localhost"),
-      port: getEnvInt("SMTP_PORT", 587),
-      user: getEnv("SMTP_USER", ""),
-      password: getEnv("SMTP_PASSWORD", ""),
-      from: getEnv("EMAIL_FROM", "noreply@fammail.com"),
     },
     adminEmails: getEnv("ADMIN_EMAILS", "")
       .split(",")
