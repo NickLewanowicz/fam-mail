@@ -172,6 +172,36 @@ function withSecurityHeaders(response: Response, req: Request): Response {
   return applyHeaders(response, req)
 }
 
+/** Create (or reuse) the DEV_MODE user and mint a token pair for it. */
+async function devLoginResponse(req: Request): Promise<Response> {
+  const devEmail = 'dev@fammail.local'
+  let user = db.getUserByEmail?.(devEmail)
+  if (!user) {
+    user = {
+      id: crypto.randomUUID(),
+      oidcSub: 'dev-user',
+      oidcIssuer: 'dev-mode',
+      email: devEmail,
+      emailVerified: true,
+      firstName: 'Dev',
+      lastName: 'User',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    db.insertUser(user)
+  }
+  const accessToken = await jwtService.generateAccessToken(user)
+  const refreshToken = await jwtService.generateRefreshToken(user)
+  db.insertSession({
+    id: crypto.randomUUID(),
+    userId: user.id,
+    token: accessToken,
+    refreshToken,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  })
+  return withSecurityHeaders(jsonResponse({ accessToken, refreshToken, user }, 200, req), req)
+}
+
 export async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
@@ -181,64 +211,16 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   // Dev mode: auto-login endpoint that creates/returns a dev user token
   if (config.devMode && url.pathname === '/api/auth/dev-login' && req.method === 'POST') {
-    const devEmail = 'dev@fammail.local'
-    let user = db.getUserByEmail?.(devEmail)
-    if (!user) {
-      user = {
-        id: crypto.randomUUID(),
-        oidcSub: 'dev-user',
-        oidcIssuer: 'dev-mode',
-        email: devEmail,
-        emailVerified: true,
-        firstName: 'Dev',
-        lastName: 'User',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      db.insertUser(user)
-    }
-    const accessToken = await jwtService.generateAccessToken(user)
-    const refreshToken = await jwtService.generateRefreshToken(user)
-    db.insertSession({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      token: accessToken,
-      refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    })
-    return withSecurityHeaders(jsonResponse({ accessToken, refreshToken, user }, 200, req), req)
+    return devLoginResponse(req)
   }
 
   // Auth endpoints — rate limited to prevent brute-force attacks
   if (url.pathname === '/api/auth/login' && req.method === 'POST') {
     if (config.devMode) {
-      // In dev mode, redirect login to dev-login for convenience
-      const devEmail = 'dev@fammail.local'
-      let user = db.getUserByEmail?.(devEmail)
-      if (!user) {
-        user = {
-          id: crypto.randomUUID(),
-          oidcSub: 'dev-user',
-          oidcIssuer: 'dev-mode',
-          email: devEmail,
-          emailVerified: true,
-          firstName: 'Dev',
-          lastName: 'User',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        db.insertUser(user)
-      }
-      const accessToken = await jwtService.generateAccessToken(user)
-      const refreshToken = await jwtService.generateRefreshToken(user)
-      db.insertSession({
-        id: crypto.randomUUID(),
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-      return withSecurityHeaders(jsonResponse({ devMode: true, accessToken, refreshToken, user }, 200, req), req)
+      // In dev mode, login is a convenience alias of dev-login
+      const devResponse = await devLoginResponse(req)
+      const body = await devResponse.json() as Record<string, unknown>
+      return withSecurityHeaders(jsonResponse({ ...body, devMode: true }, 200, req), req)
     }
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
