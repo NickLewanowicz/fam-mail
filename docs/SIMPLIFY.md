@@ -7,6 +7,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 5 | removed never-wired notifications service + SMTP config | -172 |
 | 4 | dropped generateBackHTML/generatePreviewHTML dead exports | -240 |
 | 3 | deleted orphaned root e2e specs (dead /postcard-editor route) | -516 |
 | 2 | dropped AddressForm (superseded by InlineAddressForm) | -733 |
