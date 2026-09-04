@@ -171,7 +171,7 @@ export default function CreatePage() {
   /** The draft payload as the backend stores it (bare base64 image data). */
   const draftPayload = useCallback((address: Address) => ({
     recipientAddress: address,
-    senderAddress: postcard.returnAddress ?? postcard.address,
+    senderAddress: postcard.returnAddress ?? address,
     message: postcard.message || undefined,
     imageData: postcard.image?.preview.split(',')[1],
     size: postcard.size,
