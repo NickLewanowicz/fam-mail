@@ -7,6 +7,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 23 | shared throwApiError helper (4 copies deleted) | -40 |
 | 22 | folded getDefaultCorsHeaders into getCorsHeaders | -12 |
 | 21 | consolidated PostcardSize; dropped dead initial param on usePostcard | -12 |
 | 20 | arrow-key navigation now respects step prerequisites (bug fix) | 0 |
