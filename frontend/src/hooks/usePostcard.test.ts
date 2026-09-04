@@ -23,38 +23,26 @@ function fullAddress(overrides: Partial<Address> = {}): Address {
 }
 
 describe('usePostcard', () => {
-  it('default state: image null, message empty, address null, isComplete false, currentStep 1, countryCode unselected', () => {
+  it('default state: image null, message empty, address null, isComplete false, countryCode unselected', () => {
     const { result } = renderHook(() => usePostcard())
     expect(result.current.image).toBeNull()
     expect(result.current.message).toBe('')
     expect(result.current.address).toBeNull()
     expect(result.current.isComplete).toBe(false)
-    expect(result.current.currentStep).toBe(1)
     expect(result.current.countryCode).toBeNull()
   })
 
-  it('setting image updates state and moves currentStep to 2 when no message', () => {
+  it('setting image updates state', () => {
     const { result } = renderHook(() => usePostcard())
     const img = makeImage()
     act(() => {
       result.current.setImage(img)
     })
     expect(result.current.image).toEqual(img)
-    expect(result.current.currentStep).toBe(2)
     expect(result.current.isComplete).toBe(false)
   })
 
-  it('setting message with image moves currentStep to 3', () => {
-    const { result } = renderHook(() => usePostcard())
-    act(() => {
-      result.current.setImage(makeImage())
-      result.current.setMessage('Hello')
-    })
-    expect(result.current.currentStep).toBe(3)
-    expect(result.current.isComplete).toBe(false)
-  })
-
-  it('setting address with image+message moves currentStep to 4 and isComplete true', () => {
+  it('setting address with image+message completes the card', () => {
     const { result } = renderHook(() => usePostcard())
     act(() => {
       result.current.setImage(makeImage())
@@ -62,7 +50,6 @@ describe('usePostcard', () => {
       result.current.setAddress(fullAddress())
       result.current.setReturnAddress(fullAddress())
     })
-    expect(result.current.currentStep).toBe(4)
     expect(result.current.isComplete).toBe(true)
   })
 
@@ -100,7 +87,6 @@ describe('usePostcard', () => {
       result.current.setReturnAddress(fullAddress())
     })
     expect(result.current.isComplete).toBe(false)
-    expect(result.current.currentStep).toBe(2)
   })
 
   it('reset() clears everything back to defaults', () => {
@@ -119,7 +105,6 @@ describe('usePostcard', () => {
     expect(result.current.address).toBeNull()
     expect(result.current.returnAddress).toBeNull()
     expect(result.current.isComplete).toBe(false)
-    expect(result.current.currentStep).toBe(1)
   })
 
   it('initial values can be passed via initial parameter', () => {
@@ -137,7 +122,6 @@ describe('usePostcard', () => {
     expect(result.current.message).toBe('Started')
     expect(result.current.address).toEqual(addr)
     expect(result.current.returnAddress).toEqual(addr)
-    expect(result.current.currentStep).toBe(4)
     expect(result.current.isComplete).toBe(true)
   })
 

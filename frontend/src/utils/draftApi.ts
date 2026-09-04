@@ -36,11 +36,6 @@ export interface DraftResponse {
   draft: Draft
 }
 
-export interface PublishResponse {
-  success: boolean
-  message: string
-}
-
 export interface DeleteResponse {
   message: string
 }
@@ -123,16 +118,6 @@ export async function deleteDraft(id: string): Promise<void> {
   await handleResponse<DeleteResponse>(response)
 }
 
-/** Publish a draft (mark as ready to send) */
-export async function publishDraft(id: string): Promise<PublishResponse> {
-  const response = await authFetch(`${API_BASE}/${id}/publish`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-  })
-  return handleResponse<PublishResponse>(response)
-}
-
-export { DraftApiError }
 
 export async function scheduleDraft(id: string, scheduledFor: string): Promise<void> {
   const response = await authFetch(`${API_BASE}/${id}/schedule`, {
@@ -143,14 +128,6 @@ export async function scheduleDraft(id: string, scheduledFor: string): Promise<v
   await handleResponse<{ message: string }>(response)
 }
 
-/** Cancel a scheduled send; the draft returns to normal draft state */
-export async function cancelDraftSchedule(id: string): Promise<void> {
-  const response = await authFetch(`${API_BASE}/${id}/cancel-schedule`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-  })
-  await handleResponse<{ message: string }>(response)
-}
 
 /** Download a draft as JSON — data portability for self-hosters. */
 export function exportDraftJson(draft: Draft): void {

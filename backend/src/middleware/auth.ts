@@ -1,7 +1,7 @@
 import { JWTService } from '../services/jwtService'
 import { Database } from '../database'
 import type { User } from '../models/user'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse } from '../middleware/headers'
 
 export class AuthMiddleware {
   private jwtService: JWTService

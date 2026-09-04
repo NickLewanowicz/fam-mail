@@ -2,20 +2,11 @@ import { Database } from '../database'
 import { AuthMiddleware } from '../middleware/auth'
 import type { Draft } from '../models/draft'
 import type { User } from '../models/user'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
 import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
 import { buildImageFrontHTML, buildMessageBackHTML, isCardSize } from '../utils/htmlSanitizer'
-
-// Draft sizes are already in PostGrid format (6x4, 9x6, 11x6)
-function draftSizeToPostGridSize(size: string): '6x4' | '9x6' | '11x6' {
-  const validSizes: ('6x4' | '9x6' | '11x6')[] = ['6x4', '9x6', '11x6']
-  if (validSizes.includes(size as '6x4' | '9x6' | '11x6')) {
-    return size as '6x4' | '9x6' | '11x6'
-  }
-  return '6x4'
-}
 
 export class DraftRoutes {
   private db: Database
@@ -225,7 +216,7 @@ export class DraftRoutes {
     }
 
     // Validate size
-    const postGridSize = draftSizeToPostGridSize(draft.size)
+    const postGridSize = isCardSize(draft.size) ? draft.size : '6x4'
     const sizeResult = validateSize(postGridSize)
     if (!sizeResult.valid) {
       allErrors.push(...sizeResult.errors)
@@ -249,7 +240,7 @@ export class DraftRoutes {
       // Front artwork: explicit HTML wins; otherwise the draft's uploaded
       // image becomes a full-bleed front canvas. imageData was previously
       // ignored at publish time, mailing cards without their photo.
-      const draftSize = isCardSize(postGridSize) ? postGridSize : '6x4'
+      const draftSize = postGridSize
       let finalFrontHTML = draft.frontHTML ? sanitizeHTML(draft.frontHTML) : undefined
       if (!finalFrontHTML && draft.imageData) {
         finalFrontHTML = buildImageFrontHTML(draft.imageData, draftSize)
