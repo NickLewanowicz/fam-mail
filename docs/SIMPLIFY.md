@@ -8,6 +8,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
 | 12 | removed usePostcard.currentStep (modeled the old 4-step wizard) | -15 |
+| 12 | removed usePostcard.currentStep (old 4-step wizard model) | -15 |
 | 11 | draftSizeToPostGridSize replaced by isCardSize | -10 |
 | 10 | email_processing table removed from schema | -15 |
 | 9 | deleted vestigial App.tsx + test | -27 |
