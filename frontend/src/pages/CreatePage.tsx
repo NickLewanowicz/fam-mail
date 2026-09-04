@@ -97,12 +97,7 @@ export default function CreatePage() {
     if (!postcard.address) return
     setSaving(true)
     try {
-      const payload = {
-        recipientAddress: postcard.address,
-        message: postcard.message || undefined,
-        imageData: postcard.image?.preview,
-        size: postcard.size,
-      }
+      const payload = draftPayload()
       if (activeDraftId) {
         await updateDraft(activeDraftId, payload)
       } else {
@@ -206,13 +201,7 @@ export default function CreatePage() {
     }
     setSaving(true)
     try {
-      const payload = {
-        recipientAddress: postcard.address,
-        senderAddress: postcard.returnAddress ?? postcard.address,
-        message: postcard.message || undefined,
-        imageData: postcard.image?.preview.split(',')[1],
-        size: postcard.size,
-      }
+      const payload = draftPayload()
       let draftId = activeDraftId
       if (draftId) {
         await updateDraft(draftId, payload)
@@ -228,7 +217,7 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, postcard.returnAddress, postcard.size, activeDraftId])
+  }, [activeDraftId, draftPayload])
 
   const handleSend = useCallback(async () => {
     if (!postcard.address || !postcard.image) return
