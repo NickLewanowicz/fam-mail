@@ -7,6 +7,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 13 | dropped unused draftApi publish/cancel wrappers | -25 |
 | 12 | removed usePostcard.currentStep (modeled the old 4-step wizard) | -15 |
 | 12 | removed usePostcard.currentStep (old 4-step wizard model) | -15 |
 | 11 | draftSizeToPostGridSize replaced by isCardSize | -10 |
