@@ -7,6 +7,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 16 | removed the utils/response backward-compat shim | -13 |
 | 15 | requestLogger success/error branches share one log path | -35 |
 | 14 | removed unused deps clsx + @types/dompurify | config |
 | 13 | dropped unused draftApi publish/cancel wrappers | -25 |
