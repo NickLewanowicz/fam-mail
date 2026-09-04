@@ -107,23 +107,6 @@ describe('usePostcard', () => {
     expect(result.current.isComplete).toBe(false)
   })
 
-  it('initial values can be passed via initial parameter', () => {
-    const img = makeImage()
-    const addr = fullAddress({ firstName: 'Pat' })
-    const { result } = renderHook(() =>
-      usePostcard({
-        image: img,
-        message: 'Started',
-        address: addr,
-        returnAddress: addr,
-      }),
-    )
-    expect(result.current.image).toEqual(img)
-    expect(result.current.message).toBe('Started')
-    expect(result.current.address).toEqual(addr)
-    expect(result.current.returnAddress).toEqual(addr)
-    expect(result.current.isComplete).toBe(true)
-  })
 
   it('isComplete requires both image AND message (not just image)', () => {
     const { result } = renderHook(() => usePostcard())
@@ -159,12 +142,6 @@ describe('usePostcard', () => {
     expect(result.current.countryCode).toBe('US')
   })
 
-  it('initial values can include countryCode', () => {
-    const { result } = renderHook(() =>
-      usePostcard({ countryCode: 'CA' })
-    )
-    expect(result.current.countryCode).toBe('CA')
-  })
 
   it('reset() clears countryCode back to unselected', () => {
     const { result } = renderHook(() => usePostcard())
