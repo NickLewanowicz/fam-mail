@@ -7,6 +7,8 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 25 | shared draft payload builder for save/autosave/schedule | -20 |
+| 24 | dropped redundant Content-Type spreads | -4 |
 | 23 | shared throwApiError helper (4 copies deleted) | -40 |
 | 22 | folded getDefaultCorsHeaders into getCorsHeaders | -12 |
 | 21 | consolidated PostcardSize; dropped dead initial param on usePostcard | -12 |

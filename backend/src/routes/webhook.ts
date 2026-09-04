@@ -7,6 +7,11 @@ import { logger } from '../utils/logger'
 let emailService: EmailService = new EmailService()
 
 /**
+ * PAUSED PIPELINE: the email-to-postcard flow is disabled in the 1.x product
+ * focus (see AGENTS.md). This route stays functional behind its shared
+ * secret but is not the supported path — the web UI and the agent API are.
+ *
+
  * Replace the email service instance. Used for testing.
  * @internal
  */

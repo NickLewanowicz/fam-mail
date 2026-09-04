@@ -93,16 +93,20 @@ export default function CreatePage() {
   const handleNext = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
   const handleBack = () => setStep(s => Math.max(s - 1, 0))
 
+  /** The draft payload as the backend stores it (bare base64 image data). */
+  const draftPayload = useCallback((address: Address) => ({
+    recipientAddress: address,
+    senderAddress: postcard.returnAddress ?? address,
+    message: postcard.message || undefined,
+    imageData: postcard.image?.preview.split(',')[1],
+    size: postcard.size,
+  }), [postcard.returnAddress, postcard.message, postcard.image, postcard.size])
+
   const handleSaveDraft = useCallback(async () => {
     if (!postcard.address) return
     setSaving(true)
     try {
-      const payload = {
-        recipientAddress: postcard.address,
-        message: postcard.message || undefined,
-        imageData: postcard.image?.preview,
-        size: postcard.size,
-      }
+      const payload = draftPayload(postcard.address)
       if (activeDraftId) {
         await updateDraft(activeDraftId, payload)
       } else {
@@ -114,7 +118,7 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
+  }, [postcard.address, activeDraftId, draftPayload])
 
   // Recent recipients: unique recipient addresses from past drafts
   useEffect(() => {
@@ -206,13 +210,7 @@ export default function CreatePage() {
     }
     setSaving(true)
     try {
-      const payload = {
-        recipientAddress: postcard.address,
-        senderAddress: postcard.returnAddress ?? postcard.address,
-        message: postcard.message || undefined,
-        imageData: postcard.image?.preview.split(',')[1],
-        size: postcard.size,
-      }
+      const payload = draftPayload(postcard.address)
       let draftId = activeDraftId
       if (draftId) {
         await updateDraft(draftId, payload)
@@ -228,7 +226,7 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, postcard.returnAddress, postcard.size, activeDraftId])
+  }, [activeDraftId, postcard.address, draftPayload])
 
   const handleSend = useCallback(async () => {
     if (!postcard.address || !postcard.image) return
