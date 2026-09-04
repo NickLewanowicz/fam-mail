@@ -570,4 +570,4 @@ export async function handleRequest(req: Request): Promise<Response> {
 }
 
 // Export for testing
-export { db, jwtService, postgrid, notifications, imap, config }
+export { db, jwtService, postgrid, imap, config }
