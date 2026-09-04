@@ -45,7 +45,6 @@ const basePostcard = {
   setAddress: vi.fn(),
   setReturnAddress: vi.fn(),
   isComplete: true,
-  currentStep: 4,
   reset: vi.fn(),
 }
 

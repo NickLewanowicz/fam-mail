@@ -37,7 +37,6 @@ export function usePostcard(initial?: Partial<PostcardState>) {
 
   const isComplete = !!(image && message.trim() && address?.firstName && address?.lastName && address?.addressLine1 && address?.city && address?.provinceOrState && address?.postalOrZip && returnAddress?.firstName && returnAddress?.lastName && returnAddress?.addressLine1 && returnAddress?.city && returnAddress?.provinceOrState && returnAddress?.postalOrZip)
 
-  const currentStep = image ? (message.trim() ? (address?.firstName ? 4 : 3) : 2) : 1
 
   return {
     image, setImage,
@@ -47,7 +46,6 @@ export function usePostcard(initial?: Partial<PostcardState>) {
     size, setSize,
     countryCode, setCountryCode,
     isComplete,
-    currentStep,
     reset,
   }
 }
