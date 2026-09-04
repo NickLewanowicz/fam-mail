@@ -97,7 +97,7 @@ export default function CreatePage() {
     if (!postcard.address) return
     setSaving(true)
     try {
-      const payload = draftPayload()
+      const payload = draftPayload(postcard.address)
       if (activeDraftId) {
         await updateDraft(activeDraftId, payload)
       } else {
@@ -169,13 +169,13 @@ export default function CreatePage() {
   })
 
   /** The draft payload as the backend stores it (bare base64 image data). */
-  const draftPayload = useCallback(() => ({
-    recipientAddress: postcard.address,
+  const draftPayload = useCallback((address: Address) => ({
+    recipientAddress: address,
     senderAddress: postcard.returnAddress ?? postcard.address,
     message: postcard.message || undefined,
     imageData: postcard.image?.preview.split(',')[1],
     size: postcard.size,
-  }), [postcard.address, postcard.returnAddress, postcard.message, postcard.image, postcard.size])
+  }), [postcard.returnAddress, postcard.message, postcard.image, postcard.size])
 
   // Autosave: debounce-persist an already-saved draft as the user edits.
   const firstRun = useRef(true)
@@ -210,7 +210,7 @@ export default function CreatePage() {
     }
     setSaving(true)
     try {
-      const payload = draftPayload()
+      const payload = draftPayload(postcard.address)
       let draftId = activeDraftId
       if (draftId) {
         await updateDraft(draftId, payload)
