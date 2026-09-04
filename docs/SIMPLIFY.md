@@ -7,6 +7,8 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 19 | deleted models/session.ts (zero importers) | -17 |
+| 18 | pruned the phantom notifications export | -1 |
 | 17 | shared fileToDataUrl helper replaces two FileReader copies | -8 |
 | 16 | removed the utils/response backward-compat shim | -13 |
 | 15 | requestLogger success/error branches share one log path | -35 |
