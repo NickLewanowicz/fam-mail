@@ -109,7 +109,7 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [postcard.address, postcard.message, postcard.image, postcard.size, activeDraftId])
+  }, [postcard.address, activeDraftId, draftPayload])
 
   // Recent recipients: unique recipient addresses from past drafts
   useEffect(() => {
@@ -226,7 +226,7 @@ export default function CreatePage() {
     } finally {
       setSaving(false)
     }
-  }, [activeDraftId, draftPayload])
+  }, [activeDraftId, postcard.address, draftPayload])
 
   const handleSend = useCallback(async () => {
     if (!postcard.address || !postcard.image) return
