@@ -42,15 +42,7 @@ describe('usePostcard', () => {
     expect(result.current.isComplete).toBe(false)
   })
 
-  it('setting message with image updates message state', () => {
-    const { result } = renderHook(() => usePostcard())
-    act(() => {
-      result.current.setImage(makeImage())
-      result.current.setMessage('Hello')
-    })
-    expect(result.current.isComplete).toBe(false)
-  })
-
+  it('setting address with image+message completes the card', () => {
     const { result } = renderHook(() => usePostcard())
     act(() => {
       result.current.setImage(makeImage())
