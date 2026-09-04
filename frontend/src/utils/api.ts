@@ -3,6 +3,7 @@ import { generateFrontHTML } from './postcardTemplate'
 import { getAuthHeaders, authFetch } from '../services/authApi'
 import { API_BASE_URL } from './apiConfig'
 import { fileToDataUrl } from './imageData'
+import { throwApiError } from './apiError'
 
 export interface PostcardSubmission {
   to: Address
@@ -72,8 +73,7 @@ export async function submitPostcard(
   })
 
   if (!response.ok) {
-    const errorData = await response.json()
-    throw new Error(errorData.error || 'Failed to submit postcard')
+    await throwApiError(response, 'Failed to submit postcard')
   }
 
   return response.json()
@@ -96,8 +96,7 @@ export async function listSentPostcards(limit = 50): Promise<SentPostcard[]> {
   const response = await authFetch(`${API_BASE_URL}/api/postcards?limit=${limit}`)
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error((errorData as { error?: string }).error || 'Failed to load postcards')
+    await throwApiError(response, 'Failed to load postcards')
   }
 
   const body = (await response.json()) as { data: SentPostcard[] }

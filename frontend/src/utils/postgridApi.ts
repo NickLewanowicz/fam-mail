@@ -1,4 +1,5 @@
 import { getAuthHeaders, authFetch } from '../services/authApi'
+import { throwApiError } from './apiError'
 import { API_BASE_URL } from './apiConfig'
 
 export type PostgridApiMode = 'test' | 'live' | 'mock'
@@ -13,8 +14,7 @@ export async function fetchPostgridStatus(): Promise<PostgridStatusResponse> {
     headers: getAuthHeaders(),
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(data.error || `Request failed (${response.status})`)
+    await throwApiError(response, 'Request failed')
   }
   return response.json() as Promise<PostgridStatusResponse>
 }
@@ -26,8 +26,7 @@ export async function setPostgridMode(mode: 'test' | 'live'): Promise<PostgridSt
     body: JSON.stringify({ mode }),
   })
   if (!response.ok) {
-    const data = (await response.json().catch(() => ({}))) as { error?: string }
-    throw new Error(data.error || `Request failed (${response.status})`)
+    await throwApiError(response, 'Request failed')
   }
   return response.json() as Promise<PostgridStatusResponse>
 }
