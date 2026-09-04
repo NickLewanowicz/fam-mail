@@ -7,6 +7,7 @@ rounds below. Rounds end only when lint, tests, and build stay green.
 
 | Round | Simplified | LOC Δ |
 |-------|-----------|-------|
+| 22 | folded getDefaultCorsHeaders into getCorsHeaders | -12 |
 | 21 | consolidated PostcardSize; dropped dead initial param on usePostcard | -12 |
 | 20 | arrow-key navigation now respects step prerequisites (bug fix) | 0 |
 | 19 | deleted models/session.ts (zero importers) | -17 |
