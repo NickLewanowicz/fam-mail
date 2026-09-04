@@ -93,6 +93,15 @@ export default function CreatePage() {
   const handleNext = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
   const handleBack = () => setStep(s => Math.max(s - 1, 0))
 
+  /** The draft payload as the backend stores it (bare base64 image data). */
+  const draftPayload = useCallback((address: Address) => ({
+    recipientAddress: address,
+    senderAddress: postcard.returnAddress ?? address,
+    message: postcard.message || undefined,
+    imageData: postcard.image?.preview.split(',')[1],
+    size: postcard.size,
+  }), [postcard.returnAddress, postcard.message, postcard.image, postcard.size])
+
   const handleSaveDraft = useCallback(async () => {
     if (!postcard.address) return
     setSaving(true)
@@ -167,15 +176,6 @@ export default function CreatePage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   })
-
-  /** The draft payload as the backend stores it (bare base64 image data). */
-  const draftPayload = useCallback((address: Address) => ({
-    recipientAddress: address,
-    senderAddress: postcard.returnAddress ?? address,
-    message: postcard.message || undefined,
-    imageData: postcard.image?.preview.split(',')[1],
-    size: postcard.size,
-  }), [postcard.returnAddress, postcard.message, postcard.image, postcard.size])
 
   // Autosave: debounce-persist an already-saved draft as the user edits.
   const firstRun = useRef(true)
