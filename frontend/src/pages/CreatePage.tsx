@@ -168,6 +168,15 @@ export default function CreatePage() {
     return () => window.removeEventListener('keydown', onKey)
   })
 
+  /** The draft payload as the backend stores it (bare base64 image data). */
+  const draftPayload = useCallback(() => ({
+    recipientAddress: postcard.address,
+    senderAddress: postcard.returnAddress ?? postcard.address,
+    message: postcard.message || undefined,
+    imageData: postcard.image?.preview.split(',')[1],
+    size: postcard.size,
+  }), [postcard.address, postcard.returnAddress, postcard.message, postcard.image, postcard.size])
+
   // Autosave: debounce-persist an already-saved draft as the user edits.
   const firstRun = useRef(true)
   useEffect(() => {
