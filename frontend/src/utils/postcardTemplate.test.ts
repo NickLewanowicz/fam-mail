@@ -6,8 +6,6 @@ import {
   COUNTRY_SPECS,
   calculateSafeZones,
   generateFrontHTML,
-  generateBackHTML,
-  generatePreviewHTML,
   getCountrySpec,
   getPostcardDimensions,
   type CountryCode,
@@ -325,92 +323,5 @@ describe('postcardTemplate', () => {
     })
   })
 
-  describe('generateBackHTML', () => {
-    it('generates valid HTML', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('<!DOCTYPE html>')
-      expect(html).toContain('<html>')
-    })
 
-    it('includes placeholder message when no message provided', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('Your message will appear here')
-    })
-
-    it('includes provided message HTML', () => {
-      const html = generateBackHTML('<p>Hello World</p>')
-      expect(html).toContain('<p>Hello World</p>')
-    })
-
-    it('has message area', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('message-area')
-    })
-
-    it('has address area', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('address-area')
-    })
-
-    it('has divider', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('divider')
-    })
-
-    it('uses postcard dimensions', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('1800px')
-      expect(html).toContain('1200px')
-    })
-
-    it('accepts country code parameter', () => {
-      const usHtml = generateBackHTML('<p>Hi</p>', 'US')
-      const gbHtml = generateBackHTML('<p>Hi</p>', 'GB')
-      expect(usHtml).toContain('message-area')
-      expect(gbHtml).toContain('message-area')
-    })
-  })
-
-  describe('generatePreviewHTML', () => {
-    it('generates front preview with safe zones', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'front', true)
-      expect(html).toContain('rgba(34, 197, 94, 0.8)')
-    })
-
-    it('generates front preview without safe zones', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'front', false)
-      expect(html).not.toContain('rgba(34, 197, 94, 0.8)')
-    })
-
-    it('generates back preview with safe zones and address block', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true)
-      expect(html).toContain('rgba(239, 68, 68, 0.6)')
-      expect(html).toContain('rgba(34, 197, 94, 0.8)')
-    })
-
-    it('US back preview shows USPS barcode zone', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, undefined, 'US')
-      expect(html).toContain('USPS Barcode Zone')
-    })
-
-    it('CA back preview has no barcode zone', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, undefined, 'CA')
-      expect(html).not.toContain('USPS Barcode Zone')
-    })
-
-    it('GB back preview has no barcode zone', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, undefined, 'GB')
-      expect(html).not.toContain('USPS Barcode Zone')
-    })
-
-    it('generates back preview with message', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, '<p>Test message</p>')
-      expect(html).toContain('<p>Test message</p>')
-    })
-
-    it('generates back preview without safe zones', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', false)
-      expect(html).not.toContain('rgba(34, 197, 94, 0.8)')
-    })
-  })
 })

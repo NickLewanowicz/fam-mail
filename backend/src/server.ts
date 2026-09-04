@@ -66,6 +66,18 @@ function checkRateLimit(limiter: RateLimiter, req: Request): Response | null {
   return null
 }
 
+/**
+ * Authenticate a JWT request. Returns the user, or a 401 Response ready to
+ * send — callers branch on `instanceof Response`.
+ */
+async function requireAuth(req: Request): Promise<User | Response> {
+  const authResult = await authMiddleware.authenticate(req)
+  if (authResult.error) {
+    return jsonResponse({ error: authResult.error }, 401, req)
+  }
+  return authResult.user!
+}
+
 const config = getConfig()
 const db = new Database(config.database.path)
 
@@ -160,6 +172,36 @@ function withSecurityHeaders(response: Response, req: Request): Response {
   return applyHeaders(response, req)
 }
 
+/** Create (or reuse) the DEV_MODE user and mint a token pair for it. */
+async function devLoginResponse(req: Request): Promise<Response> {
+  const devEmail = 'dev@fammail.local'
+  let user = db.getUserByEmail?.(devEmail)
+  if (!user) {
+    user = {
+      id: crypto.randomUUID(),
+      oidcSub: 'dev-user',
+      oidcIssuer: 'dev-mode',
+      email: devEmail,
+      emailVerified: true,
+      firstName: 'Dev',
+      lastName: 'User',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    db.insertUser(user)
+  }
+  const accessToken = await jwtService.generateAccessToken(user)
+  const refreshToken = await jwtService.generateRefreshToken(user)
+  db.insertSession({
+    id: crypto.randomUUID(),
+    userId: user.id,
+    token: accessToken,
+    refreshToken,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  })
+  return withSecurityHeaders(jsonResponse({ accessToken, refreshToken, user }, 200, req), req)
+}
+
 export async function handleRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
@@ -169,64 +211,16 @@ export async function handleRequest(req: Request): Promise<Response> {
 
   // Dev mode: auto-login endpoint that creates/returns a dev user token
   if (config.devMode && url.pathname === '/api/auth/dev-login' && req.method === 'POST') {
-    const devEmail = 'dev@fammail.local'
-    let user = db.getUserByEmail?.(devEmail)
-    if (!user) {
-      user = {
-        id: crypto.randomUUID(),
-        oidcSub: 'dev-user',
-        oidcIssuer: 'dev-mode',
-        email: devEmail,
-        emailVerified: true,
-        firstName: 'Dev',
-        lastName: 'User',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      db.insertUser(user)
-    }
-    const accessToken = await jwtService.generateAccessToken(user)
-    const refreshToken = await jwtService.generateRefreshToken(user)
-    db.insertSession({
-      id: crypto.randomUUID(),
-      userId: user.id,
-      token: accessToken,
-      refreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    })
-    return withSecurityHeaders(jsonResponse({ accessToken, refreshToken, user }, 200, req), req)
+    return devLoginResponse(req)
   }
 
   // Auth endpoints — rate limited to prevent brute-force attacks
   if (url.pathname === '/api/auth/login' && req.method === 'POST') {
     if (config.devMode) {
-      // In dev mode, redirect login to dev-login for convenience
-      const devEmail = 'dev@fammail.local'
-      let user = db.getUserByEmail?.(devEmail)
-      if (!user) {
-        user = {
-          id: crypto.randomUUID(),
-          oidcSub: 'dev-user',
-          oidcIssuer: 'dev-mode',
-          email: devEmail,
-          emailVerified: true,
-          firstName: 'Dev',
-          lastName: 'User',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
-        db.insertUser(user)
-      }
-      const accessToken = await jwtService.generateAccessToken(user)
-      const refreshToken = await jwtService.generateRefreshToken(user)
-      db.insertSession({
-        id: crypto.randomUUID(),
-        userId: user.id,
-        token: accessToken,
-        refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-      })
-      return withSecurityHeaders(jsonResponse({ devMode: true, accessToken, refreshToken, user }, 200, req), req)
+      // In dev mode, login is a convenience alias of dev-login
+      const devResponse = await devLoginResponse(req)
+      const body = await devResponse.json() as Record<string, unknown>
+      return withSecurityHeaders(jsonResponse({ ...body, devMode: true }, 200, req), req)
     }
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
@@ -245,15 +239,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   if (url.pathname === '/api/auth/me' && req.method === 'GET') {
     if (authRoutes) return withSecurityHeaders(await authRoutes.handleGetMe(req), req)
     // Dev mode fallback: use auth middleware directly
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    return withSecurityHeaders(jsonResponse({ user: authResult.user }, 200, req), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(jsonResponse({ user: auth }, 200, req), req)
   }
 
   if (url.pathname === '/api/auth/logout' && req.method === 'POST') {
     if (authRoutes) return withSecurityHeaders(await authRoutes.handleLogout(req), req)
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
     const authHeader = req.headers.get('authorization')
     const token = authHeader?.substring(7)
     if (token) db.deleteSession(token)
@@ -272,85 +266,69 @@ export async function handleRequest(req: Request): Promise<Response> {
   // Drafts endpoints (all require authentication)
   // Write operations are rate limited (#42)
   if (url.pathname === '/api/drafts' && req.method === 'GET') {
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.list(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.list(req, auth), req)
   }
 
   if (url.pathname === '/api/drafts' && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.create(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.create(req, auth), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'GET') {
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.get(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.get(req, auth), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'PUT') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.update(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.update(req, auth), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+$/) && req.method === 'DELETE') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.delete(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.delete(req, auth), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/publish$/) && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.publish(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.publish(req, auth), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/schedule$/) && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.schedule(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.schedule(req, auth), req)
   }
 
   if (url.pathname.match(/^\/api\/drafts\/[^/]+\/cancel-schedule$/) && req.method === 'POST') {
     const rateLimitResponse = checkRateLimit(draftRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await draftRoutes.cancelSchedule(req, authResult.user!), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await draftRoutes.cancelSchedule(req, auth), req)
   }
 
   if (url.pathname === '/api/health' && req.method === 'GET') {
@@ -405,11 +383,9 @@ export async function handleRequest(req: Request): Promise<Response> {
     const rateLimitResponse = checkRateLimit(postcardRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
-    return withSecurityHeaders(await handlePostcardCreate(req, authResult.user!, db), req)
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    return withSecurityHeaders(await handlePostcardCreate(req, auth, db), req)
   }
 
   if (url.pathname === '/api/postcards' && req.method === 'GET') {
@@ -424,18 +400,15 @@ export async function handleRequest(req: Request): Promise<Response> {
   }
 
   if (url.pathname === '/api/postgrid/status' && req.method === 'GET') {
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
     return withSecurityHeaders(jsonResponse(postgrid.getStatusPayload(), 200, req), req)
   }
 
   if (url.pathname === '/api/postgrid/mode' && req.method === 'POST') {
-    const authResult = await authMiddleware.authenticate(req)
-    if (authResult.error) {
-      return withSecurityHeaders(jsonResponse({ error: authResult.error }, 401, req), req)
-    }
+    const auth = await requireAuth(req)
+    if (auth instanceof Response) return withSecurityHeaders(auth, req)
+    const user = auth as User
     // #70: Only admins can toggle PostGrid test/live mode. When
     // ADMIN_EMAILS is unset we fail closed — an open toggle would let any
     // account on the instance switch to live mailing and spend real money.
@@ -446,7 +419,7 @@ export async function handleRequest(req: Request): Promise<Response> {
         error: 'Forbidden: admin access required. Configure ADMIN_EMAILS to enable mode switching.',
       }, 403, req), req)
     }
-    if (!adminEmails.includes(authResult.user!.email.toLowerCase())) {
+    if (!adminEmails.includes(user.email.toLowerCase())) {
       return withSecurityHeaders(jsonResponse({ error: 'Forbidden: admin access required' }, 403, req), req)
     }
     let body: unknown
