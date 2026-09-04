@@ -161,9 +161,8 @@ export default function CreatePage() {
       const typing = !!target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)
       if (typing) return
       if (e.key === 'ArrowRight' && step < STEPS.length - 1) {
-        const next = step + 1
-        const prerequisiteDone = stepComplete[next]
-        if (prerequisiteDone || next === step + 1) setStep(next)
+        // Same prerequisite rule as the step buttons
+        if (stepComplete[step]) setStep(step + 1)
       } else if (e.key === 'ArrowLeft' && step > 0) {
         setStep(step - 1)
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && step === 4) {
