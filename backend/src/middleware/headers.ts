@@ -96,25 +96,14 @@ export function jsonResponse(data: unknown, status: number = 200, req?: Request)
     'Content-Type': 'application/json',
   }
 
-  const corsHeaders = req
-    ? getCorsHeaders(req)
-    : getDefaultCorsHeaders()
-  Object.assign(headers, corsHeaders)
+  if (req) {
+    Object.assign(headers, getCorsHeaders(req))
+  }
 
   const response = new Response(JSON.stringify(data), { status, headers })
   return applyHeaders(response, req)
 }
 
-function getDefaultCorsHeaders(): Record<string, string> {
-  const allowed = getConfig().server.allowedOrigins
-  return {
-    'Access-Control-Allow-Origin': allowed[0] || '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Credentials': 'true',
-    'Vary': 'Origin',
-  }
-}
 
 /**
  * Create a CORS preflight (OPTIONS) response.
