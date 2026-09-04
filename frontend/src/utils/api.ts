@@ -39,7 +39,8 @@ export interface PostcardResponse {
   selectedImage?: { file: File; preview: string }
 }
 
-export type PostcardSize = '6x4' | '9x6' | '11x6'
+export type { PostcardSize } from './postcardTemplate'
+import type { PostcardSize } from './postcardTemplate'
 
 export async function submitPostcard(
   address: Address,
