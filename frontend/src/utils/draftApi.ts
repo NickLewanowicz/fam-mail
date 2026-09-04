@@ -122,7 +122,7 @@ export async function deleteDraft(id: string): Promise<void> {
 export async function scheduleDraft(id: string, scheduledFor: string): Promise<void> {
   const response = await authFetch(`${API_BASE}/${id}/schedule`, {
     method: 'POST',
-    headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+    headers: getAuthHeaders(),
     body: JSON.stringify({ scheduledFor }),
   })
   await handleResponse<{ message: string }>(response)
