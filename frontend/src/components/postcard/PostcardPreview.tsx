@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useCallback, useState } from 'react'
 import { useDropzone, type FileRejection } from 'react-dropzone'
+import { fileToDataUrl } from '../../utils/imageData'
 import { motion } from 'framer-motion'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
@@ -60,9 +61,7 @@ export function PostcardPreview({
   const onDropAccepted = useCallback((files: File[]) => {
     const file = files[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => { onImageChange?.({ file, preview: reader.result as string }) }
-    reader.readAsDataURL(file)
+    fileToDataUrl(file).then((preview) => onImageChange?.({ file, preview }))
   }, [onImageChange])
 
   const onDropRejected = useCallback((rejections: FileRejection[]) => {

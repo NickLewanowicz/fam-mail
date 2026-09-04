@@ -2,6 +2,7 @@ import type { Address } from '../types/address'
 import { generateFrontHTML } from './postcardTemplate'
 import { getAuthHeaders, authFetch } from '../services/authApi'
 import { API_BASE_URL } from './apiConfig'
+import { fileToDataUrl } from './imageData'
 
 export interface PostcardSubmission {
   to: Address
@@ -47,7 +48,7 @@ export async function submitPostcard(
   message?: string,
   size: PostcardSize = '6x4'
 ): Promise<PostcardResponse> {
-  const imageBase64 = await fileToBase64(imageFile)
+  const imageBase64 = await fileToDataUrl(imageFile)
   const frontHTML = generateFrontHTML(imageBase64)
 
   const submission: PostcardSubmission = {
@@ -77,14 +78,7 @@ export async function submitPostcard(
   return response.json()
 }
 
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-}
+
 
 export interface SentPostcard {
   id: string
