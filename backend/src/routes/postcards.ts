@@ -4,7 +4,7 @@ import type { User } from '../models/user'
 import type { Database } from '../database'
 import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
 import { buildImageFrontHTML, buildMessageBackHTML, isCardSize, type CardSize } from '../utils/htmlSanitizer'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse } from '../middleware/headers'
 
 export async function handlePostcardCreate(req: Request, user: User, db: Database): Promise<Response> {
   try {

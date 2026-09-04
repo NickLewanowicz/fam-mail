@@ -1,6 +1,6 @@
 import { EmailService, type EmailData } from '../services/emailService'
 import { getConfig } from '../config'
-import { jsonResponse } from '../utils/response'
+import { jsonResponse } from '../middleware/headers'
 import { logger } from '../utils/logger'
 
 // Email service instance (exported for testing)
