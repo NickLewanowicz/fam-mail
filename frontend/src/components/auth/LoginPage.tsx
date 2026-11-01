@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from './AuthContext'
 
 export function LoginPage() {
   const { login, isLoading } = useAuth()
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [searchParams] = useSearchParams()
   const callbackError = searchParams.get('error')
@@ -13,6 +14,9 @@ export function LoginPage() {
     setError(null)
     try {
       await login()
+      // Dev-token login resolves inline (the OIDC path redirects the whole
+      // window from inside login()); bring the user into the app.
+      navigate('/', { replace: true })
     } catch {
       setError('Failed to start login. Please try again.')
     }
