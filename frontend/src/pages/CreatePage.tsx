@@ -249,7 +249,7 @@ export default function CreatePage() {
 
   if (loadingDraft) {
     return (
-      <AppShell>
+      <AppShell variant="editor">
         <div className="flex justify-center items-center py-32">
           <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
         </div>
@@ -259,7 +259,7 @@ export default function CreatePage() {
 
   if (result?.success) {
     return (
-      <AppShell>
+      <AppShell variant="editor">
         <div className="container mx-auto px-4 py-16 max-w-md">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -327,10 +327,10 @@ export default function CreatePage() {
   ]
 
   return (
-    <AppShell>
-      <div className="container mx-auto px-4 py-6 max-w-3xl">
+    <AppShell variant="editor">
+      <div className="container mx-auto px-4 py-6 pb-28 md:pb-10 max-w-3xl">
         {/* Step indicator — numbered circles with connecting lines */}
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center mb-6 pt-1">
           {STEPS.map((s, i) => {
             const isDone = stepComplete[i] && i < step
             const isActive = i === step
@@ -345,21 +345,21 @@ export default function CreatePage() {
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-zinc-900 text-white'
+                      ? 'bg-clay text-clay-soft'
                       : isDone
                         ? 'bg-zinc-900 text-white'
-                        : 'border-2 border-zinc-300 text-zinc-400'
+                        : 'border-2 border-ink-line text-warm-text3'
                   }`}>
                     {isDone ? '✓' : i + 1}
                   </div>
                   <span className={`text-[11px] hidden sm:block ${
-                    isActive ? 'text-zinc-900 font-medium' : 'text-zinc-400'
+                    isActive ? 'text-warm-text font-medium' : 'text-warm-text3'
                   }`}>
                     {s.label}
                   </span>
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-8 md:w-12 h-px mx-1 ${i < step ? 'bg-zinc-900' : 'bg-zinc-200'}`} />
+                  <div className={`w-8 md:w-12 h-px mx-1 ${i < step ? 'bg-clay' : 'bg-ink-line'}`} />
                 )}
               </div>
             )
@@ -375,7 +375,8 @@ export default function CreatePage() {
           </div>
         )}
 
-        {/* Postcard preview */}
+        {/* Postcard preview — stays on screen while panels scroll (mobile) */}
+        <div className="max-md:sticky max-md:top-14 max-md:z-30 max-md:bg-ink-bg max-md:pb-2">
         <div className="flex justify-center">
           <div className="w-full max-w-[640px]">
             <PostcardPreview
@@ -394,12 +395,13 @@ export default function CreatePage() {
             />
           </div>
         </div>
+        </div>
 
         {/* Step content */}
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div key="dest" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
-              <div className="bg-white rounded-lg border border-zinc-200 p-5">
+              <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
                 <CountryStep
                   countryCode={postcard.countryCode ?? undefined}
                   onCountryChange={setCountryCode}
@@ -411,7 +413,7 @@ export default function CreatePage() {
 
           {step === 3 && (
             <motion.div key="addr" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
-              <div className="bg-white rounded-lg border border-zinc-200 p-5">
+              <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
                 <AddressStep
                   address={postcard.address}
                   returnAddress={postcard.returnAddress}
@@ -427,23 +429,39 @@ export default function CreatePage() {
           )}
 
           {step > 0 && step < 4 && step !== 3 && (
-            <motion.div key={`nav-${step}`} {...pageTransition} className="flex justify-between mt-6 max-w-[640px] mx-auto">
-              <button className="px-4 py-2 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors" onClick={handleBack}>
-                ← Back
-              </button>
-              <button
-                className="px-4 py-2 text-sm font-medium bg-zinc-900 text-white rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50"
-                onClick={handleNext}
-                disabled={step === 1 && !postcard.image}
-              >
-                {step === 1 ? 'Write Message →' : 'Add Address →'}
-              </button>
-            </motion.div>
+            <>
+              {/* Desktop: inline nav row */}
+              <motion.div key={`nav-${step}`} {...pageTransition} className="hidden md:flex justify-between mt-6 max-w-[640px] mx-auto">
+                <button className="px-4 py-2 text-sm text-warm-text2 hover:text-warm-text hover:bg-white/5 rounded-md transition-colors" onClick={handleBack}>
+                  ← Back
+                </button>
+                <button
+                  className="px-5 py-2 text-sm font-medium bg-clay text-clay-soft rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  onClick={handleNext}
+                  disabled={step === 1 && !postcard.image}
+                >
+                  {step === 1 ? 'Write Message →' : 'Add Address →'}
+                </button>
+              </motion.div>
+              {/* Mobile: thumb-reach bottom toolbar */}
+              <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink-surface/90 backdrop-blur border-t border-ink-line/60 px-4 h-16 flex items-center justify-between pb-[env(safe-area-inset-bottom)]">
+                <button className="px-4 h-10 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5 transition-colors" onClick={handleBack}>
+                  ← Back
+                </button>
+                <button
+                  className="px-6 h-10 text-sm font-medium bg-clay text-clay-soft rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  onClick={handleNext}
+                  disabled={step === 1 && !postcard.image}
+                >
+                  {step === 1 ? 'Write Message →' : 'Add Address →'}
+                </button>
+              </div>
+            </>
           )}
 
           {step === 4 && (
             <motion.div key="review" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
-              <div className="bg-white rounded-lg border border-zinc-200 p-5">
+              <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
                 <ReviewStep
                   postcard={postcard}
                   onBack={handleBack}

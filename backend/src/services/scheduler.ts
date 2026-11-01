@@ -58,14 +58,24 @@ export async function processDueDrafts(db: Database, draftRoutes: DraftRoutes): 
         // postcard record (draft-<id>) is a second line of defense.
         db.updateDraft(draft.id, { scheduledFor: null })
         logger.info('Scheduled postcard sent', { draftId: draft.id })
-      } else {
+      } else if (result.status >= 500 || result.status === 0) {
         failed++
+        // Transient upstream failure — retry later
         const retryAt = new Date(Date.now() + RETRY_DELAY_MS).toISOString()
         db.updateDraft(draft.id, { scheduledFor: retryAt })
         logger.error('Scheduled draft publish failed; will retry', {
           draftId: draft.id,
           status: result.status,
           retryAt,
+        })
+      } else {
+        // 4xx = permanent (validation, funds, address). Retrying would just
+        // fail again — cancel the schedule rather than loop forever.
+        failed++
+        db.updateDraft(draft.id, { scheduledFor: null, state: 'draft' })
+        logger.error('Scheduled draft publish failed permanently; unscheduled', {
+          draftId: draft.id,
+          status: result.status,
         })
       }
     }

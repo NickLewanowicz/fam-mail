@@ -101,10 +101,10 @@ describe('scheduled draft dispatcher', () => {
     expect(spy).not.toHaveBeenCalled()
   })
 
-  it('reschedules a failed publish instead of hot-looping', async () => {
+  it('reschedules a transient (5xx) failed publish instead of hot-looping', async () => {
     const { svc, spy } = makeMockPostgrid()
     spy.mockImplementation(async () => {
-      throw { status: 402, message: 'PostGrid payment required' }
+      throw { status: 503, message: 'PostGrid unavailable' }
     })
     const routes = new DraftRoutes(db, null as never, svc)
     const draftId = insertScheduledDraft(new Date(Date.now() - 60_000).toISOString())
@@ -131,6 +131,21 @@ describe('scheduled draft dispatcher', () => {
     expect(result.processed).toBe(1)
     expect(result.sent).toBe(0)
     expect(spy).not.toHaveBeenCalled()
+    expect(db.getDraft(draftId)?.scheduledFor).toBeUndefined()
+  })
+
+  it('unschedules a permanent (4xx) failure instead of retrying forever', async () => {
+    const { svc, spy } = makeMockPostgrid()
+    spy.mockImplementation(async () => {
+      throw { status: 402, message: 'PostGrid payment required' }
+    })
+    const routes = new DraftRoutes(db, null as never, svc)
+    const draftId = insertScheduledDraft(new Date(Date.now() - 60_000).toISOString())
+
+    const result = await processDueDrafts(db, routes)
+
+    expect(result.failed).toBe(1)
+    // Permanent client errors cancel the schedule — no endless paid retries
     expect(db.getDraft(draftId)?.scheduledFor).toBeUndefined()
   })
 })

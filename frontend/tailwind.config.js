@@ -9,6 +9,30 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
+      },
+      colors: {
+        ink: {
+          bg: '#221215',
+          surface: '#2E181A',
+          raised: '#3B2022',
+          line: '#4A2A2B',
+        },
+        clay: {
+          DEFAULT: '#C96F4F',
+          hover: '#D9805E',
+          soft: '#FFF6EF',
+        },
+        paper: '#FFFDF6',
+        warm: {
+          text: '#F7EDE5',
+          text2: '#C7AEA3',
+          text3: '#8F7A72',
+          ring: '#E09A6B',
+        },
+      },
+      borderRadius: {
+        sheet: '20px',
       },
     },
   },

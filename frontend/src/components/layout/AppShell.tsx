@@ -6,7 +6,7 @@ import { useAuth } from '../auth/AuthContext'
 import { PostGridModeBadge } from './PostGridModeBadge'
 import { VersionFooter } from './VersionFooter'
 
-export function AppShell({ children }: { children: ReactNode }) {
+export function AppShell({ children, variant = 'default' }: { children: ReactNode; variant?: 'default' | 'editor' }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
   const toggleTheme = () => {
@@ -19,18 +19,30 @@ export function AppShell({ children }: { children: ReactNode }) {
   const location = useLocation()
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-100 transition-colors">
+    <div
+      className={
+        variant === 'editor'
+          ? 'min-h-dvh flex flex-col bg-ink-bg text-warm-text transition-colors'
+          : 'min-h-dvh flex flex-col bg-zinc-50 dark:bg-zinc-950 dark:text-zinc-100 transition-colors'
+      }
+    >
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-2 focus:left-2 focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-zinc-900 focus:text-white focus:text-sm"
       >
         Skip to content
       </a>
-      <nav className="sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800">
+      <nav
+        className={
+          variant === 'editor'
+            ? 'sticky top-0 z-50 bg-ink-surface/90 backdrop-blur border-b border-ink-line/60'
+            : 'sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800'
+        }
+      >
         <div className="container mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="text-xl">✉️</span>
-            <span className="text-base font-semibold text-zinc-900">Fam Mail</span>
+            <span className={`text-base font-semibold ${variant === "editor" ? "text-warm-text font-display tracking-tight" : "text-zinc-900"}`}>Fam Mail</span>
           </Link>
 
           <div className="flex items-center gap-2">
