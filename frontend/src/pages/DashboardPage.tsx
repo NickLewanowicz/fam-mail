@@ -171,10 +171,6 @@ export default function DashboardPage() {
                         📅 {new Date(draft.scheduledFor).toLocaleDateString()}
                       </span>
                     )}
-                    }>
-                        📅 {new Date(draft.scheduledFor).toLocaleDateString()}
-                      </span>
-                    )}
                   </div>
                   <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-100">
                     <span className="text-[11px] text-zinc-400">{timeAgo(draft.updatedAt)}</span>
