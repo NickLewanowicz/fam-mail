@@ -139,7 +139,7 @@ export default function DashboardPage() {
                 <div className="aspect-[3/2] bg-zinc-100 overflow-hidden">
                   {draft.imageData ? (
                     <img
-                      src={draft.imageData}
+                      src={draft.imageData.startsWith('data:') ? draft.imageData : `data:image/jpeg;base64,${draft.imageData}`}
                       alt="Draft"
                       className="w-full h-full object-cover"
                     />

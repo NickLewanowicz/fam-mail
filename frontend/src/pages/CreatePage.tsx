@@ -65,12 +65,17 @@ export default function CreatePage() {
         setReturnAddress(draft.senderAddress ?? draft.recipientAddress ?? null)
         setMessage(draft.message ?? '')
         if (draft.imageData) {
+          // imageData is stored as bare base64 (or already a data URL)
+          const isDataUrl = draft.imageData.startsWith('data:')
+          const preview = isDataUrl ? draft.imageData : `data:image/jpeg;base64,${draft.imageData}`
           try {
-            const res = await fetch(draft.imageData)
+            const res = await fetch(preview)
             const blob = await res.blob()
             const file = new File([blob], 'draft-image.jpg', { type: blob.type || 'image/jpeg' })
-            setImage({ file, preview: draft.imageData })
-          } catch { /* ignore */ }
+            setImage({ file, preview })
+          } catch {
+            setImage({ file: new File([], 'draft-image.jpg', { type: 'image/jpeg' }), preview })
+          }
         }
         if (draft.size) {
           setSize(draft.size as '6x4' | '9x6' | '11x6')
