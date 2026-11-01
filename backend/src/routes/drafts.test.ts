@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "../database";
 import { DraftRoutes } from "./drafts";
 import { AuthMiddleware } from "../middleware/auth";

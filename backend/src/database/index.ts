@@ -119,18 +119,11 @@ export class Database {
       this.db = new SqliteDatabase(path);
       this.initializeSchema();
       // Concurrent writes (login POST racing page-load requests, the
-      // scheduler, cleanup timers) otherwise throw SQLITE_BUSY under load.
-      // WAL is only valid for file databases; :memory: stays in journal mode.
-      // Applied AFTER schema init: Bun 1.3's multi-statement exec misorders
-      // statements if the journal mode switches mid-script.
-      try {
-        if (path !== ":memory:") {
-          this.db.exec("PRAGMA journal_mode = WAL;");
-        }
-        this.db.exec("PRAGMA busy_timeout = 5000;");
-      } catch {
-        // Fall back to default journal mode; correctness is unaffected
-      }
+      // scheduler, cleanup timers) otherwise surface SQLITE_BUSY. A 5s
+      // busy timeout makes writers queue instead of throwing. (WAL mode
+      // was tried and reverted: Bun 1.3 misorders multi-statement exec
+      // right after a journal-mode switch.)
+      this.db.exec("PRAGMA busy_timeout = 5000;");
     } catch (error) {
       throw new DatabaseError(`Failed to open database at ${path}: ${(error as Error)?.message ?? String(error)}`, error);
     }
@@ -417,7 +410,7 @@ export class Database {
         data.updatedAt || new Date().toISOString()
       );
     } catch (error) {
-      throw new DatabaseError("Failed to insert user", error);
+      throw new DatabaseError(`Failed to insert user: ${(error as Error)?.message ?? String(error)}`, error);
     }
   }
 
@@ -524,8 +517,12 @@ export class Database {
     expires_at?: string;
   }): void {
     try {
+      // OR REPLACE: rapid consecutive logins mint byte-identical tokens
+      // (JWT iat is second-granularity), which would collide on the unique
+      // token index. Same token = same session identity, so replacing the
+      // older row is the correct behavior.
       const stmt = this.db.prepare(`
-        INSERT INTO sessions (id, user_id, token, refresh_token, expires_at)
+        INSERT OR REPLACE INTO sessions (id, user_id, token, refresh_token, expires_at)
         VALUES (?, ?, ?, ?, ?)
       `);
       stmt.run(

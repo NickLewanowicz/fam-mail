@@ -46,13 +46,15 @@ function runPeriodicCleanup(): void {
       logger.info('Cleaned up expired sessions', { deleted })
     }
   } catch (error) {
-    logger.error('Failed to clean up expired sessions', { error })
+    logger.error('Failed to clean up expired sessions', {
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
-// Run cleanup immediately on startup
-runPeriodicCleanup()
-
+// Periodic cleanup runs on an interval; the first run happens after the
+// database exists (started below) — calling it earlier would crash on the
+// not-yet-initialized `db`.
 const cleanupTimer = setInterval(runPeriodicCleanup, CLEANUP_INTERVAL_MS)
 // Don't prevent process exit
 if (cleanupTimer.unref) cleanupTimer.unref()
@@ -80,6 +82,9 @@ async function requireAuth(req: Request): Promise<User | Response> {
 
 const config = getConfig()
 const db = new Database(config.database.path)
+
+// First cleanup pass now that the database is open
+runPeriodicCleanup()
 
 // Initialize OIDC service (skipped in dev mode)
 let oidcService: OIDCService | null = null
