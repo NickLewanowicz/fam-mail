@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
+    "browser-image-compression": "^2.0.2",
     "dompurify": "^3.2.6",
     "framer-motion": "^12.38.0",
     "marked": "^17.0.0",

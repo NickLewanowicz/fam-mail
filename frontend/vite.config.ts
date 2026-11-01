@@ -10,12 +10,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       // Generate bundle analysis report on build (open stats.html to inspect)
-      visualizer({
-        filename: 'dist/stats.html',
-        open: false,
-        gzipSize: true,
-        brotliSize: true,
-      }),
+      process.env.ANALYZE && visualizer({
+      filename: 'dist/stats.html',
+    }),
     ],
     resolve: {
       alias: {
@@ -43,7 +40,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules/react/')) return 'vendor-react';
 
             // Router — loaded eagerly in main.tsx
-            if (id.includes('node_modules/react-router-dom/')) return 'vendor-router';
+            if (id.includes('node_modules/react-router')) return 'vendor-router';
 
             // Markdown parser + sanitizer
             if (id.includes('node_modules/marked/')) return 'vendor-markdown';

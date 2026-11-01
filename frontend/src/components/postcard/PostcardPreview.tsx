@@ -58,10 +58,18 @@ export function PostcardPreview({
 
   // Upload plumbing lives in react-dropzone (accept + size validation and
   // drag/drop); we only convert the accepted file to a preview data URL.
-  const onDropAccepted = useCallback((files: File[]) => {
-    const file = files[0]
+  const onDropAccepted = useCallback(async (files: File[]) => {
+    let file = files[0]
     if (!file) return
-    fileToDataUrl(file).then((preview) => onImageChange?.({ file, preview }))
+    try {
+      // Phone cameras produce 3-8MB shots; downscale before base64 upload
+      const imageCompression = (await import('browser-image-compression')).default
+      file = await imageCompression(file, { maxSizeMB: 4, maxWidthOrHeight: 2400, useWebWorker: true })
+    } catch {
+      /* fall back to the original file if compression fails */
+    }
+    const preview = await fileToDataUrl(file)
+    onImageChange?.({ file, preview })
   }, [onImageChange])
 
   const onDropRejected = useCallback((rejections: FileRejection[]) => {
