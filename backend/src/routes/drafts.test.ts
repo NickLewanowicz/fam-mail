@@ -65,6 +65,10 @@ describe("DraftRoutes", () => {
   let user2: User;
   let mockPostgrid: ReturnType<typeof createMockPostgrid>;
 
+  afterEach(() => {
+    db?.close();
+  });
+
   beforeEach(() => {
     if (existsSync(TEST_DB)) {
       unlinkSync(TEST_DB);

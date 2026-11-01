@@ -118,8 +118,21 @@ export class Database {
     try {
       this.db = new SqliteDatabase(path);
       this.initializeSchema();
+      // Concurrent writes (login POST racing page-load requests, the
+      // scheduler, cleanup timers) otherwise throw SQLITE_BUSY under load.
+      // WAL is only valid for file databases; :memory: stays in journal mode.
+      // Applied AFTER schema init: Bun 1.3's multi-statement exec misorders
+      // statements if the journal mode switches mid-script.
+      try {
+        if (path !== ":memory:") {
+          this.db.exec("PRAGMA journal_mode = WAL;");
+        }
+        this.db.exec("PRAGMA busy_timeout = 5000;");
+      } catch {
+        // Fall back to default journal mode; correctness is unaffected
+      }
     } catch (error) {
-      throw new DatabaseError(`Failed to open database at ${path}`, error);
+      throw new DatabaseError(`Failed to open database at ${path}: ${(error as Error)?.message ?? String(error)}`, error);
     }
   }
 
@@ -132,7 +145,10 @@ export class Database {
       const schema = readFileSync(join(__dirname, "schema.sql"), "utf-8");
       this.db.exec(schema);
     } catch (error) {
-      throw new DatabaseError("Failed to initialize database schema", error);
+      throw new DatabaseError(
+        `Failed to initialize database schema: ${(error as Error)?.message ?? String(error)}`,
+        error
+      );
     }
   }
 

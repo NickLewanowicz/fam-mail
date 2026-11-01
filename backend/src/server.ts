@@ -203,6 +203,19 @@ async function devLoginResponse(req: Request): Promise<Response> {
 }
 
 export async function handleRequest(req: Request): Promise<Response> {
+  try {
+    return await routeRequest(req)
+  } catch (error) {
+    logger.error('Unhandled request error', {
+      path: new URL(req.url).pathname,
+      method: req.method,
+      error: error instanceof Error ? { message: error.message, stack: error.stack } : String(error),
+    })
+    return jsonResponse({ error: 'Internal server error' }, 500, req)
+  }
+}
+
+async function routeRequest(req: Request): Promise<Response> {
   const url = new URL(req.url)
 
   if (req.method === 'OPTIONS') {
