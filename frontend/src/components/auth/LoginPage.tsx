@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from './AuthContext'
 
 export function LoginPage() {
-  const { login, isLoading } = useAuth()
+  const { login, isLoading, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [searchParams] = useSearchParams()
   const callbackError = searchParams.get('error')
+
+  // Already signed in? Straight into the app.
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(searchParams.get('from') ?? '/', { replace: true })
+    }
+  }, [isAuthenticated, navigate, searchParams])
 
   const handleLogin = async () => {
     setError(null)
