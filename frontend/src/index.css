@@ -23,4 +23,9 @@
   .dark :focus-visible {
     outline-color: #e4e4e7;
   }
+
+  /* The create-flow editor is dark even in light mode */
+  [data-editor] :focus-visible {
+    outline-color: #e09a6b;
+  }
 }

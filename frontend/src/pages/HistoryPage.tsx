@@ -45,7 +45,7 @@ export default function HistoryPage() {
           <p className="text-sm text-red-600">{error}</p>
         ) : postcards.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-10 text-center">
-            <p className="text-zinc-500 dark:text-zinc-400">Nothing sent yet.</p>
+            <p className="text-zinc-500 dark:text-zinc-500">Nothing sent yet.</p>
             <Link to="/create" className="text-sm text-zinc-900 dark:text-zinc-100 font-medium hover:underline">
               Send your first postcard
             </Link>
@@ -61,7 +61,7 @@ export default function HistoryPage() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{card.recipientName}</p>
                   <p className="text-xs text-zinc-500 truncate">{card.recipientAddress}</p>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                  <p className="text-[11px] text-zinc-500 mt-0.5">
                     <span title={new Date(card.createdAt).toLocaleString()}>
                       {timeAgo(card.createdAt)} · {card.mode} mode
                     </span>

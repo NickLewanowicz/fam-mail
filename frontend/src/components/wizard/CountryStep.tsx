@@ -39,7 +39,7 @@ export function CountryStep({ countryCode, onCountryChange, onNext }: Props) {
           >
             <span className="text-3xl block mb-1.5">{c.flag}</span>
             <span className="font-medium text-sm text-zinc-900 block">{c.name}</span>
-            <span className="text-xs text-zinc-400 block mt-0.5">{c.sub}</span>
+            <span className="text-xs text-zinc-500 block mt-0.5">{c.sub}</span>
           </button>
         ))}
       </div>

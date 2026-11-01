@@ -64,7 +64,7 @@ export function PostGridModeBadge() {
   const styles: Record<string, string> = {
     live: 'bg-red-100 text-red-700 border-red-200',
     test: 'bg-amber-50 text-amber-700 border-amber-200',
-    mock: 'bg-zinc-100 text-zinc-500 border-zinc-200',
+    mock: 'bg-zinc-100 text-zinc-600 border-zinc-200',
   }
 
   const cls = styles[mode] || styles.mock

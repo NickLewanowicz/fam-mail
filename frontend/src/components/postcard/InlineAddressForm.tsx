@@ -68,39 +68,39 @@ export function InlineAddressForm({ address, onAddressChange, onClose, countryCo
       <div className="flex-1 overflow-y-auto space-y-1.5">
         <div className="grid grid-cols-2 gap-1.5">
           <div>
-            <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">First Name <span className="text-red-500">*</span></label>
+            <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-firstName">First Name <span className="text-red-500">*</span></label>
             <input className={inputCls('firstName')} placeholder="Jane" value={form.firstName} onChange={e => update('firstName', e.target.value)} />
           </div>
           <div>
-            <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">Last Name <span className="text-red-500">*</span></label>
+            <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-lastName">Last Name <span className="text-red-500">*</span></label>
             <input className={inputCls('lastName')} placeholder="Doe" value={form.lastName} onChange={e => update('lastName', e.target.value)} />
           </div>
         </div>
         <div>
-          <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">Address <span className="text-red-500">*</span></label>
+          <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-addressLine1">Address <span className="text-red-500">*</span></label>
           <input className={inputCls('addressLine1')} placeholder="123 Main Street" value={form.addressLine1} onChange={e => update('addressLine1', e.target.value)} />
         </div>
         <div>
-          <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">Apt / Suite</label>
+          <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-addressLine2">Apt / Suite <span className="text-red-500">*</span></label>
           <input className={inputCls('addressLine2')} placeholder="Apt 4B" value={form.addressLine2 ?? ''} onChange={e => update('addressLine2', e.target.value)} />
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <div>
-            <label className="text-[9px] font-medium text-stone-400 mb-0.5 block">City <span className="text-error">*</span></label>
+            <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-city">City <span className="text-error">*</span></label>
             <input className={inputCls('city')} placeholder="Toronto" value={form.city} onChange={e => update('city', e.target.value)} />
           </div>
           <div>
-            <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">State <span className="text-red-500">*</span></label>
+            <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-provinceOrState">State <span className="text-red-500">*</span></label>
             <input className={inputCls('provinceOrState')} placeholder="ON" value={form.provinceOrState} onChange={e => update('provinceOrState', e.target.value)} />
           </div>
         </div>
         <div className="grid grid-cols-2 gap-1.5">
           <div>
-            <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">ZIP / Postal <span className="text-red-500">*</span></label>
+            <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block" htmlFor="iaf-postalOrZip">ZIP / Postal <span className="text-red-500">*</span></label>
             <input className={inputCls('postalOrZip')} placeholder="M5V 2T6" value={form.postalOrZip} onChange={e => update('postalOrZip', e.target.value)} />
           </div>
           <div>
-            <label className="text-[9px] font-medium text-zinc-500 mb-0.5 block">Country</label>
+            <label className="text-[10px] font-medium text-zinc-600 mb-0.5 block">Country</label>
             {countryCode ? (
               <div className="w-full px-2 py-1 text-[11px] rounded-lg border border-zinc-200 bg-zinc-50 text-zinc-500">
                 {countryCode}

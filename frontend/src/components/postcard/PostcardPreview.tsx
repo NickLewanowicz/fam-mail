@@ -100,6 +100,14 @@ export function PostcardPreview({
     if (activeZone === 'address' && !editingAddress) setEditingAddress(true)
   }, [activeZone, editingAddress])
 
+  // Divs with role=button don't fire click on Enter/Space — bridge it.
+  const zoneKeyDown = useCallback((e: React.KeyboardEvent, activate: () => void) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      activate()
+    }
+  }, [])
+
   const aspectRatio = size === '11x6' ? '11/6' : '3/2'
 
   const dimensions = useMemo(() => getPostcardDimensions(size), [size])
@@ -131,7 +139,7 @@ export function PostcardPreview({
         </span>
         <button
           onClick={onFlip}
-          className="inline-flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
+          className="inline-flex items-center gap-1 text-xs font-medium text-warm-text2 hover:text-warm-text transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -143,7 +151,7 @@ export function PostcardPreview({
       {photoError && (
         <div className="flex items-center justify-between px-3 py-2 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
           <span>{photoError}</span>
-          <button onClick={() => setPhotoError(null)} className="text-xs font-medium text-red-500">Dismiss</button>
+          <button onClick={() => setPhotoError(null)} className="text-xs font-medium text-red-700">Dismiss</button>
         </div>
       )}
 
@@ -164,6 +172,7 @@ export function PostcardPreview({
             style={{ backfaceVisibility: 'hidden' }}
             {...getRootProps()}
             onClick={handleFrontClick}
+            onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && isPhotoActive) { e.preventDefault(); handleFrontClick() } }}
             role={isPhotoActive ? 'button' : undefined}
             tabIndex={isPhotoActive ? 0 : undefined}
           >
@@ -210,7 +219,7 @@ export function PostcardPreview({
                     <span className="text-xs text-zinc-400">or drag and drop</span>
                   </div>
                 ) : (
-                  <span className="text-sm text-zinc-300">Photo</span>
+                  <span className="text-sm text-stone-600">Photo</span>
                 )}
               </div>
             )}
@@ -229,6 +238,7 @@ export function PostcardPreview({
                 }`}
                 style={{ width: `${messageWidthPercent}%` }}
                 onClick={handleMessageClick}
+                onKeyDown={(e) => zoneKeyDown(e, handleMessageClick)}
                 role={isMessageActive && !editingMessage ? 'button' : undefined}
                 tabIndex={isMessageActive && !editingMessage ? 0 : undefined}
               >
@@ -244,7 +254,7 @@ export function PostcardPreview({
                 ) : messageHtml ? (
                   <div className="prose prose-sm max-w-none text-stone-800" style={{ fontSize: '12px', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: messageHtml }} />
                 ) : (
-                  <p className="text-stone-400 text-xs italic">
+                  <p className="text-stone-500 text-xs italic">
                     {isMessageActive ? 'Click to write...' : 'Your message'}
                   </p>
                 )}
@@ -261,6 +271,7 @@ export function PostcardPreview({
                   paddingBottom: countryCode === 'US' && barcodeZonePercent > 0 ? `${barcodeZonePercent}%` : undefined,
                 }}
                 onClick={handleAddressClick}
+                onKeyDown={(e) => zoneKeyDown(e, handleAddressClick)}
                 role={isAddressActive && !editingAddress ? 'button' : undefined}
                 tabIndex={isAddressActive && !editingAddress ? 0 : undefined}
               >
@@ -278,7 +289,7 @@ export function PostcardPreview({
                   <>
                     <div className="flex justify-end">
                       <div className="w-11 h-12 border border-dashed border-stone-300 rounded flex items-center justify-center">
-                        <span className="text-stone-300 text-[9px] font-medium">STAMP</span>
+                        <span aria-hidden="true" className="text-stone-300 text-[9px] font-medium">STAMP</span>
                       </div>
                     </div>
                     <div className="mt-auto relative">
@@ -291,7 +302,7 @@ export function PostcardPreview({
                           <p className="text-stone-400">{address.countryCode}</p>
                         </div>
                       ) : (
-                        <p className="text-stone-400 text-xs italic">
+                        <p className="text-stone-500 text-xs italic">
                           {isAddressActive ? 'Click to add...' : 'Address'}
                         </p>
                       )}
@@ -312,7 +323,7 @@ export function PostcardPreview({
                   className="absolute left-0 right-0 bg-red-50/30 border-t border-dashed border-red-200/50 flex items-center pointer-events-none"
                   style={{ bottom: 0, height: `${barcodeZonePercent}%` }}
                 >
-                  <span className="text-[7px] text-red-300/80 tracking-wider pl-2">BARCODE ZONE</span>
+                  <span aria-hidden="true" className="text-[7px] text-red-300/80 tracking-wider pl-2">BARCODE ZONE</span>
                 </div>
               )}
             </div>

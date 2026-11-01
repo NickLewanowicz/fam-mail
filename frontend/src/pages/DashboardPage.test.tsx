@@ -175,7 +175,7 @@ describe('DashboardPage', () => {
       </MemoryRouter>,
     )
     expect(await screen.findByText('Sam Lee')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Delete/i }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete', exact: true }))
     // dialog appears; draft is not yet removed
     expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
     expect(deleteDraft).not.toHaveBeenCalled()

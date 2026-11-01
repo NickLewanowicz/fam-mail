@@ -54,6 +54,20 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
     textareaRef.current?.focus()
   }, [])
 
+  // Escape closes the editor (and the color popover first, if open)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (colorOpen) {
+        setColorOpen(false)
+      } else {
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [colorOpen, onClose])
+
   const applyFormat = useCallback((action: Pick<MarkdownAction, 'prefix' | 'suffix' | 'block'>) => {
     const textarea = textareaRef.current
     if (!textarea) return
@@ -232,7 +246,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
               style={{ width: `${charRatio * 100}%` }}
             />
           </div>
-          <span className={`text-[10px] ${charRatio > 0.9 ? 'text-red-600' : charRatio > 0.8 ? 'text-amber-600' : 'text-zinc-400'}`} aria-live="off">
+          <span className={`text-[11px] ${charRatio > 0.9 ? 'text-red-700' : charRatio > 0.8 ? 'text-amber-700' : 'text-zinc-500'}`} aria-live="off">
             {message.length}/{MAX_LENGTH} · {message.trim() ? message.trim().split(/\s+/).length : 0} words
           </span>
         </div>

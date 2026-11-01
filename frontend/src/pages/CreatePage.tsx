@@ -334,6 +334,7 @@ export default function CreatePage() {
   return (
     <AppShell variant="editor">
       <div className="container mx-auto px-4 py-6 pb-28 md:pb-10 max-w-3xl">
+        <h1 className="sr-only">Create a postcard</h1>
         {/* Step indicator — numbered circles with connecting lines */}
         <div className="flex items-center justify-center mb-6 pt-1">
           {STEPS.map((s, i) => {
@@ -350,7 +351,7 @@ export default function CreatePage() {
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-clay text-clay-soft'
+                      ? 'bg-clay text-ink-bg'
                       : isDone
                         ? 'bg-zinc-900 text-white'
                         : 'border-2 border-ink-line text-warm-text3'
@@ -441,7 +442,7 @@ export default function CreatePage() {
                   ← Back
                 </button>
                 <button
-                  className="px-5 py-2 text-sm font-medium bg-clay text-clay-soft rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  className="px-5 py-2 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
                   onClick={handleNext}
                   disabled={step === 1 && !postcard.image}
                 >
@@ -454,7 +455,7 @@ export default function CreatePage() {
                   ← Back
                 </button>
                 <button
-                  className="px-6 h-10 text-sm font-medium bg-clay text-clay-soft rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  className="px-6 h-10 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
                   onClick={handleNext}
                   disabled={step === 1 && !postcard.image}
                 >

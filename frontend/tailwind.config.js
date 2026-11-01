@@ -23,11 +23,14 @@ export default {
           hover: '#D9805E',
           soft: '#FFF6EF',
         },
-        paper: '#FFFDF6',
+        paper: {
+          DEFAULT: '#FFFDF6',
+          border: '#A89578',
+        },
         warm: {
           text: '#F7EDE5',
           text2: '#C7AEA3',
-          text3: '#8F7A72',
+          text3: '#A99288',
           ring: '#E09A6B',
         },
       },

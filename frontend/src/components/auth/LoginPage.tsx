@@ -60,7 +60,7 @@ export function LoginPage() {
             {isLoading ? 'Redirecting...' : 'Sign In'}
           </button>
 
-          <p className="text-xs text-center text-zinc-400 mt-3">Secured with OAuth</p>
+          <p className="text-xs text-center text-zinc-500 mt-3">Secured with OAuth</p>
         </div>
       </motion.div>
     </div>

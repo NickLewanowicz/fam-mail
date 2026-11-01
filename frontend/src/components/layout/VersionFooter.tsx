@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
  * Miniflux pattern: every screen can answer "what am I running?" which makes
  * bug reports and update checks trivial.
  */
-export function VersionFooter() {
+export function VersionFooter({ tone = 'default' }: { tone?: 'default' | 'editor' }) {
   const [version, setVersion] = useState<string | null>(null)
 
   useEffect(() => {
@@ -21,7 +21,7 @@ export function VersionFooter() {
 
   if (!version) return null
   return (
-    <footer className="py-6 text-center text-[11px] text-zinc-400">
+    <footer className={`py-6 text-center text-[11px] ${tone === 'editor' ? 'text-warm-text3' : 'text-zinc-500'}`}>
       fam-mail v{version}
     </footer>
   )

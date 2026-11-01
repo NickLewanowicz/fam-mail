@@ -20,6 +20,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
 
   return (
     <div
+      data-editor={variant === 'editor' ? '' : undefined}
       className={
         variant === 'editor'
           ? 'min-h-dvh flex flex-col bg-ink-bg text-warm-text transition-colors'
@@ -41,7 +42,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
       >
         <div className="container mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
-            <span className="text-xl">✉️</span>
+            <span className="text-xl" aria-hidden="true">✉️</span>
             <span className={`text-base font-semibold ${variant === "editor" ? "text-warm-text font-display tracking-tight" : "text-zinc-900"}`}>Fam Mail</span>
           </Link>
 
@@ -50,7 +51,11 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
               onClick={toggleTheme}
               aria-label="Toggle dark mode"
               title="Toggle dark mode"
-              className="p-1.5 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              className={
+                variant === 'editor'
+                  ? 'p-1.5 rounded-md text-warm-text2 hover:text-warm-text hover:bg-white/5 transition-colors'
+                  : 'p-1.5 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors'
+              }
             >
               {dark ? (
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM10 15a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 15zM10 7a3 3 0 100 6 3 3 0 000-6zM15.657 5.404a.75.75 0 10-1.06-1.06l-1.061 1.06a.75.75 0 001.06 1.06l1.06-1.06zM6.464 14.596a.75.75 0 10-1.06-1.06l-1.06 1.06a.75.75 0 001.06 1.06l1.06-1.06zM18 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 0118 10zM5 10a.75.75 0 01-.75.75h-1.5a.75.75 0 010-1.5h1.5A.75.75 0 015 10zM14.596 15.657a.75.75 0 001.06-1.06l-1.06-1.061a.75.75 0 10-1.06 1.06l1.06 1.06zM5.404 6.464a.75.75 0 001.06-1.06l-1.06-1.06a.75.75 0 10-1.06 1.06l1.06 1.06z" /></svg>
@@ -61,9 +66,12 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
             {user && (
               <Link
                 to="/history"
+                aria-current={location.pathname === '/history' ? 'page' : undefined}
                 className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
                   location.pathname === '/history'
-                    ? 'bg-zinc-900 text-white'
+                    ? 'bg-clay text-ink-bg'
+                    : variant === 'editor'
+                    ? 'text-warm-text2 hover:text-warm-text hover:bg-white/5'
                     : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:text-white dark:hover:bg-zinc-800'
                 }`}
               >
@@ -91,7 +99,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
                   {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
                 </div>
                 <ul tabIndex={0} className="menu menu-sm dropdown-content bg-white rounded-lg z-[1] mt-2 w-52 p-1.5 shadow-lg border border-zinc-200">
-                  <li className="px-2 py-1.5 text-xs font-medium text-zinc-400">Account</li>
+                  <li className="px-2 py-1.5 text-xs font-medium text-zinc-500">Account</li>
                   <li><span className="text-sm text-zinc-500 cursor-default">{user.email}</span></li>
                   <li className="mt-1"><button onClick={logout} className="text-sm text-red-600 hover:bg-red-50">Sign out</button></li>
                 </ul>
@@ -110,7 +118,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
           {children}
         </motion.div>
       </main>
-      <VersionFooter />
+      <VersionFooter tone={variant} />
     </div>
   )
 }

@@ -101,7 +101,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             </button>
           ))}
         </div>
-        <p className="text-xs text-zinc-400 mt-1">
+        <p className="text-xs text-zinc-500 mt-1">
           {size === '6x4' ? 'Standard' : size === '9x6' ? 'Large' : 'Extra-large'}
         </p>
       </div>
@@ -140,7 +140,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               {scheduling ? 'Scheduling...' : 'Save & schedule'}
             </button>
           </div>
-          <p className="text-xs text-zinc-400 mt-1.5">The card is saved now and mailed automatically when the date arrives.</p>
+          <p className="text-xs text-zinc-500 mt-1.5">The card is saved now and mailed automatically when the date arrives.</p>
         </details>
 
         <button
@@ -158,7 +158,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
           )}
         </button>
         {keyboardHint && !sending && (
-          <p className="text-center text-[11px] text-zinc-400">{keyboardHint}</p>
+          <p className="text-center text-[11px] text-zinc-500">{keyboardHint}</p>
         )}
         <div className="flex gap-2">
           <button className="flex-1 h-9 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors" onClick={onBack}>

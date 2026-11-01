@@ -92,7 +92,8 @@ export default function DashboardPage() {
           )}
           <button
             onClick={loadDrafts}
-            className="text-sm text-zinc-400 hover:text-zinc-600 transition-colors disabled:opacity-50"
+            aria-label="Refresh drafts"
+            className="text-sm text-zinc-500 hover:text-zinc-600 transition-colors disabled:opacity-50"
             disabled={loading}
           >
             {loading ? (
@@ -121,8 +122,8 @@ export default function DashboardPage() {
           </div>
         ) : drafts.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-zinc-200 rounded-lg">
-            <p className="text-zinc-400 text-sm">No drafts yet</p>
-            <p className="text-zinc-300 text-xs mt-1">Your saved postcards will appear here</p>
+            <p className="text-zinc-500 text-sm">No drafts yet</p>
+            <p className="text-zinc-500 text-xs mt-1">Your saved postcards will appear here</p>
           </div>
         ) : (
           <motion.div
@@ -133,7 +134,10 @@ export default function DashboardPage() {
             {visibleDrafts.map(draft => (
               <div
                 key={draft.id}
-                className="group bg-white rounded-lg border border-zinc-200 cursor-pointer overflow-hidden hover:border-zinc-300 transition-colors"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/drafts/${draft.id}`) } }}
+                className="group bg-white rounded-lg border border-zinc-200 cursor-pointer overflow-hidden hover:border-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 transition-colors"
                 onClick={() => navigate(`/drafts/${draft.id}`)}
               >
                 <div className="aspect-[3/2] bg-zinc-100 overflow-hidden">
@@ -157,7 +161,7 @@ export default function DashboardPage() {
                           ? `${draft.recipientAddress.firstName} ${draft.recipientAddress.lastName}`
                           : 'No recipient'}
                       </h3>
-                      <p className="text-xs text-zinc-400 truncate mt-0.5">
+                      <p className="text-xs text-zinc-500 truncate mt-0.5">
                         {draft.message || 'No message yet'}
                       </p>
                     </div>
@@ -173,8 +177,8 @@ export default function DashboardPage() {
                     )}
                   </div>
                   <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-zinc-100">
-                    <span className="text-[11px] text-zinc-400">{timeAgo(draft.updatedAt)}</span>
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-[11px] text-zinc-500">{timeAgo(draft.updatedAt)}</span>
+                    <span className="text-xs text-zinc-500">
                       {new Date(draft.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
                     <button
@@ -185,7 +189,7 @@ export default function DashboardPage() {
                         Export
                       </button>
                       <button
-                      className="text-xs text-zinc-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all"
+                      className="text-xs text-zinc-500 hover:text-red-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-all"
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget(draft) }}
                     >
                       Delete
