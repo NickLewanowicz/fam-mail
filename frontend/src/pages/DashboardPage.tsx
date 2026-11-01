@@ -171,8 +171,7 @@ export default function DashboardPage() {
                         📅 {new Date(draft.scheduledFor).toLocaleDateString()}
                       </span>
                     )}
-                    {draft.scheduledFor && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-700" title={`Scheduled for ${new Date(draft.scheduledFor).toLocaleString()}`}>
+                    }>
                         📅 {new Date(draft.scheduledFor).toLocaleDateString()}
                       </span>
                     )}
