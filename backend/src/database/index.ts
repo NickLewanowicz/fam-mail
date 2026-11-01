@@ -579,9 +579,17 @@ export class Database {
    */
   deleteExpiredSessions(): number {
     try {
-      const stmt = this.db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')");
-      const result = stmt.run();
-      return result.changes;
+      // expires_at is stored as an ISO string, which does NOT compare
+      // correctly against SQLite's datetime() format ('T' vs ' ' separator) —
+      // compute "now" as ISO and delete by explicit ids instead.
+      const nowIso = new Date().toISOString();
+      const rows = this.db
+        .prepare("SELECT id FROM sessions WHERE expires_at IS NOT NULL AND expires_at < ?")
+        .all(nowIso) as { id: string }[];
+      for (const row of rows) {
+        this.db.prepare("DELETE FROM sessions WHERE id = ?").run(row.id);
+      }
+      return rows.length;
     } catch (error) {
       throw new DatabaseError("Failed to delete expired sessions", error);
     }
