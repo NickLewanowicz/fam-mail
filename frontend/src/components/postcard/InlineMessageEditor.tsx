@@ -142,7 +142,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
           <button
             key={action.label}
             type="button"
-            className={`w-8 h-8 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center ${action.iconClass ?? ''}`}
+            className={`w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center ${action.iconClass ?? ''}`}
             title={action.label}
             aria-label={action.label}
             // Keep focus (and any text selection) in the textarea — clicking a
@@ -156,7 +156,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div>
           <button
             type="button"
-            className="w-8 h-8 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center"
+            className="w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center"
             title="Text color"
             aria-label="Text color"
             aria-haspopup="true"
