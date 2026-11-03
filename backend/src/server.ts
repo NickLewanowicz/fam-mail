@@ -207,6 +207,58 @@ async function devLoginResponse(req: Request): Promise<Response> {
   return withSecurityHeaders(jsonResponse({ accessToken, refreshToken, user }, 200, req), req)
 }
 
+/**
+ * ISSUE-0111: DEV_MODE refresh. Dev sessions store a real refresh token
+ * (devLoginResponse), but authRoutes is not constructed in dev mode, so
+ * refresh used to refuse outright and dev sessions died at access-token
+ * expiry. Accept a refresh token backed by a session row and re-issue an
+ * access token; the refresh token (and its 7d session window) stays valid.
+ * Production OIDC refresh keeps using authRoutes — untouched.
+ */
+export async function devRefreshResponse(req: Request, db: Database, jwtService: JWTService): Promise<Response> {
+  let body: { refreshToken?: string }
+  try {
+    body = await req.json() as { refreshToken?: string }
+  } catch {
+    return jsonResponse({ error: 'Invalid request body' }, 400, req)
+  }
+  const refreshToken = body.refreshToken
+  if (!refreshToken) {
+    return jsonResponse({ error: 'Missing refresh token' }, 400, req)
+  }
+
+  // Verify the refresh JWT (rejects garbage/expired) and that a session
+  // row backs it — both must hold
+  try {
+    await jwtService.verifyRefreshToken(refreshToken)
+  } catch {
+    return jsonResponse({ error: 'Invalid or expired refresh token' }, 401, req)
+  }
+  const session = db.getSessionByRefreshToken(refreshToken)
+  if (!session) {
+    return jsonResponse({ error: 'Refresh token not found' }, 401, req)
+  }
+  const user = db.getUserById(session.userId)
+  if (!user) {
+    return jsonResponse({ error: 'User not found' }, 401, req)
+  }
+
+  // Re-issue the access token; the refresh token and 7d session window
+  // stay as they are (no rotation in dev — the client keeps its refresh)
+  const accessToken = await jwtService.generateAccessToken(user)
+  db.deleteSessionById(session.id)
+  db.insertSession({
+    id: crypto.randomUUID(),
+    userId: user.id,
+    token: accessToken,
+    refreshToken,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+  })
+  db.deleteExpiredSessions()
+
+  return jsonResponse({ accessToken, refreshToken }, 200, req)
+}
+
 export async function handleRequest(req: Request): Promise<Response> {
   try {
     return await routeRequest(req)
@@ -277,6 +329,11 @@ async function routeRequest(req: Request): Promise<Response> {
       const rateLimitResponse = checkRateLimit(authRateLimiter, req)
       if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
       return withSecurityHeaders(await authRoutes.handleAuthRefresh(req), req)
+    }
+    if (config.devMode) {
+      // ISSUE-0111: dev sessions die at access-token expiry no more — the
+      // dev session's refresh token re-issues an access token
+      return withSecurityHeaders(await devRefreshResponse(req, db, jwtService), req)
     }
     return withSecurityHeaders(jsonResponse({ error: 'Token refresh not available in dev mode' }, 400, req), req)
   }

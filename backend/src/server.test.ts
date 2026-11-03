@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterEach } from 'bun:test'
 import { JWTService } from './services/jwtService'
+import { devRefreshResponse } from './server'
 import type { User } from './models/user'
-import type { Database } from './database'
+import { Database } from './database'
 import type { PostGridService } from './services/postgrid'
 
 describe('Backend Server', () => {
@@ -873,4 +874,68 @@ describe('Backend Server', () => {
             expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5173')
         })
     })
+    describe('POST /api/auth/refresh in dev mode (ISSUE-0111)', () => {
+        // Self-contained fixtures: the full suite runs files concurrently in
+        // one process and the shared JWT_SECRET env races with config.test —
+        // local db + jwt service make this deterministic.
+        const localJwt = new JWTService({
+            secret: 'dev-refresh-local-secret-minimum-32-chars-ok',
+            expiresIn: '1h',
+            refreshExpiresIn: '7d',
+        })
+        let localDb: Database
+        const devUser: User = {
+            id: 'dev-refresh-user',
+            oidcSub: 'dev-refresh-sub',
+            oidcIssuer: 'dev-mode',
+            email: 'dev-refresh@example.com',
+            emailVerified: true,
+            firstName: 'Dev',
+            lastName: 'Refresher',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        }
+
+        it('re-issues an access token for a stored refresh token and keeps the refresh valid', async () => {
+            localDb = new Database(':memory:')
+            localDb.insertUser(devUser)
+            const refreshToken = await localJwt.generateRefreshToken(devUser)
+            localDb.insertSession({
+                id: crypto.randomUUID(),
+                userId: devUser.id,
+                token: 'stale-access-token',
+                refreshToken,
+                expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            })
+
+            const req = new Request('http://localhost:8484/api/auth/refresh', {
+                method: 'POST',
+                body: JSON.stringify({ refreshToken }),
+            })
+            const res = await devRefreshResponse(req, localDb, localJwt)
+            expect(res.status).toBe(200)
+            const data = await res.json() as { accessToken?: string; refreshToken?: string }
+            expect(typeof data.accessToken).toBe('string')
+            expect(data.refreshToken).toBe(refreshToken)
+
+            // The new access token is a real token for the dev user…
+            const payload = await localJwt.verifyToken(data.accessToken!)
+            expect(payload.sub).toBe(devUser.id)
+            // …and the stored session now carries it (logout keeps working)
+            expect(localDb.getSessionByRefreshToken(refreshToken)?.token).toBe(data.accessToken)
+            localDb.close()
+        })
+
+        it('rejects garbage refresh tokens with 401', async () => {
+            localDb = new Database(':memory:')
+            const req = new Request('http://localhost:8484/api/auth/refresh', {
+                method: 'POST',
+                body: JSON.stringify({ refreshToken: 'not-a-real-jwt' }),
+            })
+            const res = await devRefreshResponse(req, localDb, localJwt)
+            expect([400, 401]).toContain(res.status)
+            localDb.close()
+        })
+    })
+
 })
