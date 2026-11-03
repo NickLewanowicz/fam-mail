@@ -7,6 +7,8 @@ import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { WizardActionBar } from '../components/wizard/WizardActionBar'
+import { truthCopy } from '../utils/postcardPricing'
+import { fetchPostgridStatus, type PostgridApiMode } from '../utils/postgridApi'
 import type { WizardStepActions } from '../components/wizard/AddressStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
@@ -48,6 +50,21 @@ export default function CreatePage() {
   // M5: steps 3–4 lift their actions to the sticky bar through these refs
   const addressActionRef = useRef<WizardStepActions | null>(null)
   const reviewActionRef = useRef<WizardStepActions | null>(null)
+  // ISSUE-0117: one mode fetch for the whole wizard (truth row + truth line)
+  const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const status = await fetchPostgridStatus()
+        if (!cancelled) setPostgridMode(status.mode)
+      } catch {
+        if (!cancelled) setPostgridMode(null)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [])
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
   const [saving, setSaving] = useState(false)
   const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -364,7 +381,7 @@ export default function CreatePage() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-6 pb-28 md:pb-10 max-w-3xl">
+      <div className="container mx-auto px-4 py-6 pb-[calc(8rem+env(safe-area-inset-bottom,0px))] md:pb-10 max-w-3xl">
         <h1 className="sr-only">Create a postcard</h1>
         {/* Step indicator — numbered circles with connecting lines */}
         <div className="flex items-center justify-center mb-6 pt-1">
@@ -536,6 +553,7 @@ export default function CreatePage() {
                     sending={submitting}
                     saving={saving}
                     actionRef={reviewActionRef}
+                    mode={postgridMode}
                   />
                 </div>
               </div>
@@ -548,6 +566,9 @@ export default function CreatePage() {
             absolute positioning and would slide with the step content */}
         {step >= 1 && step <= 4 && (
           <WizardActionBar
+            step={step}
+            mode={postgridMode}
+            truth={truthCopy(postgridMode, postcard.address?.firstName, postcard.size)}
             onBack={handleBack}
             primaryLabel={
               step === 4 ? 'Send Postcard'

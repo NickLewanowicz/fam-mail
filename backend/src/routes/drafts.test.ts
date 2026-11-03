@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, spyOn, beforeEach, afterEach } from "bun:test";
 import { Database } from "../database";
 import { DraftRoutes } from "./drafts";
+import { processDueDrafts } from "../services/scheduler";
 import { AuthMiddleware } from "../middleware/auth";
 import type { User } from "../models/user";
 import type { Draft } from "../models/draft";
@@ -60,10 +61,6 @@ function createMockPostgrid(overrides: Partial<{
 
 // Minimal 1x1 white JPEG (smallest valid JPEG) — same fixture as postcards.test.ts
 const minimalJPEG = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AKwA//9k=';
-
-// GIF89a header bytes — valid base64, but rejected format (JPEG/PNG/WebP only)
-const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
-const gifBase64 = Buffer.from(gifBytes).toString('base64');
 
 describe("DraftRoutes", () => {
   let db: Database;
@@ -543,6 +540,33 @@ describe("DraftRoutes", () => {
     });
 
 
+    it("should return 400 when senderAddress is missing (return address required)", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.senderAddress = undefined;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      expect(data.errors).toContainEqual({
+        field: "from",
+        message: "Return address (from) is required",
+      });
+
+      // Validation must fail before PostGrid is called — draft stays in draft state
+      const unchangedDraft = db.getDraft(draft.id);
+      expect(unchangedDraft?.state).toBe("draft");
+
+      // #118: assert the fail-before-PostGrid guarantee directly
+      const createSpy = spyOn(mockPostgrid, "createPostcard");
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
     it("should return 400 when senderAddress is invalid", async () => {
       const draft = createTestDraft(user1.id, "draft");
       draft.senderAddress = {
@@ -1004,3 +1028,93 @@ describe("DraftRoutes", () => {
     });
   });
 });
+
+// ============================================================================
+// ISSUE-0118 / ADR 0002 — scheduled sender-less drafts fail safe
+// ============================================================================
+
+describe("DraftRoutes — scheduled sender-less draft dispatch (#118)", () => {
+  let db: Database;
+  let mockPostgrid: ReturnType<typeof createMockPostgrid>;
+
+  beforeEach(() => {
+    if (existsSync(TEST_DB)) {
+      unlinkSync(TEST_DB);
+    }
+    db = new Database(TEST_DB);
+    db.insertUser({
+      id: "user-118",
+      oidcSub: "sub-118",
+      oidcIssuer: "https://accounts.google.com",
+      email: "user118@test.com",
+      emailVerified: true,
+      firstName: "User",
+      lastName: "OneEighteen",
+      createdAt: "",
+      updatedAt: "",
+    });
+    mockPostgrid = createMockPostgrid();
+  });
+
+  afterEach(() => {
+    db?.close();
+    try {
+      if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
+      if (existsSync(TEST_DB + "-wal")) unlinkSync(TEST_DB + "-wal");
+      if (existsSync(TEST_DB + "-shm")) unlinkSync(TEST_DB + "-shm");
+    } catch {
+      /* best-effort cleanup */
+    }
+  });
+
+  // Mirrors the main describe's createTestDraft, minus the sender, ready
+  // state, and a schedule that is already due
+  const createSenderlessScheduledDraft = (): Omit<Draft, "createdAt" | "updatedAt"> => ({
+    id: crypto.randomUUID(),
+    userId: "user-118",
+    recipientAddress: {
+      firstName: "John",
+      lastName: "Doe",
+      addressLine1: "123 Main St",
+      city: "Ottawa",
+      provinceOrState: "ON",
+      postalOrZip: "K1A 0B1",
+      countryCode: "CA",
+    },
+    senderAddress: undefined,
+    message: "Scheduled without a sender",
+    state: "ready",
+    scheduledFor: new Date(Date.now() - 60_000).toISOString(),
+    size: "6x4",
+  });
+
+  it("publish rejects sender-less scheduled drafts with 400; the dispatcher unschedules, reverts to draft, and never calls PostGrid", async () => {
+    const draft = createSenderlessScheduledDraft();
+    db.insertDraft(draft);
+
+    const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+    const owner = db.getUserById("user-118")!;
+
+    // Dispatcher-path publish: 400 with the from error
+    const result = await routes.publishDraftById(draft.id, owner, { allowScheduled: true });
+    expect(result.status).toBe(400);
+    const body = result.body as { error?: string; errors?: Array<{ field?: string; message?: string }> };
+    expect(body.errors).toContainEqual({
+      field: "from",
+      message: "Return address (from) is required",
+    });
+
+    // Scheduler composition (scheduler.ts): 4xx is permanent — unschedule,
+    // revert to draft, and never reach PostGrid
+    const createSpy = spyOn(mockPostgrid, "createPostcard");
+    const dispatch = await processDueDrafts(db, routes);
+    expect(dispatch.failed).toBe(1);
+    const reverted = db.getDraft(draft.id);
+    // updateDraft clears the schedule to NULL; the row mapper surfaces that
+    // as undefined on the record — both mean "no schedule"
+    expect(reverted?.scheduledFor ?? null).toBeNull();
+    expect(reverted?.state).toBe("draft");
+    expect(createSpy).toHaveBeenCalledTimes(0);
+  });
+});
+

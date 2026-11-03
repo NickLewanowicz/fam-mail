@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "./index";
+import { Database as SqliteDatabase } from "bun:sqlite";
 import { unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -30,6 +31,22 @@ describe("Database", () => {
   it("should create schema on initialization", () => {
     const tables = db.getTables();
     expect(tables).toContain("postcards");
+  });
+
+  it("drops the orphaned email_processing table from pre-existing databases (#88)", () => {
+    // Simulate a database created before #88: schema.sql no longer defines
+    // email_processing, but existing file DBs still carry it + its indexes.
+    db.close();
+    const legacy = new SqliteDatabase(TEST_DB);
+    legacy.exec(
+      "CREATE TABLE email_processing (id INTEGER PRIMARY KEY AUTOINCREMENT, email_message_id TEXT UNIQUE NOT NULL, status TEXT NOT NULL)"
+    );
+    legacy.exec("CREATE INDEX idx_email_processing_email_message_id ON email_processing(email_message_id)");
+    legacy.exec("CREATE INDEX idx_email_processing_status ON email_processing(status)");
+    legacy.close();
+
+    db = new Database(TEST_DB);
+    expect(db.getTables()).not.toContain("email_processing");
   });
 
   it("should insert and retrieve postcard record", () => {

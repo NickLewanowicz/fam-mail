@@ -138,3 +138,8 @@ The agent fills the address book from conversation context, composes the message
 | 429 | Rate limited (10/min) |
 | 500 | PostGrid not configured or upstream failure — nothing was mailed |
 | 502+ | PostGrid upstream error passed through |
+
+
+## Drafts are not exposed on /api/v1
+
+Draft endpoints (`POST /api/drafts`, `POST /api/drafts/:id/publish`, etc.) are JWT-only and are deliberately **not** mirrored under `/api/v1` — the Agent API covers direct sends only via `POST /api/v1/postcards`, which already requires a sender address (`from`). Agents that need drafts should manage state client-side and submit with `from` included (ADR 0002: publish requires a sender address; scheduled dispatch fails safe on drafts without one).
