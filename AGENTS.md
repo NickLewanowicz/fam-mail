@@ -71,8 +71,35 @@ Detailed matrices and field rules: `.claude/skills/postcard-validation/SKILL.md`
 
 - **TypeScript strict**; avoid `any`.
 - **DaisyUI** for UI primitives; avoid one-off raw Tailwind form controls where a Daisy component exists.
-- **Controlled inputs** in the wizard (no react-hook-form in this codebase).
+- **react-hook-form + zod is the standard for multi-field forms** (address forms); plain controlled inputs remain fine for 1–2-field forms (country picker, login). Zod address schemas should mirror backend validation. (ADR 0001)
 - Wizard steps live under `frontend/src/components/wizard/` (e.g. photo, message, address, review); postcard preview under `frontend/src/components/postcard/`.
+- **UI layering** (ADR 0001): DaisyUI for styled primitives and theme tokens; `radix-ui` headless primitives for dialogs/popovers/menus; never add a second styled component kit.
+- **Message editing** uses TipTap 3 constrained to the message HTML contract (ADR 0001, Phase 3); editor output is untrusted input — server-side DOMPurify (`backend/src/utils/htmlSanitizer.ts`) is the only sanitization authority.
+- **File uploads** go through react-dropzone + shared validation — do not hand-roll drag/drop or FileReader plumbing.
+- **Destructive actions** use `ConfirmDialog` (radix-ui AlertDialog, `frontend/src/components/ui/ConfirmDialog.tsx`); user feedback uses sonner toasts — no `window.confirm`, no per-page error banners.
+- Architecture decisions live in `docs/adr/` — read ADR 0001 before adding UI dependencies.
+
+## How we work (AI team)
+
+The repo is run by an AI team. The **Maintainer** (primary agent / Nick) owns scope, sequencing, and acceptance, and dispatches personas one job at a time. Persona definitions live in `.zcode/agents/*.md` (ZCode subagent format; each description carries the persona's scope and its deliverable path).
+
+| Persona | File | Scope (one job each) | Deliverable |
+|---------|------|----------------------|-------------|
+| **Priya** — principal engineer | `principal-engineer.md` | Architecture, API/schema, PostGrid contracts, ADRs, simplification reviews. Design/review only — never implements. | `docs/adr/`, `docs/ARCHITECTURE-1.0.0.md`, `docs/SIMPLIFY.md` |
+| **Sam** — product engineer | `product-engineer.md` | Implements issues test-first, minimal, all gates green. | branches / PRs + verification summary |
+| **June** — UX designer | `ux-designer.md` | Wizard/preview/editor interaction specs, a11y, mobile ergonomics. Research only — never implements. | `docs/design/<topic>.md` |
+| **Marcus** — QA engineer | `qa-engineer.md` | Runbook gate passes + exploratory passes. Finds and reports — never fixes. | `docs/qa/qa-report-<date>.md` |
+| **Ray** — print reviewer | `print-reviewer.md` | The card as it prints: DPI, safe zones, message fit, legibility. Review only. | `docs/qa/print-review-<date>.md` |
+| **Nick** — sim user (the Regular) | `simuser-nick.md` | Monthly routine send: speed, memory, preview trust, recovery. | `docs/qa/sim/nick-<date>.md` |
+| **Maya** — sim user (First-Timer) | `simuser-maya.md` | Cold start and the trust decision (cost clarity, address confidence). | `docs/qa/sim/maya-<date>.md` |
+| **Rose** — sim user (Auntie) | `simuser-rose.md` | Phone-first elder, large system text: forgiveness, jargon, the money moment. | `docs/qa/sim/rose-<date>.md` |
+
+Dispatch rules:
+
+- **One persona per dispatch.** Fresh agent per job; sim users get a staged app instance (mock/test PostGrid mode), never source access — they judge the rendered app only and write only their own report.
+- **Sim users never trigger real sends** and never sign in with real credentials; findings flow into `docs/qa/` and become backlog issues.
+- **Staff specs gate implementation**: June's designs and Priya's ADRs/reviews are what Sam implements and Marcus verifies against.
+- Report language is English; a persona that can't reach what it needs writes that in its report rather than inventing results.
 
 ## Key files
 
@@ -89,12 +116,17 @@ Detailed matrices and field rules: `.claude/skills/postcard-validation/SKILL.md`
 | `.github/workflows/ci.yml` | CI |
 | `opencode.json` | OpenCode model + agent wiring |
 | `.claude/nightshift.yaml` | NightShift orchestrator (Pi + Z.ai) |
+| `.zcode/agents/` | Persona definitions for the AI team (see "How we work") |
 
 ## Project board
 
 https://github.com/users/NickLewanowicz/projects/4  
 
 Fields: Status (Backlog → Done), Priority (P0–P2), Size (XS–XL).
+
+## Issue tracking (temporary: `.issues/`)
+
+GitHub Issues remain the source of truth for existing issues and are **closed as fixes merge**. New issues discovered during agent sessions are filed as git-ignored files under `.issues/` (one markdown file per issue, YAML frontmatter with `state: open|closed`, labels `bug` / `feature` / `epic` plus qualifiers) instead of being created on GitHub. Treat them exactly like GitHub issues: triage, dispatch one persona per issue, and flip `state` to `closed` with a resolution note when fixed. Mirror files for open GitHub issues live there too and are kept in sync. Never commit `.issues/`.
 
 ## Known issues and gotchas
 
@@ -121,11 +153,10 @@ GLM-based OpenCode models do not embed vision. For screenshots or visual QA, use
 - When fixing several **independent** issues, parallel delegation is fine; still run a **unified test/lint pass** before merge.
 - If a sandbox denies a command, retry with an explicit `cd` to the repo or package path, or narrow the command (e.g. path-scoped `pnpm`).
 
-## OpenCode-specific layout
+## Tool-specific layouts
 
-- **Models and permissions**: `opencode.json` at repo root.
-- **Custom slash commands**: `.opencode/commands/*.md`.
-- **Subagent personas**: `.opencode/agents/*.md` (OpenCode-specific; not duplicated into `.claude/` unless you intentionally migrate).
+- **ZCode (canonical personas)**: `.zcode/agents/*.md` — the AI-team roster above.
+- **OpenCode (legacy)**: `opencode.json` (models + permissions), `.opencode/commands/*.md` (slash commands), `.opencode/agents/*.md` (older subagents: implementer, qa, reviewer, triage, vision — superseded by the `.zcode/agents/` roster; kept until intentionally migrated).
 
 ## Skills (on-demand)
 

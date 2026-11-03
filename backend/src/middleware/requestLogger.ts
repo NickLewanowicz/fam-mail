@@ -73,58 +73,41 @@ export function withRequestLogging(
 
     try {
       const response = await handler(req)
-      const endTime = performance.now()
-      const durationMs = endTime - startTime
-
-      const logContext: RequestLogContext = {
-        method: req.method,
-        path: url.pathname, // Intentionally exclude search/query string
-        status: response.status,
-        duration_ms: Math.round(durationMs),
-      }
-
-      // Try to extract user ID (non-blocking if it fails)
-      try {
-        const userId = await extractUserId(req, jwtService, db)
-        if (userId) {
-          logContext.user_id = userId
-        }
-      } catch {
-        // Silently ignore errors in user ID extraction
-      }
-
-      // Log as JSON line to stdout
-      // eslint-disable-next-line no-console
-      console.log(JSON.stringify(logContext))
-
+      await logRequest(req, url, response.status, startTime, jwtService, db)
       return response
     } catch (error) {
-      const endTime = performance.now()
-      const durationMs = endTime - startTime
-
-      const logContext: RequestLogContext = {
-        method: req.method,
-        path: url.pathname,
-        status: 500, // Unhandled errors result in 500
-        duration_ms: Math.round(durationMs),
-      }
-
-      // Try to extract user ID even on errors
-      try {
-        const userId = await extractUserId(req, jwtService, db)
-        if (userId) {
-          logContext.user_id = userId
-        }
-      } catch {
-        // Silently ignore errors in user ID extraction
-      }
-
-      // Log as JSON line to stdout
-      // eslint-disable-next-line no-console
-      console.log(JSON.stringify(logContext))
-
-      // Re-throw the error to be handled by Bun's default error handling
+      // Unhandled errors result in 500
+      await logRequest(req, url, 500, startTime, jwtService, db)
       throw error
     }
   }
+}
+
+/** Build the log context (with user id, best-effort) and emit one JSON line. */
+async function logRequest(
+  req: Request,
+  url: URL,
+  status: number,
+  startTime: number,
+  jwtService: JWTService,
+  db: Database
+): Promise<void> {
+  const logContext: RequestLogContext = {
+    method: req.method,
+    path: url.pathname, // Intentionally exclude search/query string
+    status,
+    duration_ms: Math.round(performance.now() - startTime),
+  }
+
+  try {
+    const userId = await extractUserId(req, jwtService, db)
+    if (userId) {
+      logContext.user_id = userId
+    }
+  } catch {
+    // Silently ignore errors in user ID extraction
+  }
+
+  // eslint-disable-next-line no-console
+  console.log(JSON.stringify(logContext))
 }

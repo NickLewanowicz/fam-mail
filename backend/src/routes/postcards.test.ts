@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, beforeAll } from 'bun:test'
+import { describe, it, expect, beforeEach, beforeAll, spyOn } from 'bun:test'
 import { handlePostcardCreate } from './postcards'
 import type { User } from '../models/user'
 import { Database } from '../database'
+import { PostGridService, setPostgridService } from '../services/postgrid'
 
 /** Safe base64 encoding for Uint8Array of any size (avoids stack overflow from spread operator). */
 function bytesToBase64(bytes: Uint8Array): string {
@@ -123,60 +124,16 @@ describe('handlePostcardCreate — Address Validation', () => {
     expect(response.status).not.toBe(400)
   })
 
-  // --- Missing required fields -----------------------------------------------
-
-  function omitField(field: keyof typeof validUSAddress): Record<string, string> {
-    const copy = { ...validUSAddress }
-    delete copy[field]
-    return copy
-  }
-
-  it('rejects missing addressLine1', async () => {
-    const req = makeRequest({ to: omitField('addressLine1'), frontHTML: '<html>Test</html>' })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    const data = await getResponse(res)
-    expect(res.status).toBe(400)
-    expect(data.errors!.some(e => e.field === 'to.addressLine1')).toBe(true)
-  })
-
-  it('rejects missing city', async () => {
-    const req = makeRequest({ to: omitField('city'), frontHTML: '<html>Test</html>' })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    const data = await getResponse(res)
-    expect(res.status).toBe(400)
-    expect(data.errors!.some(e => e.field === 'to.city')).toBe(true)
-  })
-
-  it('rejects missing provinceOrState', async () => {
-    const req = makeRequest({ to: omitField('provinceOrState'), frontHTML: '<html>Test</html>' })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    const data = await getResponse(res)
-    expect(res.status).toBe(400)
-    expect(data.errors!.some(e => e.field === 'to.provinceOrState')).toBe(true)
-  })
-
-  it('rejects missing postalOrZip', async () => {
-    const req = makeRequest({ to: omitField('postalOrZip'), frontHTML: '<html>Test</html>' })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    const data = await getResponse(res)
-    expect(res.status).toBe(400)
-    expect(data.errors!.some(e => e.field === 'to.postalOrZip')).toBe(true)
-  })
-
-  it('rejects missing countryCode', async () => {
-    const req = makeRequest({ to: omitField('countryCode'), frontHTML: '<html>Test</html>' })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    const data = await getResponse(res)
-    expect(res.status).toBe(400)
-    expect(data.errors!.some(e => e.field === 'to.countryCode')).toBe(true)
-  })
-
-  it('rejects completely empty address', async () => {
+  // Missing-field coverage lives in utils/validation.test.ts; the route only
+  // needs to prove it surfaces those errors with the right field names.
+  it('rejects an address missing required fields, naming each field', async () => {
     const req = makeRequest({ to: {}, frontHTML: '<html>Test</html>' })
     const res = await handlePostcardCreate(req, mockUser, db)
     const data = await getResponse(res)
     expect(res.status).toBe(400)
-    expect(data.errors!.length).toBeGreaterThanOrEqual(7)
+    for (const field of ['firstName', 'lastName', 'addressLine1', 'city', 'provinceOrState', 'postalOrZip', 'countryCode']) {
+      expect(data.errors!.some(e => e.field === `to.${field}`)).toBe(true)
+    }
   })
 
   // --- Empty / whitespace-only fields ----------------------------------------
@@ -1339,15 +1296,33 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     expect(data.errors!.some(e => e.field === 'image')).toBe(true)
   })
 
-  it('accepts WebP image at route level', async () => {
+  it('accepts WebP image at route level and builds front artwork from it', async () => {
     const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50])
     const webp = bytesToBase64(webpBytes)
-    const req = makeRequest({
-      to: validUSAddress,
-      image: webp,
+    // Mock-mode service: no real PostGrid call. The uploaded image becomes
+    // the front artwork instead of being silently dropped.
+    const svc = new PostGridService({
+      mode: 'test', testApiKey: 't', liveApiKey: 'l',
+      forceTestMode: false, mockMode: true, webhookSecret: '', size: '6x4', senderId: '',
     })
-    const res = await handlePostcardCreate(req, mockUser, db)
-    expect(res.status).toBe(401) // PostGrid API call attempted (mock key → 401)
+    const spy = spyOn(svc, 'createPostcard').mockImplementation(async (request) => ({
+      id: 'pc_webp_test', object: 'postcard', live: false, status: 'ready',
+      to: request.to, size: request.size ?? '6x4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }) as never)
+    setPostgridService(svc)
+    try {
+      const req = makeRequest({
+        to: validUSAddress,
+        image: webp,
+      })
+      const res = await handlePostcardCreate(req, mockUser, db)
+      expect(res.status).toBe(200)
+      const request = spy.mock.calls[0][0]
+      expect(request.frontHTML).toContain('data:image/webp;base64,')
+    } finally {
+      setPostgridService(null as unknown as PostGridService)
+    }
   })
 
   it('rejects oversized image (>10MB) at route level', async () => {
@@ -2183,5 +2158,48 @@ describe('handlePostcardCreate — DOMPurify Comprehensive (#22)', () => {
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
+  })
+})
+
+// ============================================================================
+// Structured recipient persistence (#109)
+// History's "Again" needs the structured address back; the formatted
+// recipient_address string alone can't reconstruct country/city/ZIP.
+// ============================================================================
+
+describe('handlePostcardCreate — structured recipient persistence (#109)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  it('persists the structured to-address and lists it back parseable', async () => {
+    const svc = new PostGridService({
+      mode: 'test', testApiKey: 't', liveApiKey: 'l',
+      forceTestMode: false, mockMode: true, webhookSecret: '', size: '6x4', senderId: '',
+    })
+    spyOn(svc, 'createPostcard').mockImplementation(async (request) => ({
+      id: 'pc_ca_109', object: 'postcard', live: false, status: 'ready',
+      to: request.to, size: request.size ?? '6x4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }) as never)
+    setPostgridService(svc)
+    try {
+      const req = makeRequest({
+        to: validCAAddress,
+        message: 'Again-test card',
+      })
+      const res = await handlePostcardCreate(req, mockUser, db)
+      expect(res.status).toBe(200)
+
+      const records = db.listPostcardsByUser(mockUser.id)
+      expect(records.length).toBe(1)
+      expect(records[0].recipientAddressJson).toBeTruthy()
+      const structured = JSON.parse(records[0].recipientAddressJson!)
+      expect(structured).toEqual(validCAAddress)
+    } finally {
+      setPostgridService(null as unknown as PostGridService)
+    }
   })
 })

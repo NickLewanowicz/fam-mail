@@ -36,11 +36,6 @@ export interface DraftResponse {
   draft: Draft
 }
 
-export interface PublishResponse {
-  success: boolean
-  message: string
-}
-
 export interface DeleteResponse {
   message: string
 }
@@ -123,13 +118,24 @@ export async function deleteDraft(id: string): Promise<void> {
   await handleResponse<DeleteResponse>(response)
 }
 
-/** Publish a draft (mark as ready to send) */
-export async function publishDraft(id: string): Promise<PublishResponse> {
-  const response = await authFetch(`${API_BASE}/${id}/publish`, {
+
+export async function scheduleDraft(id: string, scheduledFor: string): Promise<void> {
+  const response = await authFetch(`${API_BASE}/${id}/schedule`, {
     method: 'POST',
     headers: getAuthHeaders(),
+    body: JSON.stringify({ scheduledFor }),
   })
-  return handleResponse<PublishResponse>(response)
+  await handleResponse<{ message: string }>(response)
 }
 
-export { DraftApiError }
+
+/** Download a draft as JSON — data portability for self-hosters. */
+export function exportDraftJson(draft: Draft): void {
+  const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `fam-mail-draft-${draft.id.slice(0, 8)}.json`
+  a.click()
+  URL.revokeObjectURL(url)
+}

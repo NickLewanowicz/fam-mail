@@ -4,7 +4,44 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.1.0] — 2026-09-01
+
+### Added
+- Postcard history page (`/history`) with status chips
+- Schedule-for-later UI wired to the background dispatcher
+- Occasion templates in the message editor
+- Recent-recipient quick-pick on the address step
+- Draft autosave with a polite saved indicator
+- Draft JSON export; keyboard shortcuts (arrow nav, Cmd/Ctrl+Enter to send)
+- Word count + near-limit counter state; dark mode toggle
+
+### Fixed
+- Return address, image fronts, print canvas sizing, document-wrapper sanitization
+- Dark-mode form theming (data-theme root fix); toolbar selection loss
+- Stepper skip gating; editor overlay stuck across steps
+
+### Changed
+- ADR 0001 library strategy: sonner, radix-ui, react-dropzone adopted; ~1,200 LOC dead code removed
+
 ## [Unreleased]
+
+### Added
+- Agent API (`/api/v1`) with API-key auth for machine integrations (Hermes, OpenClaw)
+- Scheduled postcards now dispatch automatically when their send date arrives
+- Rich text messages: underline, strikethrough, and text colors that print
+- Size-accurate preview for 6x4 / 9x6 / 11x6 cards
+
+### Fixed
+- Return address is now actually sent to PostGrid (was validated then dropped)
+- Uploaded photos are used as front artwork (were silently ignored, draft path too)
+- Card canvas dimensions now match the selected card size at print time
+- PostGrid mode toggle no longer usable when ADMIN_EMAILS is unset (fail closed)
+- Toolbar formatting no longer clears the text selection
+- Address form renders correctly under OS dark mode
+
+### Changed
+- Adopted frontend library strategy (ADR 0001): sonner toasts, radix-ui dialogs,
+  react-dropzone uploads; removed ~1,200 LOC of dead/duplicated code
 
 ### Added
 - Multi-step postcard creation wizard (Country → Photo → Message → Address → Review)

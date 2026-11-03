@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "bun:test";
+import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "./index";
 import { unlinkSync, existsSync } from "fs";
 import { join } from "path";
@@ -16,10 +16,20 @@ describe("Database", () => {
     db = new Database(TEST_DB);
   });
 
+  afterEach(() => {
+    db?.close();
+    try {
+      if (existsSync(TEST_DB)) unlinkSync(TEST_DB);
+      if (existsSync(TEST_DB + "-wal")) unlinkSync(TEST_DB + "-wal");
+      if (existsSync(TEST_DB + "-shm")) unlinkSync(TEST_DB + "-shm");
+    } catch {
+      /* best-effort cleanup */
+    }
+  });
+
   it("should create schema on initialization", () => {
     const tables = db.getTables();
     expect(tables).toContain("postcards");
-    expect(tables).toContain("email_processing");
   });
 
   it("should insert and retrieve postcard record", () => {
@@ -187,6 +197,10 @@ describe("Database - Session methods", () => {
   beforeEach(() => {
     const testDb = join(tmpdir(), `fammail-session-test-${Date.now()}.db`);
     db = new Database(testDb);
+  });
+
+  afterEach(() => {
+    db?.close();
   });
 
   it("should insert and find session by refresh token", () => {

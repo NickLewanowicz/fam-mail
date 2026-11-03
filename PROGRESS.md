@@ -65,3 +65,16 @@ Started: 2026-04-10
 ## Verification Log
 | Time | Check | Result | Notes |
 |------|-------|--------|-------|
+
+## Notes — Sept 2026 work session
+
+Big push over a couple of days: fixed the print-path bugs (return address and
+photo uploads were being dropped before they reached PostGrid; card canvases
+were hardcoded to 6x4), added the agent API for machine integrations, rich
+text on card backs, a scheduler so scheduled cards actually mail, and a
+library strategy for the frontend (see docs/adr/0001). Also reworked the
+wizard UX after walking through it on desktop and mobile.
+
+Everything currently known to be missing or half-done is listed at the bottom
+of the earlier sections above (IMAP pipeline stays paused; dead code cleanup
+is partially done).

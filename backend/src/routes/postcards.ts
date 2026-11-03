@@ -1,10 +1,9 @@
-import { marked } from 'marked'
-import DOMPurify from 'isomorphic-dompurify'
 import { getPostgridService } from '../services/postgrid'
 import type { PostGridPostcardRequest } from '../types/postgrid'
 import type { User } from '../models/user'
 import type { Database } from '../database'
-import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
+import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML } from '../utils/validation'
+import { buildImageFrontHTML, buildMessageBackHTML, isCardSize, type CardSize } from '../utils/htmlSanitizer'
 import { jsonResponse } from '../middleware/headers'
 
 export async function handlePostcardCreate(req: Request, user: User, db: Database): Promise<Response> {
@@ -94,66 +93,29 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       }, 500, req)
     }
 
-    let finalBackHTML = backHTML
+    const cardSize: CardSize = isCardSize(size) ? size : '6x4'
 
-    if (message) {
-      // Sanitize markdown to strip any raw HTML tags before processing
-      const sanitizedMessage = sanitizeMarkdown(message)
-      const markedHTML = await marked(sanitizedMessage)
-      const messageHTML = DOMPurify.sanitize(markedHTML, {
-        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
-        ALLOWED_ATTR: ['class'],
-        FORBID_ATTR: ['onclick', 'onload', 'onerror', 'style']
-      })
-      finalBackHTML = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-              width: 1800px;
-              height: 1200px;
-              overflow: hidden;
-              position: relative;
-              background: white;
-              font-family: Arial, sans-serif;
-              padding: 60px;
-            }
-            .message {
-              position: absolute;
-              left: 60px;
-              top: 60px;
-              width: 840px;
-              height: 1080px;
-              font-size: 24px;
-              line-height: 1.6;
-              color: #333;
-            }
-            .message h1 { font-size: 36px; margin-bottom: 16px; }
-            .message h2 { font-size: 32px; margin-bottom: 14px; }
-            .message h3 { font-size: 28px; margin-bottom: 12px; }
-            .message p { margin-bottom: 12px; }
-            .message strong { font-weight: bold; }
-            .message em { font-style: italic; }
-          </style>
-        </head>
-        <body>
-          <div class="message">
-            ${messageHTML}
-          </div>
-        </body>
-        </html>
-      `.trim()
+    // Front artwork: explicit HTML wins; otherwise a validated uploaded
+    // image becomes a full-bleed front canvas. Previously an image-only
+    // request silently mailed a card with no artwork at all.
+    let finalFrontHTML = frontHTML ? sanitizeHTML(frontHTML) : undefined
+    if (!finalFrontHTML && image) {
+      finalFrontHTML = buildImageFrontHTML(image, cardSize)
+    }
+
+    // Back artwork: explicit HTML wins; otherwise render the markdown message
+    // onto a canvas sized for the actual card.
+    let finalBackHTML = backHTML ? sanitizeHTML(backHTML) : undefined
+    if (!finalBackHTML && message) {
+      finalBackHTML = sanitizeHTML(buildMessageBackHTML(message, cardSize))
     }
 
     const postcardRequest: PostGridPostcardRequest = {
       to,
       from,
-      size: size as '6x4' | '9x6' | '11x6',
-      frontHTML: frontHTML ? sanitizeHTML(frontHTML) : undefined,
-      backHTML: finalBackHTML ? sanitizeHTML(finalBackHTML) : undefined,
+      size: cardSize,
+      frontHTML: finalFrontHTML,
+      backHTML: finalBackHTML,
     }
 
     const result = await postgridService.createPostcard(postcardRequest)
@@ -166,6 +128,9 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       senderEmail: user.email,
       recipientName: `${to.firstName} ${to.lastName}`,
       recipientAddress: `${to.addressLine1}, ${to.city}, ${to.provinceOrState} ${to.postalOrZip}`,
+      // #109: keep the structured address so History "Again" can prefill
+      // city/ZIP/country instead of a formatted string
+      recipientAddressJson: JSON.stringify(to),
       postgridPostcardId: result.id,
       postgridMode: postgridService.getTestMode() ? 'test' : 'live',
       forcedTestMode: false,

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterEach } from "bun:test";
-import { getConfig } from "./config";
+import { getConfig, parseApiKeys } from "./config";
 
 describe("Configuration", () => {
   // Clean up IMAP env vars after each test to avoid cross-contamination
@@ -114,5 +114,55 @@ describe("Configuration", () => {
     expect(config.postgrid.mode).toBe("test");
     expect(config.jwt.secret).toBe("test-secret-key-minimum-32-characters-long");
     expect(config.oidc.clientId).toBe("minimal-client");
+  });
+});
+
+describe("parseApiKeys", () => {
+  it("returns an empty list when API_KEYS is unset or blank", () => {
+    expect(parseApiKeys("")).toEqual([]);
+    expect(parseApiKeys("   ")).toEqual([]);
+  });
+
+  it("parses key:label:email entries", () => {
+    expect(parseApiKeys("fam_abc:hermes:me@example.com")).toEqual([
+      { key: "fam_abc", label: "hermes", email: "me@example.com" },
+    ]);
+  });
+
+  it("defaults the label to the key when omitted", () => {
+    expect(parseApiKeys("fam_abc::me@example.com")).toEqual([
+      { key: "fam_abc", label: "fam_abc", email: "me@example.com" },
+    ]);
+  });
+
+  it("parses multiple comma-separated entries", () => {
+    const parsed = parseApiKeys("fam_abc:hermes:a@example.com, fam_def:openclaw:b@example.com");
+    expect(parsed).toHaveLength(2);
+    expect(parsed[1]).toEqual({ key: "fam_def", label: "openclaw", email: "b@example.com" });
+  });
+
+  it("lowercases emails for matching", () => {
+    const parsed = parseApiKeys("fam_abc:x:Me@Example.COM");
+    expect(parsed[0]?.email).toBe("me@example.com");
+  });
+
+  it("throws on entries missing the email part", () => {
+    expect(() => parseApiKeys("fam_abc:hermes")).toThrow("API_KEYS entries must be");
+  });
+
+  it("throws on entries missing the key part", () => {
+    expect(() => parseApiKeys(":hermes:me@example.com")).toThrow("API_KEYS entries must be");
+  });
+
+  it("getConfig wires API_KEYS into config.apiKeys", () => {
+    process.env.API_KEYS = "fam_cfgtest:cfg:cfguser@example.com";
+    try {
+      const config = getConfig();
+      expect(config.apiKeys).toEqual([
+        { key: "fam_cfgtest", label: "cfg", email: "cfguser@example.com" },
+      ]);
+    } finally {
+      delete process.env.API_KEYS;
+    }
   });
 });

@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useAuth } from '../auth/AuthContext'
+import { ConfirmDialog } from '../ui/ConfirmDialog'
 import { fetchPostgridStatus, setPostgridMode, type PostgridApiMode } from '../../utils/postgridApi'
-
-const LIVE_CONFIRM =
-  'Switching to LIVE mode means postcards will actually be printed and mailed. Continue?'
 
 export function PostGridModeBadge() {
   const { token } = useAuth()
@@ -11,6 +10,7 @@ export function PostGridModeBadge() {
   const [mockMode, setMockMode] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmingLive, setConfirmingLive] = useState(false)
 
   const load = useCallback(async () => {
     if (!token) return
@@ -32,16 +32,23 @@ export function PostGridModeBadge() {
     void load()
   }, [load])
 
-  const toggle = async () => {
+  const requestToggle = () => {
     if (!mode || mode === 'mock' || mockMode) return
-    const next: 'test' | 'live' = mode === 'live' ? 'test' : 'live'
-    if (next === 'live' && !window.confirm(LIVE_CONFIRM)) return
+    if (mode === 'test') {
+      setConfirmingLive(true)
+    } else {
+      void applyMode('test')
+    }
+  }
+
+  const applyMode = async (next: 'test' | 'live') => {
     setLoading(true)
     setError(null)
     try {
       const s = await setPostgridMode(next)
       setMode(s.mode)
       setMockMode(s.mockMode)
+      toast.success(s.mode === 'live' ? 'Live mode — postcards will be mailed' : 'Test mode — nothing will be mailed')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update mode')
     } finally {
@@ -50,55 +57,44 @@ export function PostGridModeBadge() {
   }
 
   if (!token) return null
-
-  if (error && mode === null) {
-    return (
-      <span className="badge badge-ghost badge-sm text-white/90 border border-white/30" title={error}>
-        PostGrid ?
-      </span>
-    )
-  }
-
-  if (mode === null && loading) {
-    return (
-      <span className="badge badge-ghost badge-sm text-white/80 border border-white/20">
-        <span className="loading loading-spinner loading-xs" />
-      </span>
-    )
-  }
-
+  if (mode === null && loading) return null
+  if (mode === null && error) return null
   if (mode === null) return null
 
-  const label = mode === 'live' ? 'LIVE' : mode === 'test' ? 'TEST' : 'MOCK'
-  const badgeClass =
-    mode === 'live'
-      ? 'badge-error text-white border-0'
-      : mode === 'test'
-        ? 'badge-warning text-warning-content border-0'
-        : 'badge-neutral text-neutral-content border border-white/20'
-
-  const canToggle = !mockMode && mode !== 'mock'
-
-  if (!canToggle) {
-    return (
-      <span
-        className={`badge badge-sm font-semibold tracking-wide ${badgeClass}`}
-        title="PostGrid mock mode — no API keys; mode cannot be changed here."
-      >
-        {label}
-      </span>
-    )
+  const styles: Record<string, string> = {
+    live: 'bg-red-100 text-red-700 border-red-200',
+    test: 'bg-amber-50 text-amber-700 border-amber-200',
+    mock: 'bg-zinc-100 text-zinc-600 border-zinc-200',
   }
 
+  const cls = styles[mode] || styles.mock
+  const label = mode.toUpperCase()
+  const canToggle = !mockMode && mode !== 'mock'
+
+  const Tag = canToggle ? 'button' : 'span'
   return (
-    <button
-      type="button"
-      className={`badge badge-sm font-semibold tracking-wide cursor-pointer hover:opacity-90 ${badgeClass}`}
-      disabled={loading}
-      title={mode === 'live' ? 'Click to switch to test mode' : 'Click to switch to live mode (confirmation required)'}
-      onClick={() => void toggle()}
-    >
-      {loading ? <span className="loading loading-spinner loading-xs" /> : label}
-    </button>
+    <>
+      <Tag
+        className={`press inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border ${cls} ${canToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
+        {...(canToggle ? {
+          onClick: requestToggle,
+          disabled: loading,
+          title: mode === 'live' ? 'Switch to test' : 'Switch to live',
+        } : {
+          title: 'Mock mode',
+        })}
+      >
+        {loading ? '...' : label}
+      </Tag>
+      <ConfirmDialog
+        open={confirmingLive}
+        onOpenChange={setConfirmingLive}
+        title="Switch to live mode?"
+        description="Postcards will actually be printed and mailed, and your PostGrid account will be charged."
+        confirmLabel="Go live"
+        destructive
+        onConfirm={() => void applyMode('live')}
+      />
+    </>
   )
 }

@@ -38,6 +38,7 @@ tmp/
 .claude_sessions/
 frontend/.claude_sessions/
 .worktrees/
+.issues/
 
 # Test results
 test-results/
@@ -90,3 +91,10 @@ logs/
 agent-progress.json
 nightshift-progress.json
 CHANGELOG_AGENT.md
+qa/
+.playwright-mcp/
+pale-variants.png
+
+# UX audit runtime output
+frontend/tests/e2e/ux-audit-results.json
+frontend/tests/e2e/ux-audit-results-*.json

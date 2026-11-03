@@ -1,3 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-zinc-50 text-zinc-900;
+  }
+}
+
+@layer base {
+  :focus-visible {
+    outline: 2px solid #18181b;
+    outline-offset: 2px;
+  }
+  .dark :focus-visible {
+    outline-color: #e4e4e7;
+  }
+
+  /* The create-flow editor is dark even in light mode */
+  [data-editor] :focus-visible {
+    outline-color: #e09a6b;
+  }
+}
+
+/* Press feedback (June's spec slice 7, D7): transform+color press scale for
+   buttons and CTA links. transform/opacity only; reduced motion drops the
+   scale but keeps the color transitions. */
+@layer utilities {
+  .press {
+    transition:
+      transform 120ms cubic-bezier(0.2, 0, 0, 1),
+      background-color 120ms cubic-bezier(0.2, 0, 0, 1),
+      color 120ms cubic-bezier(0.2, 0, 0, 1),
+      border-color 120ms cubic-bezier(0.2, 0, 0, 1),
+      opacity 120ms cubic-bezier(0.2, 0, 0, 1);
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .press:active:not(:disabled) {
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  /* Tap/selection + scroll containment (spec slice 1: M9, M8) */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    overscroll-behavior-y: none;
+  }
+  button, a, [role="button"], input, select, textarea, summary {
+    touch-action: manipulation;
+  }
+
+  /* iOS focus zoom (M3): floor every text field at 16px on touch-width
+     viewports. The !important is deliberate (spec slice 8) — it must beat
+     per-component text-sm/text-[13px], e.g. the inline editor textarea. */
+  @media (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Reduced-motion belt (M7): every CSS transition/animation degrades to
+     ~1 frame (DaisyUI pulse included). Framer surfaces are handled by
+     MotionConfig reducedMotion="user"; this covers the CSS side. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 1ms !important;
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}

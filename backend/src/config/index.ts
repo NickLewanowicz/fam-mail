@@ -3,6 +3,8 @@
  */
 export interface Config {
   devMode: boolean;
+  /** Machine API keys for agent integrations (Hermes, OpenClaw, scripts). */
+  apiKeys: ApiKeyEntry[];
   postgrid: {
     mode: "test" | "live";
     testApiKey: string;
@@ -48,13 +50,6 @@ export interface Config {
   database: {
     path: string;
   };
-  smtp: {
-    host: string;
-    port: number;
-    user: string;
-    password: string;
-    from: string;
-  };
   adminEmails: string[];
   server: {
     port: number;
@@ -62,6 +57,44 @@ export interface Config {
     logLevel: "debug" | "info" | "warn" | "error";
     allowedOrigins: string[];
   };
+}
+
+/**
+ * A machine API key for the /api/v1 agent API.
+ * Keys are configured via the API_KEYS env var as "key:label:email" entries;
+ * each key acts as its mapped user for attribution and ownership.
+ */
+export interface ApiKeyEntry {
+  key: string;
+  label: string;
+  email: string;
+}
+
+/**
+ * Parse the API_KEYS env var: comma-separated "key:label:email" entries
+ * ("key:email" also accepted; label defaults to the key). The email must
+ * contain "@" so a bare "key:label" entry fails loudly instead of silently
+ * treating the label as a user.
+ * @throws {Error} If an entry is malformed
+ */
+export function parseApiKeys(value: string): ApiKeyEntry[] {
+  return value
+    .split(",")
+    .map((entry: string) => entry.trim())
+    .filter((entry: string) => entry.length > 0)
+    .map((entry: string) => {
+      const parts = entry.split(":").map((part) => part.trim());
+      const key = parts[0];
+      const email = parts[parts.length - 1]!;
+      if (parts.length < 2 || !key || !email || !email.includes("@")) {
+        throw new Error(
+          `API_KEYS entries must be "key:label:email" format (got "${entry}")`
+        );
+      }
+      const label =
+        parts.length > 2 ? parts.slice(1, -1).join(":") || key : key;
+      return { key, label, email: email.toLowerCase() };
+    });
 }
 
 /**
@@ -151,6 +184,7 @@ export function getConfig(): Config {
 
   return {
     devMode,
+    apiKeys: parseApiKeys(getEnv("API_KEYS", "")),
     postgrid: {
       mode: getEnvEnum("POSTGRID_MODE", "test", ["test", "live"] as const),
       testApiKey: isMock ? getEnv("POSTGRID_TEST_API_KEY", "mock-test-key") : getEnvRequired("POSTGRID_TEST_API_KEY"),
@@ -197,13 +231,6 @@ export function getConfig(): Config {
     },
     database: {
       path: getEnv("DATABASE_PATH", "/data/fammail.db"),
-    },
-    smtp: {
-      host: getEnv("SMTP_HOST", "localhost"),
-      port: getEnvInt("SMTP_PORT", 587),
-      user: getEnv("SMTP_USER", ""),
-      password: getEnv("SMTP_PASSWORD", ""),
-      from: getEnv("EMAIL_FROM", "noreply@fammail.com"),
     },
     adminEmails: getEnv("ADMIN_EMAILS", "")
       .split(",")

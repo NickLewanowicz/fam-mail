@@ -69,7 +69,7 @@ describe('Backend Server', () => {
 
             expect(res.status).toBe(200)
             expect(data.status).toBe('healthy')
-            expect(data.version).toBe('1.0.0')
+            expect(data.version).toBe('1.1.0') // read from package.json
             expect(typeof data.timestamp).toBe('string')
             expect(Number.isNaN(Date.parse(String(data.timestamp)))).toBe(false)
             

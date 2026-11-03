@@ -2,6 +2,39 @@
 
 Thank you for your interest in contributing to Fam Mail! This document provides guidelines and instructions for contributing to the project.
 
+## Everyday commands
+
+| Command | What it does |
+|---------|--------------|
+| `pnpm qa` | One-command gate: lint + tests + build for every package |
+| `pnpm test` | Backend (`bun test`) + frontend (`vitest run`) |
+| `pnpm --filter frontend dev` | Frontend dev server on :5173 |
+| `pnpm --filter backend dev` | Backend watch mode on :8484 |
+
+The frontend `test` script uses `vitest run` (one-shot) — watch mode hangs in
+automation.
+
+## Conventions that matter
+
+- **UI layering:** DaisyUI for styled primitives/theme tokens; `radix-ui`
+  headless primitives for dialogs/popovers/menus. No second styled kit.
+- **Forms:** react-hook-form + zod for multi-field forms; plain controlled
+  inputs are fine for 1–2 fields.
+- **Uploads** go through react-dropzone; **destructive actions** use
+  `ConfirmDialog`; **feedback** uses sonner toasts.
+- **Sanitization authority** is server-side DOMPurify
+  (`backend/src/utils/htmlSanitizer.ts`) — client output is untrusted input.
+- **Branches:** `feat/<n>-<slug>`; merge to `main` only when `pnpm qa` passes.
+- **ADRs:** significant decisions go in `docs/adr/` — read ADR 0001 before
+  adding UI dependencies.
+
+## AI-assisted development
+
+Fam Mail is built with AI assistance — tools like Claude Code draft code,
+tests, and docs under human direction. The maintainer reviews, tests, and
+decides what actually ships. If you contribute, there's no requirement to
+disclose your own tooling; just make sure you understand the code you submit.
+
 ## Code of Conduct
 
 - Be respectful and inclusive

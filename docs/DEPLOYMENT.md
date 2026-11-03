@@ -181,6 +181,12 @@ See `.env.example` for the complete configuration schema with all available envi
 - `NODE_ENV` - Environment mode (`development` or `production`)
 - `DATABASE_PATH` - SQLite database file path
 
+## Backups
+
+Run `scripts/backup.sh` on the host (uses `VACUUM INTO`, so it's safe while
+the app is running). Restoring is a file copy: stop the app, replace the
+database file, start it again. Schedule it with cron — daily is plenty.
+
 ## Health Checks
 
 The application includes a health check endpoint:

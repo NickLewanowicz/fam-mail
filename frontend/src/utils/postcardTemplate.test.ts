@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import {
   POSTCARD_6X4_DIMENSIONS,
+  POSTCARD_9X6_DIMENSIONS,
+  POSTCARD_11X6_DIMENSIONS,
   COUNTRY_SPECS,
   calculateSafeZones,
   generateFrontHTML,
-  generateBackHTML,
-  generatePreviewHTML,
   getCountrySpec,
+  getPostcardDimensions,
   type CountryCode,
 } from './postcardTemplate'
 
@@ -25,6 +26,45 @@ describe('postcardTemplate', () => {
 
     it('has 0.125" bleed margin', () => {
       expect(POSTCARD_6X4_DIMENSIONS.bleedMargin).toBe(37.5)
+    })
+  })
+
+  describe('getPostcardDimensions', () => {
+    it('returns 6x4 dimensions (1800×1200) for "6x4"', () => {
+      expect(getPostcardDimensions('6x4')).toBe(POSTCARD_6X4_DIMENSIONS)
+    })
+
+    it('returns 9x6 dimensions (2700×1800) for "9x6"', () => {
+      expect(POSTCARD_9X6_DIMENSIONS.width).toBe(2700)
+      expect(POSTCARD_9X6_DIMENSIONS.height).toBe(1800)
+      expect(getPostcardDimensions('9x6')).toBe(POSTCARD_9X6_DIMENSIONS)
+    })
+
+    it('returns 11x6 dimensions (3300×1800) for "11x6"', () => {
+      expect(POSTCARD_11X6_DIMENSIONS.width).toBe(3300)
+      expect(POSTCARD_11X6_DIMENSIONS.height).toBe(1800)
+      expect(getPostcardDimensions('11x6')).toBe(POSTCARD_11X6_DIMENSIONS)
+    })
+
+    it('keeps safe/bleed margins constant across sizes', () => {
+      for (const size of ['6x4', '9x6', '11x6'] as const) {
+        expect(getPostcardDimensions(size).safeMargin).toBe(37.5)
+        expect(getPostcardDimensions(size).bleedMargin).toBe(37.5)
+      }
+    })
+
+    it('11x6 safe zones stay proportional (address ~half width, barcode 0.625" of height)', () => {
+      const dims = getPostcardDimensions('11x6')
+      const zones = calculateSafeZones(dims, true, 'US')
+      const messageRatio = zones.messageArea!.width / dims.width
+      const addressRatio = zones.addressBlock!.width / dims.width
+      // Half-width split minus margins — near 0.5, matching the 6x4 proportions
+      expect(messageRatio).toBeGreaterThan(0.45)
+      expect(messageRatio).toBeLessThan(0.5)
+      expect(addressRatio).toBeGreaterThan(0.4)
+      expect(addressRatio).toBeLessThan(0.5)
+      const barcodeRatio = zones.barcodeZone!.height / dims.height
+      expect(barcodeRatio).toBeCloseTo(0.625 / 6, 5)
     })
   })
 
@@ -283,92 +323,5 @@ describe('postcardTemplate', () => {
     })
   })
 
-  describe('generateBackHTML', () => {
-    it('generates valid HTML', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('<!DOCTYPE html>')
-      expect(html).toContain('<html>')
-    })
 
-    it('includes placeholder message when no message provided', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('Your message will appear here')
-    })
-
-    it('includes provided message HTML', () => {
-      const html = generateBackHTML('<p>Hello World</p>')
-      expect(html).toContain('<p>Hello World</p>')
-    })
-
-    it('has message area', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('message-area')
-    })
-
-    it('has address area', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('address-area')
-    })
-
-    it('has divider', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('divider')
-    })
-
-    it('uses postcard dimensions', () => {
-      const html = generateBackHTML()
-      expect(html).toContain('1800px')
-      expect(html).toContain('1200px')
-    })
-
-    it('accepts country code parameter', () => {
-      const usHtml = generateBackHTML('<p>Hi</p>', 'US')
-      const gbHtml = generateBackHTML('<p>Hi</p>', 'GB')
-      expect(usHtml).toContain('message-area')
-      expect(gbHtml).toContain('message-area')
-    })
-  })
-
-  describe('generatePreviewHTML', () => {
-    it('generates front preview with safe zones', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'front', true)
-      expect(html).toContain('rgba(34, 197, 94, 0.8)')
-    })
-
-    it('generates front preview without safe zones', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'front', false)
-      expect(html).not.toContain('rgba(34, 197, 94, 0.8)')
-    })
-
-    it('generates back preview with safe zones and address block', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true)
-      expect(html).toContain('rgba(239, 68, 68, 0.6)')
-      expect(html).toContain('rgba(34, 197, 94, 0.8)')
-    })
-
-    it('US back preview shows USPS barcode zone', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, undefined, 'US')
-      expect(html).toContain('USPS Barcode Zone')
-    })
-
-    it('CA back preview has no barcode zone', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, undefined, 'CA')
-      expect(html).not.toContain('USPS Barcode Zone')
-    })
-
-    it('GB back preview has no barcode zone', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, undefined, 'GB')
-      expect(html).not.toContain('USPS Barcode Zone')
-    })
-
-    it('generates back preview with message', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', true, '<p>Test message</p>')
-      expect(html).toContain('<p>Test message</p>')
-    })
-
-    it('generates back preview without safe zones', () => {
-      const html = generatePreviewHTML('data:image/jpeg;base64,test', 'back', false)
-      expect(html).not.toContain('rgba(34, 197, 94, 0.8)')
-    })
-  })
 })

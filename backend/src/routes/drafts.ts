@@ -5,55 +5,8 @@ import type { User } from '../models/user'
 import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
-import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
-import { marked } from 'marked'
-import DOMPurify from 'isomorphic-dompurify'
-
-// Draft sizes are already in PostGrid format (6x4, 9x6, 11x6)
-function draftSizeToPostGridSize(size: string): '6x4' | '9x6' | '11x6' {
-  const validSizes: ('6x4' | '9x6' | '11x6')[] = ['6x4', '9x6', '11x6']
-  if (validSizes.includes(size as '6x4' | '9x6' | '11x6')) {
-    return size as '6x4' | '9x6' | '11x6'
-  }
-  return '6x4'
-}
-
-/**
- * Extract the base64 payload from stored image data.
- * The frontend saves drafts with data URLs (`data:image/jpeg;base64,...`);
- * raw base64 (no prefix) is also accepted.
- */
-function extractImageBase64(imageData: string): string {
-  const match = /^data:[^,]*;base64,(.*)$/.exec(imageData)
-  return match ? match[1] : imageData
-}
-
-/**
- * Build a full-bleed front page from the draft's image data.
- * Mirrors the frontend's `generateFrontHTML` so an image-only draft prints
- * the photo as the postcard front instead of a blank side.
- */
-function buildImageFrontHTML(imageData: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { width: 100%; height: 100%; overflow: hidden; position: relative; }
-        .full-bleed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-        .full-bleed img { width: 100%; height: 100%; object-fit: cover; }
-      </style>
-    </head>
-    <body>
-      <div class="full-bleed">
-        <img src="${imageData}" alt="Postcard front" />
-      </div>
-    </body>
-    </html>
-  `.trim()
-}
+import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
+import { buildImageFrontHTML, buildMessageBackHTML, isCardSize } from '../utils/htmlSanitizer'
 
 export class DraftRoutes {
   private db: Database
@@ -201,18 +154,34 @@ export class DraftRoutes {
       return jsonResponse({ error: 'Draft ID is required' }, 400, req)
     }
 
-    const draft = this.db.getDraft(id!)
+    const result = await this.publishDraftById(id, user)
+    return jsonResponse(result.body, result.status, req)
+  }
+
+  /**
+   * Core publish pipeline shared by the HTTP route and the scheduled-draft
+   * dispatcher. Returns a JSON-able body + status so both callers can use it.
+   *
+   * `allowScheduled` lets the dispatcher publish drafts in `ready` state that
+   * carry a `scheduledFor` date (the HTTP route only publishes `draft` state).
+   */
+  async publishDraftById(
+    id: string,
+    user: User,
+    options?: { allowScheduled?: boolean }
+  ): Promise<{ status: number; body: Record<string, unknown> }> {
+    const draft = this.db.getDraft(id)
 
     if (!draft) {
-      return jsonResponse({ error: 'Draft not found' }, 404, req)
+      return { status: 404, body: { error: 'Draft not found' } }
     }
 
     if (draft.userId !== user.id) {
-      return jsonResponse({ error: 'Forbidden' }, 403, req)
+      return { status: 403, body: { error: 'Forbidden' } }
     }
 
-    if (draft.state !== 'draft') {
-      return jsonResponse({ error: 'Draft is not in draft state' }, 400, req)
+    if (draft.state !== 'draft' && !options?.allowScheduled) {
+      return { status: 400, body: { error: 'Draft is not in draft state' } }
     }
 
     // --- Validate all required fields before sending to PostGrid ---
@@ -225,10 +194,8 @@ export class DraftRoutes {
       allErrors.push(...addressResult.errors)
     }
 
-    // Validate return address — required for physical mail
-    if (!draft.senderAddress) {
-      allErrors.push({ field: 'from', message: 'Return address (from) is required' })
-    } else {
+    // Validate sender address if provided
+    if (draft.senderAddress) {
       const fromResult = validateAddress(draft.senderAddress, 'from')
       if (!fromResult.valid) {
         allErrors.push(...fromResult.errors)
@@ -237,15 +204,7 @@ export class DraftRoutes {
 
     // Must have at least one content field
     if (!draft.frontHTML && !draft.backHTML && !draft.message && !draft.imageData) {
-      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or imageData is required' })
-    }
-
-    // Validate image if present (same rules as the direct postcard creation route)
-    if (draft.imageData) {
-      const imageResult = validateImage(extractImageBase64(draft.imageData))
-      if (!imageResult.valid) {
-        allErrors.push(...imageResult.errors)
-      }
+      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or an image is required' })
     }
 
     // Validate message if present
@@ -257,83 +216,43 @@ export class DraftRoutes {
     }
 
     // Validate size
-    const postGridSize = draftSizeToPostGridSize(draft.size)
+    const postGridSize = isCardSize(draft.size) ? draft.size : '6x4'
     const sizeResult = validateSize(postGridSize)
     if (!sizeResult.valid) {
       allErrors.push(...sizeResult.errors)
     }
 
     if (allErrors.length > 0) {
-      return jsonResponse({ error: 'Validation failed', errors: allErrors }, 400, req)
+      return { status: 400, body: { error: 'Validation failed', errors: allErrors } }
     }
 
     // Check PostGrid service is configured
     if (!this.postgrid) {
-      return jsonResponse({
-        error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.',
-      }, 500, req)
+      return {
+        status: 500,
+        body: {
+          error: 'PostGrid service not configured. Please set POSTGRID_TEST_API_KEY or POSTGRID_LIVE_API_KEY environment variable.',
+        },
+      }
     }
 
     try {
-      // Build backHTML from message if no explicit backHTML
-      let finalBackHTML = draft.backHTML
-      if (!finalBackHTML && draft.message) {
-        // The message was already sanitized when the draft was saved/updated,
-        // but sanitize again as a defense-in-depth measure
-        const sanitizedMessage = sanitizeMarkdown(draft.message)
-        const markedHTML = await marked(sanitizedMessage)
-        const messageHTML = DOMPurify.sanitize(markedHTML, {
-          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'code', 'pre'],
-          ALLOWED_ATTR: ['class'],
-          FORBID_ATTR: ['onclick', 'onload', 'onerror', 'style'],
-        })
-        finalBackHTML = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8">
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                width: 1800px;
-                height: 1200px;
-                overflow: hidden;
-                position: relative;
-                background: white;
-                font-family: Arial, sans-serif;
-                padding: 60px;
-              }
-              .message {
-                position: absolute;
-                left: 60px;
-                top: 60px;
-                width: 840px;
-                height: 1080px;
-                font-size: 24px;
-                line-height: 1.6;
-                color: #333;
-              }
-              .message h1 { font-size: 36px; margin-bottom: 16px; }
-              .message h2 { font-size: 32px; margin-bottom: 14px; }
-              .message h3 { font-size: 28px; margin-bottom: 12px; }
-              .message p { margin-bottom: 12px; }
-              .message strong { font-weight: bold; }
-              .message em { font-style: italic; }
-            </style>
-          </head>
-          <body>
-            <div class="message">
-              ${messageHTML}
-            </div>
-          </body>
-          </html>
-        `.trim()
+      // Front artwork: explicit HTML wins; otherwise the draft's uploaded
+      // image becomes a full-bleed front canvas. imageData was previously
+      // ignored at publish time, mailing cards without their photo.
+      const draftSize = postGridSize
+      let finalFrontHTML = draft.frontHTML ? sanitizeHTML(draft.frontHTML) : undefined
+      if (!finalFrontHTML && draft.imageData) {
+        finalFrontHTML = buildImageFrontHTML(draft.imageData, draftSize)
       }
 
-      // Build frontHTML from the draft image when no explicit frontHTML
-      let finalFrontHTML = draft.frontHTML
-      if (!finalFrontHTML && draft.imageData) {
-        finalFrontHTML = buildImageFrontHTML(draft.imageData)
+      // Back artwork: explicit HTML wins; otherwise render the markdown
+      // message onto a canvas sized for the actual card. The message was
+      // sanitized when the draft was saved, but sanitize again as
+      // defense-in-depth (buildMessageBackHTML re-sanitizes end to end).
+      let finalBackHTML = draft.backHTML ? sanitizeHTML(draft.backHTML) : undefined
+      if (!finalBackHTML && draft.message) {
+        finalBackHTML = sanitizeHTML(buildMessageBackHTML(draft.message, draftSize))
       }
 
       // Call PostGrid API
@@ -341,8 +260,8 @@ export class DraftRoutes {
         to: draft.recipientAddress,
         from: draft.senderAddress,
         size: postGridSize,
-        frontHTML: finalFrontHTML ? sanitizeHTML(finalFrontHTML) : undefined,
-        backHTML: finalBackHTML ? sanitizeHTML(finalBackHTML) : undefined,
+        frontHTML: finalFrontHTML,
+        backHTML: finalBackHTML,
       }
 
       const result = await this.postgrid.createPostcard(postcardRequest)
@@ -366,23 +285,29 @@ export class DraftRoutes {
       // Only update draft state after successful PostGrid call
       this.db.updateDraft(id, { state: 'ready' })
 
-      return jsonResponse({
-        success: true,
-        message: 'Postcard sent successfully',
-        postcard: {
-          id: result.id,
-          status: result.status,
-          testMode: this.postgrid.getTestMode(),
+      return {
+        status: 200,
+        body: {
+          success: true,
+          message: 'Postcard sent successfully',
+          postcard: {
+            id: result.id,
+            status: result.status,
+            testMode: this.postgrid.getTestMode(),
+          },
         },
-      }, 200, req)
+      }
     } catch (error: unknown) {
       const pgError = error as PostGridError
       const status = pgError.status || 500
-      return jsonResponse({
-        success: false,
-        error: pgError.message || 'Failed to create postcard',
-        details: pgError.error,
-      }, status, req)
+      return {
+        status,
+        body: {
+          success: false,
+          error: pgError.message || 'Failed to create postcard',
+          details: pgError.error,
+        },
+      }
     }
   }
 

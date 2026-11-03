@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 
+vi.mock('framer-motion', () => ({
+  motion: {
+    button: ({ children, whileHover: _whileHover, whileTap: _whileTap, initial: _initial, animate: _animate, transition: _transition, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => (
+      <button {...props}>{children}</button>
+    ),
+  },
+}))
+
 vi.mock('../../utils/postgridApi', () => ({
   fetchPostgridStatus: vi.fn(),
 }))
 
 import { ReviewStep } from './ReviewStep'
 import { fetchPostgridStatus } from '../../utils/postgridApi'
+import type { ButtonHTMLAttributes } from 'react'
 
 const basePostcard = {
   image: { file: new File([''], 'test.jpg', { type: 'image/jpeg' }), preview: 'data:image/jpeg;base64,abc' },
@@ -36,7 +45,6 @@ const basePostcard = {
   setAddress: vi.fn(),
   setReturnAddress: vi.fn(),
   isComplete: true,
-  currentStep: 4,
   reset: vi.fn(),
 }
 
@@ -50,7 +58,7 @@ describe('ReviewStep', () => {
     vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
   })
 
-  it('renders "Review Your Postcard" title', async () => {
+  it('renders "Review & Send" title', async () => {
     await act(async () => {
       render(
         <ReviewStep
@@ -63,7 +71,7 @@ describe('ReviewStep', () => {
         />,
       )
     })
-    expect(screen.getByRole('heading', { name: /Review Your Postcard/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Review & Send/i })).toBeInTheDocument()
   })
 
   it('shows checklist items for photo, message, address', async () => {
@@ -81,7 +89,7 @@ describe('ReviewStep', () => {
     })
     expect(screen.getByText(/Photo uploaded/i)).toBeInTheDocument()
     expect(screen.getByText(/Message \(11 chars\)/i)).toBeInTheDocument()
-    expect(screen.getByText(/To: Jane Doe, Toronto, ON/i)).toBeInTheDocument()
+    expect(screen.getByText(/To: Jane Doe, Toronto/i)).toBeInTheDocument()
   })
 
   it('shows checkmark for uploaded photo', async () => {
@@ -118,7 +126,7 @@ describe('ReviewStep', () => {
       )
       container = result.container
     })
-    expect(container!.textContent).toContain('\u2717')
+    expect(container!.textContent).toContain('×')
     expect(screen.getByText(/Photo missing/i)).toBeInTheDocument()
   })
 
@@ -137,8 +145,8 @@ describe('ReviewStep', () => {
       )
       container = result.container
     })
-    expect(container!.textContent).toContain('\u26A0')
-    expect(screen.getByText(/Message \(optional, empty\)/i)).toBeInTheDocument()
+    expect(container!.textContent).toContain('!')
+    expect(screen.getByText(/Message missing — required to send/i)).toBeInTheDocument()
   })
 
   it('shows checkmark for non-empty message with char count', async () => {
@@ -192,7 +200,7 @@ describe('ReviewStep', () => {
     expect(screen.getByRole('button', { name: /Send Postcard/i })).not.toBeDisabled()
   })
 
-  it('Save as Draft button calls onSaveDraft', async () => {
+  it('Save Draft button calls onSaveDraft', async () => {
     await act(async () => {
       render(
         <ReviewStep
@@ -205,7 +213,7 @@ describe('ReviewStep', () => {
         />,
       )
     })
-    fireEvent.click(screen.getByRole('button', { name: /Save as Draft/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Save Draft/i }))
     expect(onSaveDraft).toHaveBeenCalledTimes(1)
   })
 
@@ -242,7 +250,7 @@ describe('ReviewStep', () => {
     expect(screen.getByText(/Sending\.\.\./i)).toBeInTheDocument()
   })
 
-  it('Save as Draft shows Saving... when saving is true', async () => {
+  it('Save Draft shows Saving... when saving is true', async () => {
     await act(async () => {
       render(
         <ReviewStep
@@ -271,7 +279,7 @@ describe('ReviewStep', () => {
       />,
     )
     await waitFor(() => {
-      expect(screen.getByText(/sent via PostGrid in TEST mode/i)).toBeInTheDocument()
+      expect(screen.getByText(/Test mode — no physical mail will be sent/i)).toBeInTheDocument()
     })
   })
 
@@ -288,7 +296,7 @@ describe('ReviewStep', () => {
       />,
     )
     await waitFor(() => {
-      expect(screen.getByText(/ACTUALLY PRINTED AND MAILED/i)).toBeInTheDocument()
+      expect(screen.getByText(/LIVE mode — this will be printed and mailed/i)).toBeInTheDocument()
     })
   })
 

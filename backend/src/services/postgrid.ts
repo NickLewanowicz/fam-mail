@@ -121,6 +121,8 @@ export class PostGridService {
 
     try {
       const formData = new URLSearchParams()
+      // Don't let a hung PostGrid connection stall the request forever
+      const timeout = AbortSignal.timeout(30_000)
 
       formData.append('to[firstName]', request.to.firstName)
       formData.append('to[lastName]', request.to.lastName)
@@ -132,6 +134,21 @@ export class PostGridService {
       formData.append('to[provinceOrState]', request.to.provinceOrState)
       formData.append('to[postalOrZip]', request.to.postalOrZip)
       formData.append('to[countryCode]', request.to.countryCode)
+
+      // Return address — without it, undeliverable mail is destroyed instead
+      // of returned to the sender.
+      if (request.from) {
+        formData.append('from[firstName]', request.from.firstName)
+        formData.append('from[lastName]', request.from.lastName)
+        formData.append('from[addressLine1]', request.from.addressLine1)
+        if (request.from.addressLine2) {
+          formData.append('from[addressLine2]', request.from.addressLine2)
+        }
+        formData.append('from[city]', request.from.city)
+        formData.append('from[provinceOrState]', request.from.provinceOrState)
+        formData.append('from[postalOrZip]', request.from.postalOrZip)
+        formData.append('from[countryCode]', request.from.countryCode)
+      }
 
       if (request.frontHTML) {
         formData.append('frontHTML', request.frontHTML)
@@ -145,6 +162,7 @@ export class PostGridService {
           'x-api-key': this.apiKey,
         },
         body: formData,
+        signal: timeout,
       })
 
       if (!response.ok) {

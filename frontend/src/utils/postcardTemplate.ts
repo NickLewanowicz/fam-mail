@@ -21,6 +21,42 @@ export const POSTCARD_6X4_DIMENSIONS: PostcardDimensions = {
   safeMargin: 37.5,   // 0.125" safe inset from trim at 300 DPI
 }
 
+/** Supported print sizes (width × height in inches). */
+export type PostcardSize = '6x4' | '9x6' | '11x6'
+
+/**
+ * 9×6" postcard at 300 DPI.
+ * Trim size is 9×6" = 2700×1800 px.
+ */
+export const POSTCARD_9X6_DIMENSIONS: PostcardDimensions = {
+  width: 2700,   // 9" trim
+  height: 1800,  // 6" trim
+  bleedMargin: 37.5,
+  safeMargin: 37.5,
+}
+
+/**
+ * 11×6" postcard at 300 DPI.
+ * Trim size is 11×6" = 3300×1800 px.
+ */
+export const POSTCARD_11X6_DIMENSIONS: PostcardDimensions = {
+  width: 3300,   // 11" trim
+  height: 1800,  // 6" trim
+  bleedMargin: 37.5,
+  safeMargin: 37.5,
+}
+
+const POSTCARD_SIZE_DIMENSIONS: Record<PostcardSize, PostcardDimensions> = {
+  '6x4': POSTCARD_6X4_DIMENSIONS,
+  '9x6': POSTCARD_9X6_DIMENSIONS,
+  '11x6': POSTCARD_11X6_DIMENSIONS,
+}
+
+/** Real trim dimensions for a postcard size (px at 300 DPI). */
+export function getPostcardDimensions(size: PostcardSize): PostcardDimensions {
+  return POSTCARD_SIZE_DIMENSIONS[size] ?? POSTCARD_6X4_DIMENSIONS
+}
+
 export interface Rect {
   x: number
   y: number
@@ -231,156 +267,3 @@ export function generateFrontHTML(imageBase64: string): string {
 </html>`
 }
 
-export function generateBackHTML(messageHTML?: string, countryCode: CountryCode = 'US'): string {
-  const dims = POSTCARD_6X4_DIMENSIONS
-  const zones = calculateSafeZones(dims, true, countryCode)
-
-  const displayMessage = messageHTML || '<p style="color: #999; font-style: italic;">Your message will appear here...</p>'
-
-  const msgArea = zones.messageArea ?? zones.safe
-  const addrArea = zones.addressBlock ?? {
-    x: dims.width / 2 + 50,
-    y: dims.height / 2 + 100,
-    width: dims.width / 2 - 100,
-    height: dims.height / 2 - 150,
-  }
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      width: ${dims.width}px;
-      height: ${dims.height}px;
-      overflow: hidden;
-      position: relative;
-      background: white;
-      font-family: Arial, sans-serif;
-    }
-    .message-area {
-      position: absolute;
-      left: ${msgArea.x}px;
-      top: ${msgArea.y}px;
-      width: ${msgArea.width}px;
-      height: ${msgArea.height}px;
-      padding: 20px;
-      font-size: 24px;
-      line-height: 1.6;
-      color: #333;
-      overflow: hidden;
-    }
-    .message-area h1 { font-size: 36px; margin-bottom: 16px; font-weight: bold; }
-    .message-area h2 { font-size: 32px; margin-bottom: 14px; font-weight: bold; }
-    .message-area h3 { font-size: 28px; margin-bottom: 12px; font-weight: bold; }
-    .message-area p { margin-bottom: 12px; }
-    .message-area strong { font-weight: bold; }
-    .message-area em { font-style: italic; }
-    .message-area ul, .message-area ol { margin-left: 30px; margin-bottom: 12px; }
-    .message-area li { margin-bottom: 6px; }
-    .divider {
-      position: absolute;
-      left: ${dims.width * (1 - getCountrySpec(countryCode).addressWidthRatio)}px;
-      top: ${zones.safe.y}px;
-      width: 2px;
-      height: ${zones.safe.height}px;
-      background: #ddd;
-    }
-    .address-area {
-      position: absolute;
-      left: ${addrArea.x}px;
-      top: ${addrArea.y + addrArea.height / 2}px;
-      width: ${addrArea.width}px;
-      height: ${addrArea.height / 2}px;
-      border: 2px solid #ddd;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #999;
-      font-size: 20px;
-    }
-  </style>
-</head>
-<body>
-  <div class="message-area">
-    ${displayMessage}
-  </div>
-  <div class="divider"></div>
-  <div class="address-area">
-    Address will be placed here
-  </div>
-</body>
-</html>`
-}
-
-export function generatePreviewHTML(
-  imageBase64: string,
-  side: 'front' | 'back',
-  showSafeZones = true,
-  messageHTML?: string,
-  countryCode: CountryCode = 'US'
-): string {
-  const dims = POSTCARD_6X4_DIMENSIONS
-  const zones = calculateSafeZones(dims, side === 'back', countryCode)
-
-  const baseHTML = side === 'front'
-    ? generateFrontHTML(imageBase64)
-    : generateBackHTML(messageHTML, countryCode)
-
-  if (!showSafeZones) {
-    return baseHTML
-  }
-
-  const safeZoneOverlay = `
-    <div style="
-      position: absolute;
-      top: ${zones.safe.y}px;
-      left: ${zones.safe.x}px;
-      width: ${zones.safe.width}px;
-      height: ${zones.safe.height}px;
-      border: 3px dashed rgba(34, 197, 94, 0.8);
-      pointer-events: none;
-      z-index: 1000;
-    "></div>
-    <div style="
-      position: absolute;
-      top: ${zones.bleed.y}px;
-      left: ${zones.bleed.x}px;
-      width: ${zones.bleed.width}px;
-      height: ${zones.bleed.height}px;
-      border: 3px dashed rgba(251, 191, 36, 0.6);
-      pointer-events: none;
-      z-index: 999;
-    "></div>
-    ${zones.addressBlock ? `
-    <div style="
-      position: absolute;
-      top: ${zones.addressBlock.y}px;
-      left: ${zones.addressBlock.x}px;
-      width: ${zones.addressBlock.width}px;
-      height: ${zones.addressBlock.height}px;
-      border: 3px dashed rgba(239, 68, 68, 0.6);
-      pointer-events: none;
-      z-index: 1001;
-    "></div>` : ''}
-    ${zones.barcodeZone ? `
-    <div style="
-      position: absolute;
-      top: ${zones.barcodeZone.y}px;
-      left: ${zones.barcodeZone.x}px;
-      width: ${zones.barcodeZone.width}px;
-      height: ${zones.barcodeZone.height}px;
-      background: rgba(239, 68, 68, 0.08);
-      border-top: 3px dashed rgba(239, 68, 68, 0.4);
-      pointer-events: none;
-      z-index: 1001;
-    "><span style="position:absolute;top:2px;left:8px;font-size:10px;color:rgba(239,68,68,0.6);">USPS Barcode Zone</span></div>` : ''}
-  `
-
-  return baseHTML.replace('</body>', `${safeZoneOverlay}</body>`)
-}

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { submitPostcard } from './api'
+import { submitPostcard, listSentPostcards } from './api'
+import { API_BASE_URL } from './apiConfig'
 import type { Address } from '../types/address'
 
 describe('submitPostcard', () => {
@@ -72,7 +73,7 @@ describe('submitPostcard', () => {
     const result = await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/postcards',
+      `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -146,7 +147,7 @@ describe('submitPostcard', () => {
     await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/postcards',
+      `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -168,7 +169,7 @@ describe('submitPostcard', () => {
     await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/postcards',
+      `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -176,5 +177,75 @@ describe('submitPostcard', () => {
         },
       })
     )
+  })
+})
+
+// ISSUE-0112: listSentPostcards was the only authFetch call built without
+// getAuthHeaders() — every History visit went out header-less, cycled a
+// doomed silent refresh, and (in dev mode) cleared tokens. This sweep
+// guards that every exported request function sends the auth header.
+describe('#112 — every exported api request carries the auth header', () => {
+  const addrA: Address = {
+    firstName: 'John', lastName: 'Doe', addressLine1: '123 Main St',
+    city: 'Ottawa', provinceOrState: 'ON', postalOrZip: 'K1A 0B1', countryCode: 'CA',
+  }
+  const addrB: Address = {
+    firstName: 'Jane', lastName: 'Smith', addressLine1: '456 Oak Ave',
+    city: 'Toronto', provinceOrState: 'ON', postalOrZip: 'M5V 2T6', countryCode: 'CA',
+  }
+  const file = new File(['x'], 'a.jpg', { type: 'image/jpeg' })
+
+  beforeEach(() => {
+    global.fetch = vi.fn()
+    global.localStorage = {
+      getItem: vi.fn(() => 'tok-112'),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 1,
+      key: vi.fn(() => 'fam_mail_token'),
+    }
+    const mockFileReader = {
+      result: null as string | ArrayBuffer | null,
+      onload: null as ((event: ProgressEvent<FileReader>) => void) | null,
+      onerror: null as ((event: ProgressEvent<FileReader>) => void) | null,
+      readAsDataURL: function () {
+        setTimeout(() => {
+          if (this.onload) {
+            this.result = 'data:image/jpeg;base64,test'
+            this.onload({ target: this } as ProgressEvent<FileReader>)
+          }
+        }, 0)
+      },
+    }
+    global.FileReader = vi.fn().mockImplementation(() => mockFileReader) as unknown as typeof FileReader
+  })
+
+  it('listSentPostcards sends Authorization on its first attempt', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: [] }),
+    } as Response)
+
+    await listSentPostcards()
+
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+    const [, init] = vi.mocked(global.fetch).mock.calls[0]
+    const headers = (init?.headers ?? {}) as Record<string, string>
+    expect(headers['Authorization']).toBe('Bearer tok-112')
+  })
+
+  it('submitPostcard sends Authorization on its first attempt', async () => {
+    vi.mocked(global.fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ success: true }),
+    } as Response)
+
+    await submitPostcard(addrA, addrB, file)
+
+    expect(global.fetch).toHaveBeenCalledTimes(1)
+    const [, init] = vi.mocked(global.fetch).mock.calls[0]
+    const headers = (init?.headers ?? {}) as Record<string, string>
+    expect(headers['Authorization']).toBe('Bearer tok-112')
   })
 })

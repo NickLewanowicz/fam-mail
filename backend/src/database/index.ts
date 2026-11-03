@@ -11,6 +11,8 @@ export interface PostcardRecord {
   senderEmail: string;
   recipientName: string;
   recipientAddress: string;
+  /** JSON-serialized structured recipient address (#109 — "Again" prefill). */
+  recipientAddressJson?: string;
   postgridPostcardId?: string;
   postgridMode: "test" | "live";
   forcedTestMode: boolean;
@@ -32,6 +34,7 @@ interface PostcardRow {
   sender_email: string;
   recipient_name: string;
   recipient_address: string;
+  recipient_address_json?: string | null;
   postgrid_postcard_id: string | null;
   postgrid_mode: string;
   forced_test_mode: number;
@@ -118,8 +121,14 @@ export class Database {
     try {
       this.db = new SqliteDatabase(path);
       this.initializeSchema();
+      // Concurrent writes (login POST racing page-load requests, the
+      // scheduler, cleanup timers) otherwise surface SQLITE_BUSY. A 5s
+      // busy timeout makes writers queue instead of throwing. (WAL mode
+      // was tried and reverted: Bun 1.3 misorders multi-statement exec
+      // right after a journal-mode switch.)
+      this.db.exec("PRAGMA busy_timeout = 5000;");
     } catch (error) {
-      throw new DatabaseError(`Failed to open database at ${path}`, error);
+      throw new DatabaseError(`Failed to open database at ${path}: ${(error as Error)?.message ?? String(error)}`, error);
     }
   }
 
@@ -131,8 +140,34 @@ export class Database {
     try {
       const schema = readFileSync(join(__dirname, "schema.sql"), "utf-8");
       this.db.exec(schema);
+      this.migrateSchema();
     } catch (error) {
-      throw new DatabaseError("Failed to initialize database schema", error);
+      throw new DatabaseError(
+        `Failed to initialize database schema: ${(error as Error)?.message ?? String(error)}`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Idempotent migrations for databases created before a column existed.
+   * schema.sql's CREATE TABLE IF NOT EXISTS won't touch an existing file DB,
+   * so new columns are added here with PRAGMA guards.
+   * @private
+   */
+  private migrateSchema(): void {
+    try {
+      const postcardColumns = this.db.prepare("PRAGMA table_info(postcards)").all() as Array<{ name: string }>;
+      const has = (name: string) => postcardColumns.some((c) => c.name === name);
+      // #109: structured recipient address for History "Again" prefill
+      if (!has("recipient_address_json")) {
+        this.db.exec("ALTER TABLE postcards ADD COLUMN recipient_address_json TEXT");
+      }
+    } catch (error) {
+      throw new DatabaseError(
+        `Failed to migrate database schema: ${(error as Error)?.message ?? String(error)}`,
+        error
+      );
     }
   }
 
@@ -173,9 +208,10 @@ export class Database {
       const stmt = this.db.prepare(`
         INSERT INTO postcards (
           id, email_message_id, sender_email, recipient_name, recipient_address,
+          recipient_address_json,
           postgrid_postcard_id, postgrid_mode, forced_test_mode, status, error_message,
           user_id, draft_id, scheduled_for
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       stmt.run(
@@ -184,6 +220,7 @@ export class Database {
         data.senderEmail,
         data.recipientName,
         data.recipientAddress,
+        data.recipientAddressJson || null,
         data.postgridPostcardId || null,
         data.postgridMode,
         this.boolToInt(data.forcedTestMode),
@@ -211,6 +248,35 @@ export class Database {
     const row = stmt.get(id) as PostcardRow | undefined;
     if (!row) return undefined;
     return this.rowToPostcardRecord(row);
+  }
+
+  /**
+   * Retrieves a postcard by ID, scoped to a user.
+   * @param id - Postcard ID
+   * @param userId - Owning user ID
+   * @returns Postcard record if found and owned by the user, undefined otherwise
+   */
+  getPostcardForUser(id: string, userId: string): PostcardRecord | undefined {
+    const stmt = this.db.prepare(
+      "SELECT * FROM postcards WHERE id = ? AND user_id = ?"
+    );
+    const row = stmt.get(id, userId) as PostcardRow | undefined;
+    if (!row) return undefined;
+    return this.rowToPostcardRecord(row);
+  }
+
+  /**
+   * Lists a user's postcards, newest first.
+   * @param userId - Owning user ID
+   * @param limit - Maximum number of records (default 50, max 200)
+   */
+  listPostcardsByUser(userId: string, limit = 50): PostcardRecord[] {
+    const safeLimit = Math.max(1, Math.min(limit, 200));
+    const stmt = this.db.prepare(
+      "SELECT * FROM postcards WHERE user_id = ? ORDER BY created_at DESC LIMIT ?"
+    );
+    const rows = stmt.all(userId, safeLimit) as PostcardRow[];
+    return rows.map((row) => this.rowToPostcardRecord(row));
   }
 
   /**
@@ -286,6 +352,7 @@ export class Database {
       senderEmail: row.sender_email,
       recipientName: row.recipient_name,
       recipientAddress: row.recipient_address,
+      recipientAddressJson: row.recipient_address_json || undefined,
       postgridPostcardId: row.postgrid_postcard_id || undefined,
       postgridMode: row.postgrid_mode as PostcardRecord["postgridMode"],
       forcedTestMode: this.intToBool(row.forced_test_mode),
@@ -372,7 +439,7 @@ export class Database {
         data.updatedAt || new Date().toISOString()
       );
     } catch (error) {
-      throw new DatabaseError("Failed to insert user", error);
+      throw new DatabaseError(`Failed to insert user: ${(error as Error)?.message ?? String(error)}`, error);
     }
   }
 
@@ -479,8 +546,12 @@ export class Database {
     expires_at?: string;
   }): void {
     try {
+      // OR REPLACE: rapid consecutive logins mint byte-identical tokens
+      // (JWT iat is second-granularity), which would collide on the unique
+      // token index. Same token = same session identity, so replacing the
+      // older row is the correct behavior.
       const stmt = this.db.prepare(`
-        INSERT INTO sessions (id, user_id, token, refresh_token, expires_at)
+        INSERT OR REPLACE INTO sessions (id, user_id, token, refresh_token, expires_at)
         VALUES (?, ?, ?, ?, ?)
       `);
       stmt.run(
@@ -534,9 +605,17 @@ export class Database {
    */
   deleteExpiredSessions(): number {
     try {
-      const stmt = this.db.prepare("DELETE FROM sessions WHERE expires_at < datetime('now')");
-      const result = stmt.run();
-      return result.changes;
+      // expires_at is stored as an ISO string, which does NOT compare
+      // correctly against SQLite's datetime() format ('T' vs ' ' separator) —
+      // compute "now" as ISO and delete by explicit ids instead.
+      const nowIso = new Date().toISOString();
+      const rows = this.db
+        .prepare("SELECT id FROM sessions WHERE expires_at IS NOT NULL AND expires_at < ?")
+        .all(nowIso) as { id: string }[];
+      for (const row of rows) {
+        this.db.prepare("DELETE FROM sessions WHERE id = ?").run(row.id);
+      }
+      return rows.length;
     } catch (error) {
       throw new DatabaseError("Failed to delete expired sessions", error);
     }
@@ -573,6 +652,22 @@ export class Database {
       ORDER BY created_at DESC
     `);
     const rows = stmt.all(user_id, state) as DraftRow[];
+    return rows.map(row => this.rowToDraft(row));
+  }
+
+  /**
+   * Retrieves all drafts in `ready` state that carry a `scheduled_for` date,
+   * in any user's account. The scheduler filters by due date in JS because
+   * scheduled_for is stored as an ISO string, which does not compare
+   * correctly against SQLite's datetime() format.
+   */
+  getReadyScheduledDrafts() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM drafts
+      WHERE state = 'ready' AND scheduled_for IS NOT NULL
+      ORDER BY scheduled_for ASC
+    `);
+    const rows = stmt.all() as DraftRow[];
     return rows.map(row => this.rowToDraft(row));
   }
 

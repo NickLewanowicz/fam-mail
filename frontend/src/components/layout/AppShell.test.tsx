@@ -1,7 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { AuthContextType } from '../../types/auth'
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, initial: _initial, animate: _animate, transition: _transition, ...props }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
+      <div {...props}>{children}</div>
+    ),
+    span: ({ children, initial: _initial, animate: _animate, transition: _transition, layoutId: _layoutId, ...props }: HTMLAttributes<HTMLSpanElement> & Record<string, unknown>) => (
+      <span {...props}>{children}</span>
+    ),
+  },
+}))
 
 vi.mock('./PostGridModeBadge', () => ({
   PostGridModeBadge: () => <div data-testid="postgrid-mode-badge">PG</div>,
@@ -14,6 +25,7 @@ vi.mock('../auth/AuthContext', () => ({
 import { AppShell } from './AppShell'
 
 import { useAuth } from '../auth/AuthContext'
+import type { HTMLAttributes } from 'react'
 
 const authMock = (): AuthContextType => ({
   user: {
@@ -61,7 +73,7 @@ describe('AppShell', () => {
     expect(screen.getByText('Fam Mail')).toBeInTheDocument()
   })
 
-  it('renders New Postcard link', () => {
+  it('renders New link to create', () => {
     render(
       <MemoryRouter>
         <AppShell>
@@ -69,7 +81,7 @@ describe('AppShell', () => {
         </AppShell>
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: /New Postcard/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /^New$/i })).toBeInTheDocument()
   })
 
   it('renders children content', () => {
@@ -108,7 +120,7 @@ describe('AppShell', () => {
     expect(screen.getByText('Sign out')).toBeInTheDocument()
   })
 
-  it('New Postcard link points to /create', () => {
+  it('New link points to /create', () => {
     render(
       <MemoryRouter>
         <AppShell>
@@ -116,7 +128,7 @@ describe('AppShell', () => {
         </AppShell>
       </MemoryRouter>,
     )
-    expect(screen.getByRole('link', { name: /New Postcard/i })).toHaveAttribute('href', '/create')
+    expect(screen.getByRole('link', { name: /^New$/i })).toHaveAttribute('href', '/create')
   })
 
   it('Fam Mail link points to /', () => {
@@ -141,6 +153,45 @@ describe('AppShell', () => {
       </MemoryRouter>,
     )
     expect(screen.getByTestId('postgrid-mode-badge')).toBeInTheDocument()
+  })
+
+  it('renders the mobile tab bar only for the default variant (M4)', () => {
+    const { rerender } = render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppShell>
+          <div />
+        </AppShell>
+      </MemoryRouter>,
+    )
+    const tabs = screen.getByRole('navigation', { name: 'Primary' })
+    expect(tabs).toBeInTheDocument()
+    expect(tabs.querySelectorAll('a')).toHaveLength(3)
+
+    // Editor variant: the wizard owns the bottom edge — no tab bar
+    rerender(
+      <MemoryRouter initialEntries={['/create']}>
+        <AppShell variant="editor">
+          <div />
+        </AppShell>
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('navigation', { name: 'Primary' })).not.toBeInTheDocument()
+  })
+
+  it('header History/New links hand off to the tab bar below md (M4)', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <AppShell>
+          <div />
+        </AppShell>
+      </MemoryRouter>,
+    )
+    // Tailwind classes are the contract; jsdom has no media-query engine
+    const header = screen.getByRole('navigation', { name: 'Site' })
+    expect(within(header).getByRole('link', { name: 'History' }).className).toContain('hidden md:inline-flex')
+    expect(within(header).getByRole('link', { name: /^New$/i }).className).toContain('hidden md:inline-flex')
+    const tabs = screen.getByRole('navigation', { name: 'Primary' })
+    expect(tabs.querySelector('a[href="/history"]')).not.toBeNull()
   })
 
   it('does not render PostGrid mode badge slot when guest', () => {

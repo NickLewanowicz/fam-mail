@@ -1,19 +1,29 @@
-import { useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { useAuth } from './AuthContext'
 
 export function LoginPage() {
-  const { login, isLoading } = useAuth()
+  const { login, isLoading, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
   const [searchParams] = useSearchParams()
-
-  // Check for error from callback redirect
   const callbackError = searchParams.get('error')
+
+  // Already signed in? Straight into the app.
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(searchParams.get('from') ?? '/', { replace: true })
+    }
+  }, [isAuthenticated, navigate, searchParams])
 
   const handleLogin = async () => {
     setError(null)
     try {
       await login()
+      // Dev-token login resolves inline (the OIDC path redirects the whole
+      // window from inside login()); bring the user into the app.
+      navigate('/', { replace: true })
     } catch {
       setError('Failed to start login. Please try again.')
     }
@@ -22,50 +32,37 @@ export function LoginPage() {
   const displayError = error || callbackError
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-base-200" data-theme="light">
-      <div className="card w-full max-w-md bg-base-100 shadow-xl">
-        <div className="card-body items-center text-center">
-          <h1 className="text-4xl font-bold mb-2">📮 Fam Mail</h1>
-          <p className="text-base-content/70 mb-6">
-            Send postcards to the people you love
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-zinc-50" data-theme="fammail">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="w-full max-w-sm mx-4"
+      >
+        <div className="text-center mb-8">
+          <div className="text-5xl mb-3">✉️</div>
+          <h1 className="text-xl font-semibold text-zinc-900">Fam Mail</h1>
+          <p className="text-zinc-500 text-sm mt-1">Send postcards to the people you love</p>
+        </div>
 
-          <div className="divider">Get Started</div>
-
+        <div className="bg-white rounded-lg border border-zinc-200 p-6">
           {displayError && (
-            <div className="alert alert-error mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm mb-4">
               <span>{displayError}</span>
             </div>
           )}
 
           <button
-            className="btn btn-primary btn-lg w-full"
+            className="press active:scale-[0.97] w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50"
             onClick={handleLogin}
             disabled={isLoading}
           >
-            {isLoading ? (
-              <>
-                <span className="loading loading-spinner loading-sm"></span>
-                Redirecting...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                </svg>
-                Sign in with OAuth
-              </>
-            )}
+            {isLoading ? 'Redirecting...' : 'Sign In'}
           </button>
 
-          <p className="text-sm text-base-content/50 mt-4">
-            Sign in to create and send postcards
-          </p>
+          <p className="text-xs text-center text-zinc-500 mt-3">Secured with OAuth</p>
         </div>
-      </div>
+      </motion.div>
     </div>
   )
 }

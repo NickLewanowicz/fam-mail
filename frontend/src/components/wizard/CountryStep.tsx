@@ -1,15 +1,15 @@
 import type { CountryCode } from '../../utils/postcardTemplate'
 
 interface Props {
-  countryCode: CountryCode
+  countryCode?: CountryCode | null
   onCountryChange: (code: CountryCode) => void
   onNext: () => void
 }
 
-const COUNTRIES: { code: CountryCode; name: string; flag: string; description: string }[] = [
-  { code: 'US', name: 'United States', flag: '🇺🇸', description: 'USA postal service' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦', description: 'Canada Post' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', description: 'Royal Mail' },
+const COUNTRIES: { code: CountryCode; name: string; flag: string; sub: string }[] = [
+  { code: 'US', name: 'United States', flag: '🇺🇸', sub: 'USPS delivery' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦', sub: 'Canada Post' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧', sub: 'Royal Mail' },
 ]
 
 export function CountryStep({ countryCode, onCountryChange, onNext }: Props) {
@@ -21,27 +21,25 @@ export function CountryStep({ countryCode, onCountryChange, onNext }: Props) {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl font-bold">Where are you sending this?</h2>
-        <p className="text-base-content/60 text-sm mt-1">Choose the destination country for your postcard</p>
+        <h2 className="text-lg font-semibold text-zinc-900">Where is this going?</h2>
+        <p className="text-zinc-500 text-sm mt-0.5">Choose the destination country</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {COUNTRIES.map((country) => (
+        {COUNTRIES.map((c) => (
           <button
-            key={country.code}
+            key={c.code}
             type="button"
-            className={`card bg-base-100 border-2 transition-all hover:shadow-lg ${
-              countryCode === country.code
-                ? 'border-primary shadow-primary/20 shadow-md'
-                : 'border-base-300 hover:border-primary/50'
+            className={`press rounded-lg border-2 p-4 text-center ${
+              countryCode === c.code
+                ? 'border-zinc-900 bg-zinc-50'
+                : 'border-zinc-200 hover:border-zinc-400 bg-white'
             }`}
-            onClick={() => handleSelect(country.code)}
+            onClick={() => handleSelect(c.code)}
           >
-            <div className="card-body p-4 items-center text-center">
-              <span className="text-5xl mb-2">{country.flag}</span>
-              <h3 className="card-title text-base">{country.name}</h3>
-              <p className="text-xs text-base-content/60">{country.description}</p>
-            </div>
+            <span className="text-3xl block mb-1.5">{c.flag}</span>
+            <span className="font-medium text-sm text-zinc-900 block">{c.name}</span>
+            <span className="text-xs text-zinc-500 block mt-0.5">{c.sub}</span>
           </button>
         ))}
       </div>
