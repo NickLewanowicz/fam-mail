@@ -94,3 +94,6 @@ CHANGELOG_AGENT.md
 qa/
 .playwright-mcp/
 pale-variants.png
+
+# UX audit runtime output
+frontend/tests/e2e/ux-audit-results.json
