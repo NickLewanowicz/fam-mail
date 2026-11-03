@@ -16,7 +16,7 @@ process.env.OIDC_ISSUER_URL = "https://accounts.google.com";
 process.env.OIDC_CLIENT_ID = "test-client-id";
 process.env.OIDC_CLIENT_SECRET = "test-client-secret";
 process.env.OIDC_REDIRECT_URI = "http://localhost:5173/auth/callback";
-process.env.JWT_SECRET = "test-jwt-secret-key-16chars";
+process.env.JWT_SECRET = "test-jwt-secret-key-at-least-32-chars";
 // IMAP vars intentionally omitted — not required for beta (#18)
 
 const TEST_DB = join(tmpdir(), `test-drafts-${Date.now()}.db`);
