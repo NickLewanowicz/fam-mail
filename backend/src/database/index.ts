@@ -13,6 +13,8 @@ export interface PostcardRecord {
   recipientAddress: string;
   /** JSON-serialized structured recipient address (#109 — "Again" prefill). */
   recipientAddressJson?: string;
+  /** JSON-serialized card content: { imageData, message } (#114 — "Again" content restore). */
+  contentJson?: string;
   postgridPostcardId?: string;
   postgridMode: "test" | "live";
   forcedTestMode: boolean;
@@ -35,6 +37,7 @@ interface PostcardRow {
   recipient_name: string;
   recipient_address: string;
   recipient_address_json?: string | null;
+  content_json?: string | null;
   postgrid_postcard_id: string | null;
   postgrid_mode: string;
   forced_test_mode: number;
@@ -163,6 +166,11 @@ export class Database {
       if (!has("recipient_address_json")) {
         this.db.exec("ALTER TABLE postcards ADD COLUMN recipient_address_json TEXT");
       }
+      // #114: card content (image + message) so "Again" can restore the
+      // previous card, not just its recipient
+      if (!has("content_json")) {
+        this.db.exec("ALTER TABLE postcards ADD COLUMN content_json TEXT");
+      }
       // #88: drop the orphaned email_processing table (paused IMAP pipeline
       // leftover; removed from schema.sql). DROP ... IF EXISTS is naturally
       // idempotent — fresh databases never had the table.
@@ -214,10 +222,10 @@ export class Database {
       const stmt = this.db.prepare(`
         INSERT INTO postcards (
           id, email_message_id, sender_email, recipient_name, recipient_address,
-          recipient_address_json,
+          recipient_address_json, content_json,
           postgrid_postcard_id, postgrid_mode, forced_test_mode, status, error_message,
           user_id, draft_id, scheduled_for
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       stmt.run(
@@ -227,6 +235,7 @@ export class Database {
         data.recipientName,
         data.recipientAddress,
         data.recipientAddressJson || null,
+        data.contentJson || null,
         data.postgridPostcardId || null,
         data.postgridMode,
         this.boolToInt(data.forcedTestMode),
@@ -359,6 +368,7 @@ export class Database {
       recipientName: row.recipient_name,
       recipientAddress: row.recipient_address,
       recipientAddressJson: row.recipient_address_json || undefined,
+      contentJson: row.content_json || undefined,
       postgridPostcardId: row.postgrid_postcard_id || undefined,
       postgridMode: row.postgrid_mode as PostcardRecord["postgridMode"],
       forcedTestMode: this.intToBool(row.forced_test_mode),

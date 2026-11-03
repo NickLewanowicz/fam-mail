@@ -131,6 +131,10 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       // #109: keep the structured address so History "Again" can prefill
       // city/ZIP/country instead of a formatted string
       recipientAddressJson: JSON.stringify(to),
+      // #114: keep the card content so "Again" can restore photo + message
+      ...((image || message)
+        ? { contentJson: JSON.stringify({ imageData: image || undefined, message: message || undefined }) }
+        : {}),
       postgridPostcardId: result.id,
       postgridMode: postgridService.getTestMode() ? 'test' : 'live',
       forcedTestMode: false,

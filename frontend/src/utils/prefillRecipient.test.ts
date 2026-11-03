@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { prefillRecipientFrom } from './prefillRecipient'
+import { prefillContentFrom, prefillRecipientFrom } from './prefillRecipient'
 import type { SentPostcard } from './api'
 
 // ISSUE-0109: "Again" must reconstruct the STRUCTURED recipient address —
@@ -77,3 +77,32 @@ describe('prefillRecipientFrom', () => {
     expect(addr.lastName).toBe('')
   })
 })
+
+describe('prefillContentFrom (#114 — Again restores the card content)', () => {
+  const caCardContent = {
+    ...caCard,
+    content: { imageData: 'KV9waG90bw==', message: 'Monthly photo card for grandma' },
+  }
+
+  it('carries the stored photo and message through for a structured CA card', () => {
+    expect(prefillContentFrom(caCardContent)).toEqual({
+      imageData: 'KV9waG90bw==',
+      message: 'Monthly photo card for grandma',
+    })
+  })
+
+  it('returns undefined for legacy cards without content (recipient-only prefill stays)', () => {
+    expect(prefillContentFrom(legacyCard)).toBeUndefined()
+  })
+
+  it('carries message-only or image-only content without empty keys', () => {
+    expect(prefillContentFrom({ ...caCard, content: { message: 'words only' } })).toEqual({
+      message: 'words only',
+    })
+    expect(prefillContentFrom({ ...caCard, content: { imageData: 'img' } })).toEqual({
+      imageData: 'img',
+    })
+    expect(prefillContentFrom({ ...caCard, content: {} })).toBeUndefined()
+  })
+})
+

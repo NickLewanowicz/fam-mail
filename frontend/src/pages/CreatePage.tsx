@@ -74,8 +74,15 @@ export default function CreatePage() {
   const [recentRecipients, setRecentRecipients] = useState<Address[]>([])
 
   useEffect(() => {
-    const prefill = (location.state as { prefillRecipient?: Address } | null)?.prefillRecipient
-    if (prefill?.firstName) {
+    let cancelled = false
+    const run = async () => {
+      const state = location.state as {
+        prefillRecipient?: Address
+        prefillContent?: { imageData?: string; message?: string }
+      } | null
+      const prefill = state?.prefillRecipient
+      if (!prefill?.firstName) return
+
       // Full structured address (post-#109); fields stay editable on the
       // Address step the user lands on.
       postcard.setAddress(prefill)
@@ -84,8 +91,37 @@ export default function CreatePage() {
       if (prefill.countryCode === 'US' || prefill.countryCode === 'CA' || prefill.countryCode === 'GB') {
         setCountryCode(prefill.countryCode)
       }
+
+      // ISSUE-0114: restore the previous card's photo + message when the
+      // record carries them — land on the Message step with everything
+      // editable. Legacy cards (no content) keep the recipient-only flow.
+      const content = state?.prefillContent
+      if (content?.imageData || content?.message) {
+        if (content.message) setMessage(content.message)
+        if (content.imageData) {
+          const dataUrl = content.imageData.startsWith('data:')
+            ? content.imageData
+            : `data:image/jpeg;base64,${content.imageData}`
+          try {
+            const res = await fetch(dataUrl)
+            const blob = await res.blob()
+            const file = new File([blob], 'previous-card.jpg', { type: blob.type || 'image/jpeg' })
+            if (!cancelled) setImage({ file, preview: dataUrl })
+          } catch {
+            if (!cancelled) toast.error('Could not restore the previous photo')
+          }
+        }
+        if (!cancelled) {
+          toast.success('Photo and message copied from your last card — edit anything you like')
+          goTo(2)
+        }
+        return
+      }
+
       goTo(3)
     }
+    void run()
+    return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -25,3 +25,21 @@ export function prefillRecipientFrom(card: SentPostcard): Address {
     countryCode: to?.countryCode ?? 'US',
   }
 }
+
+export interface PrefillContent {
+  imageData?: string
+  message?: string
+}
+
+/**
+ * ISSUE-0114: the previous card's photo + message for the "Again" flow.
+ * Undefined for legacy cards (sent before content persistence) — callers
+ * keep the recipient-only prefill in that case.
+ */
+export function prefillContentFrom(card: SentPostcard): PrefillContent | undefined {
+  const imageData = card.content?.imageData
+  const message = card.content?.message
+  if (!imageData && !message) return undefined
+  return { ...(imageData ? { imageData } : {}), ...(message ? { message } : {}) }
+}
+
