@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { AlertDialog } from 'radix-ui'
 
 interface ConfirmDialogProps {
@@ -27,6 +28,19 @@ export function ConfirmDialog({
   destructive = false,
   onConfirm,
 }: ConfirmDialogProps) {
+  // ISSUE-0115: prop-controlled dialog, no radix Trigger — radix restores
+  // focus to nothing on close. Capture the opener on open and hand focus
+  // back when the dialog closes.
+  const openerRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    if (open) {
+      openerRef.current = (document.activeElement as HTMLElement | null) ?? null
+    } else if (openerRef.current) {
+      openerRef.current.focus()
+      openerRef.current = null
+    }
+  }, [open])
+
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
