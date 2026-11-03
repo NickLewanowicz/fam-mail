@@ -107,7 +107,11 @@ export interface SentPostcard {
 
 /** List the signed-in user's sent postcards, newest first. */
 export async function listSentPostcards(limit = 50): Promise<SentPostcard[]> {
-  const response = await authFetch(`${API_BASE_URL}/api/postcards?limit=${limit}`)
+  // #112: without getAuthHeaders() every History visit went out header-less,
+  // triggering a doomed silent-refresh cycle on each load
+  const response = await authFetch(`${API_BASE_URL}/api/postcards?limit=${limit}`, {
+    headers: getAuthHeaders(),
+  })
 
   if (!response.ok) {
     await throwApiError(response, 'Failed to load postcards')
