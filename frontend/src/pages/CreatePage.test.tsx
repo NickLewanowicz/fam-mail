@@ -5,6 +5,7 @@ import type { ButtonHTMLAttributes, HTMLAttributes } from 'react'
 import CreatePage from './CreatePage'
 
 vi.mock('framer-motion', () => ({
+  useReducedMotion: () => false,
   motion: {
     div: ({ children, initial: _initial, animate: _animate, exit: _exit, transition: _transition, variants: _variants, custom: _custom, ...props }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
       <div {...props}>{children}</div>

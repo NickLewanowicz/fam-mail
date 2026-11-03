@@ -5,6 +5,7 @@ import { PostcardPreview } from './PostcardPreview'
 import type { Address } from '../../types/address'
 
 vi.mock('framer-motion', () => ({
+  useReducedMotion: () => false,
   motion: {
     // Capture the inline style as JSON so tests can assert aspectRatio etc.
     div: ({ children, style, ...props }: HTMLAttributes<HTMLDivElement>) => (

@@ -182,6 +182,9 @@ export default function CreatePage() {
         if (stepComplete[step]) goTo(step + 1)
       } else if (e.key === 'ArrowLeft' && step > 0) {
         goTo(step - 1)
+      } else if (e.key === 'f' || e.key === 'F') {
+        // D4: flip the preview card (keyboard twin of the Flip button)
+        setShowBack(b => !b)
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && step === 4) {
         handleSend()
       }

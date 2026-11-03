@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useCallback, useState } from 'react'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { fileToDataUrl } from '../../utils/imageData'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
+import { T } from '../../utils/motion'
 import type { Address } from '../../types/address'
 import type { PostcardImage } from '../../hooks/usePostcard'
 import type { CountryCode, PostcardSize } from '../../utils/postcardTemplate'
@@ -42,6 +43,7 @@ export function PostcardPreview({
   const [editingMessage, setEditingMessage] = useState(false)
   const [editingAddress, setEditingAddress] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const reduce = useReducedMotion()
 
   const isPhotoActive = activeZone === 'photo'
   const isMessageActive = activeZone === 'message'
@@ -139,6 +141,8 @@ export function PostcardPreview({
         </span>
         <button
           onClick={onFlip}
+          aria-keyshortcuts="F"
+          title="Flip card (F)"
           className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-1 text-xs font-medium text-warm-text2 hover:text-warm-text transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -160,8 +164,8 @@ export function PostcardPreview({
       <div className="relative w-full" style={{ perspective: '1200px' }}>
         <motion.div
           className="relative w-full"
-          animate={{ rotateY: showBack ? 180 : 0 }}
-          transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+          animate={reduce ? { opacity: 1 } : { rotateY: showBack ? 180 : 0 }}
+          transition={T.flip}
           style={{ aspectRatio, transformStyle: 'preserve-3d' }}
         >
           {/* Front */}
@@ -169,7 +173,12 @@ export function PostcardPreview({
             className={`absolute inset-0 rounded-lg overflow-hidden transition-shadow duration-200 ${
               isPhotoActive ? 'shadow-xl ring-2 ring-warm-ring' : 'shadow-lg'
             } ${isPhotoActive ? 'cursor-pointer' : ''}`}
-            style={{ backfaceVisibility: 'hidden' }}
+            style={{
+              backfaceVisibility: 'hidden',
+              // Reduced motion: crossfade faces instead of rotateY
+              opacity: reduce ? (showBack ? 0 : 1) : 1,
+              transition: reduce ? 'opacity 150ms linear' : undefined,
+            }}
             {...getRootProps()}
             onClick={handleFrontClick}
             onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && isPhotoActive) { e.preventDefault(); handleFrontClick() } }}
@@ -230,8 +239,14 @@ export function PostcardPreview({
 
           {/* Back */}
           <div
-            className="absolute inset-0 rounded-lg overflow-hidden shadow-lg bg-[#fffef8]"
-            style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+            className="absolute inset-0 rounded-lg overflow-hidden shadow-lg bg-paper"
+            style={reduce
+              ? {
+                  // Reduced motion: crossfade faces instead of rotateY
+                  opacity: showBack ? 1 : 0,
+                  transition: 'opacity 150ms linear',
+                }
+              : { backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
           >
             <div className="h-full flex relative">
               {/* Message area */}
