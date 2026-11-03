@@ -208,9 +208,11 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       {/* Return address toggle */}
       <div>
         <label className="flex items-center gap-3 cursor-pointer min-h-11">
+          {/* 44px custom checkbox (M2/#110): the audit counts the input's own
+              rect, so the hit surface must be the control itself */}
           <input
             type="checkbox"
-            className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
+            className="appearance-none h-11 w-11 rounded-md border-2 border-zinc-300 checked:border-zinc-900 checked:bg-zinc-900 checked:after:content-['✓'] checked:after:text-white checked:after:text-xl checked:after:flex checked:after:items-center checked:after:justify-center transition-colors"
             checked={showReturn}
             onChange={e => setShowReturn(e.target.checked)}
           />

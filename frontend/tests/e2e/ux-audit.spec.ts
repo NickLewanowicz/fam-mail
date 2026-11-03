@@ -76,28 +76,51 @@ async function measurePage(page: import('@playwright/test').Page): Promise<PageM
   })
 }
 
-async function runWizardToReview(page: import('@playwright/test').Page) {
-  await page.goto('/create')
+// #110: seeded draft so the dashboard draft-card controls (Export/Delete,
+// search) and the /drafts/:id editor surface are part of every audit run
+const SEED_DRAFT = {
+  id: 'draft-e2e-seeded',
+  userId: 'user-e2e-test',
+  recipientAddress: {
+    firstName: 'Grace', lastName: 'Hopper', addressLine1: '1 Spectacular Way',
+    city: 'New Haven', provinceOrState: 'CT', postalOrZip: '06510', countryCode: 'US',
+  },
+  senderAddress: {
+    firstName: 'Grace', lastName: 'Hopper', addressLine1: '1 Spectacular Way',
+    city: 'New Haven', provinceOrState: 'CT', postalOrZip: '06510', countryCode: 'US',
+  },
+  message: 'Seeded audit draft',
+  state: 'ready',
+  size: '6x4',
+  createdAt: '2026-11-02T00:00:00Z',
+  updatedAt: '2026-11-02T00:00:00Z',
+}
+
+
+/** #110: walk the seeded draft through message editing (inline editor open)
+ *  to Review, measuring every intermediate surface. */
+async function runDraftToReview(page: import('@playwright/test').Page) {
+  await page.goto('/drafts/draft-e2e-seeded')
+  await page.evaluate(() => document.fonts.ready)
+  await page.waitForTimeout(400)
+
+  // Re-pick the destination (draft load restores the address but not the
+  // country state), then attach the fixture photo to unlock the wizard
   await page.getByRole('button', { name: /United States/ }).click()
+  await page.waitForTimeout(400)
   await page.locator('input[type="file"]').setInputFiles(IMAGE_PATH)
   await page.getByRole('button', { name: /Write Message/ }).click()
-  const editorButton = page.getByRole('button', { name: /Click to write/ })
-  if (await editorButton.isVisible().catch(() => false)) {
-    await editorButton.click()
-    const box = page.getByRole('textbox').first()
-    await box.fill('Nightshift audit message — please ignore, this is a test card.')
-    await page.getByRole('button', { name: 'Done' }).click()
-  }
-  await page.getByRole('button', { name: /Add Address/ }).click()
-  await page.getByRole('textbox', { name: 'Jane' }).fill('Eleanor')
-  await page.getByRole('textbox', { name: 'Doe' }).fill('Kowalski')
-  await page.getByRole('textbox', { name: '123 Main Street' }).fill('812 Maple Avenue')
-  await page.getByRole('textbox', { name: 'Toronto' }).fill('Portland')
-  await page.getByRole('textbox', { name: 'ON', exact: true }).fill('OR')
-  await page.getByRole('textbox', { name: 'M5V 2T6' }).fill('97205')
-  await page.getByRole('button', { name: /Next: Review/ }).click()
+  await page.waitForTimeout(400)
+
+  // Open the inline message editor (draft already carries a message, so the
+  // zone shows the rendered text, not the "Click to write..." placeholder).
+  // Click the zone itself — a raw text-node click can land on the Flip
+  // control that paints over the mirrored back face and flip the card.
+  await page.locator('div[role="button"]').filter({ hasText: 'Seeded audit draft' }).first().click()
+  await page.getByRole('textbox').first().waitFor({ state: 'visible' })
   await page.waitForTimeout(400)
 }
+
 
 async function auditProject(projectName: string, isMobile: boolean) {
   const pages: Record<string, PageMetrics> = {}
@@ -120,8 +143,11 @@ async function auditProject(projectName: string, isMobile: boolean) {
       if (url.match(/\/api\/(auth\/me|health)(\?|$)/) || url.includes('/api/postgrid/status')) {
         return route.fallback()
       }
+      if (url.match(/\/api\/drafts\/draft-e2e-seeded$/)) {
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ draft: SEED_DRAFT }) })
+      }
       if (url.includes('/api/drafts')) {
-        return route.fulfill({ status: 200, contentType: 'application/json', body: '{"drafts":[]}' })
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ drafts: [SEED_DRAFT] }) })
       }
       if (url.includes('/api/postcards')) {
         return route.fulfill({ status: 200, contentType: 'application/json', body: '{"data":[]}' })
@@ -134,7 +160,26 @@ async function auditProject(projectName: string, isMobile: boolean) {
     await page.waitForTimeout(300)
     pages.dashboard = await measurePage(page)
 
-    await runWizardToReview(page)
+    // #110: seeded draft surfaces — draft card on the dashboard (measured
+    // above), the draft editor, the open inline message editor, and each
+    // subsequent wizard step through Review
+    await runDraftToReview(page)
+    pages.draftEditor = await measurePage(page)
+
+    await page.getByRole('button', { name: 'Done' }).click()
+    await page.getByRole('button', { name: /Add Address/ }).click()
+    // D3: settle the step transition (exit + 32px enter slide) before
+    // measuring — a fixed wait races under parallel-worker CPU load
+    await page.waitForFunction(() => {
+      const panel = document.querySelector('div[class*="min-h-[320px]"]')
+      const settled = !panel || getComputedStyle(panel).transform === 'none'
+      const d = document.documentElement
+      return settled && d.scrollWidth <= d.clientWidth
+    }, undefined, { timeout: 8000 }).catch(() => { /* measure whatever state we reached */ })
+    pages.wizardAddress = await measurePage(page)
+
+    await page.getByRole('button', { name: /Next: Review/ }).click()
+    await page.waitForTimeout(400)
     pages.wizardReview = await measurePage(page)
 
     await page.goto('/history')

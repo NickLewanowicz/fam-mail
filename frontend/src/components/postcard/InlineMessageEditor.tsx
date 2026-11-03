@@ -151,12 +151,12 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
       exit={{ opacity: 0 }}
       className="absolute inset-0 bg-white flex flex-col rounded-xl overflow-hidden z-10"
     >
-      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-zinc-100 shrink-0">
+      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-zinc-100 shrink-0 overflow-x-auto">
         {TOOLBAR_ACTIONS.map((action) => (
           <button
             key={action.label}
             type="button"
-            className={`press w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center ${action.iconClass ?? ''}`}
+            className={`press w-11 h-11 shrink-0 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center ${action.iconClass ?? ''}`}
             title={action.label}
             aria-label={action.label}
             // Keep focus (and any text selection) in the textarea — clicking a
@@ -170,7 +170,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div>
           <button
             type="button"
-            className="press w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center"
+            className="press w-11 h-11 shrink-0 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center"
             title="Text color"
             aria-label="Text color"
             aria-haspopup="true"
@@ -184,7 +184,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
             <div
               role="menu"
               aria-label="Text color palette"
-              className="absolute top-full left-2 mt-1 z-30 flex items-center gap-1.5 px-2 py-1.5 bg-white border border-zinc-200 rounded-lg shadow-lg"
+              className="absolute top-full left-2 mt-1 z-30 flex flex-wrap items-center gap-1.5 px-2 py-1.5 bg-white border border-zinc-200 rounded-lg shadow-lg max-w-[240px]"
             >
               {TEXT_COLORS.map((color) => (
                 <button
@@ -193,17 +193,21 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
                   role="menuitem"
                   aria-label={`${color.name} (${color.hex})`}
                   title={color.name}
-                  className="press w-6 h-6 rounded-full border border-zinc-200 hover:ring-2 hover:ring-offset-1 hover:ring-zinc-300"
-                  style={{ backgroundColor: color.hex }}
+                  className="press group w-11 h-11 shrink-0 flex items-center justify-center"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyTextColor(color.hex)}
-                />
+                >
+                  <span
+                    className="w-6 h-6 rounded-full border border-zinc-200 group-hover:ring-2 group-hover:ring-offset-1 group-hover:ring-zinc-300"
+                    style={{ backgroundColor: color.hex }}
+                  />
+                </button>
               ))}
             </div>
           )}
         </div>
         <select
-          className="ml-1 h-8 rounded-md border border-zinc-200 bg-white px-1.5 text-xs text-zinc-600 outline-none hover:border-zinc-300 focus:border-zinc-400"
+          className="ml-1 h-11 rounded-md border border-zinc-200 bg-white px-1.5 text-xs text-zinc-600 outline-none hover:border-zinc-300 focus:border-zinc-400"
           title="Insert an occasion template at the cursor"
           aria-label="Insert occasion template"
           value=""
@@ -222,7 +226,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div className="flex-1" />
         <button
           type="button"
-          className="press px-3 py-1.5 rounded-lg font-medium bg-zinc-900 text-white text-xs hover:bg-zinc-800"
+          className="press min-h-11 min-w-11 px-3 inline-flex items-center justify-center rounded-lg font-medium bg-zinc-900 text-white text-xs hover:bg-zinc-800"
           onClick={onClose}
         >
           Done

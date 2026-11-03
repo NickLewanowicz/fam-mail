@@ -210,13 +210,13 @@ export default function DashboardPage() {
                     </span>
                     <button
                         onClick={(e) => { e.stopPropagation(); exportDraftJson(draft) }}
-                        className="press text-xs text-zinc-500 hover:text-zinc-900"
+                        className="press inline-flex items-center justify-center h-11 min-w-11 px-2 -my-3 text-xs text-zinc-500 hover:text-zinc-900"
                         title="Export draft as JSON"
                       >
                         Export
                       </button>
                       <button
-                      className="press text-xs text-zinc-500 hover:text-red-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
+                      className="press inline-flex items-center justify-center h-11 min-w-11 px-2 -my-3 text-xs text-zinc-500 hover:text-red-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget(draft) }}
                     >
                       Delete

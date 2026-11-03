@@ -42,7 +42,7 @@ export function InlineAddressForm({ address, onAddressChange, onClose, countryCo
   }
 
   const inputCls = (key: keyof Address) =>
-    `w-full px-2 py-1 text-[11px] rounded-lg border outline-none transition-colors ${
+    `w-full px-2 h-11 text-[11px] rounded-lg border outline-none transition-colors ${
       errors[key]
         ? 'border-red-300 bg-red-50 focus:border-red-500'
         : 'border-zinc-200 bg-white focus:border-zinc-400 focus:ring-1 focus:ring-zinc-300'
@@ -59,7 +59,7 @@ export function InlineAddressForm({ address, onAddressChange, onClose, countryCo
         <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Recipient</span>
         <button
           type="button"
-          className="press px-2.5 py-0.5 rounded-md font-medium bg-zinc-900 text-white text-[10px] hover:bg-zinc-800"
+          className="press min-h-11 min-w-11 px-2.5 inline-flex items-center justify-center rounded-md font-medium bg-zinc-900 text-white text-[10px] hover:bg-zinc-800"
           onClick={handleDone}
         >
           Done
@@ -106,7 +106,7 @@ export function InlineAddressForm({ address, onAddressChange, onClose, countryCo
                 {countryCode}
               </div>
             ) : (
-              <select className="w-full px-2 py-1 text-[11px] rounded-lg border border-zinc-200 bg-white" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
+              <select className="w-full px-2 h-11 text-[11px] rounded-lg border border-zinc-200 bg-white" value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
                 <option value="US">US</option>
                 <option value="CA">CA</option>
                 <option value="GB">GB</option>

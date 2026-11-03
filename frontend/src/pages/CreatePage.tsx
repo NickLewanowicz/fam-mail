@@ -420,9 +420,17 @@ export default function CreatePage() {
         )}
 
         {/* Postcard preview — stays on screen while panels scroll (mobile) */}
-        <div className="max-md:sticky max-md:top-14 max-md:z-30 max-md:bg-ink-bg max-md:pb-2">
+        {/* overflow-x-clip: the 3D-flipped card's projected subtree extends
+            ~15px past the viewport at mobile widths (perspective projection)
+            — without this, flipping the card opens a horizontal scroll leak.
+            clip (not hidden) so no scroll container is created; the 3D flip
+            itself lives one level deeper and is unaffected. */}
+        <div className="max-md:sticky max-md:top-14 max-md:z-30 max-md:bg-ink-bg max-md:pb-2 overflow-x-clip">
         <div className="flex justify-center">
-          <div className="w-full max-w-[640px]">
+          {/* overflow-x-hidden: scroll containers CONFINe the 3D card's
+              projected overflow; overflow-x-clip on an ancestor proved
+              insufficient for Chromium's composited 3D scroll area */}
+          <div className="w-full max-w-[640px] overflow-x-hidden">
             <PostcardPreview
               image={postcard.image?.preview ?? null}
               imageFile={postcard.image?.file ?? null}

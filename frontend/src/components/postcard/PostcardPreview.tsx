@@ -155,7 +155,7 @@ export function PostcardPreview({
       {photoError && (
         <div className="flex items-center justify-between px-3 py-2 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
           <span>{photoError}</span>
-          <button onClick={() => setPhotoError(null)} className="press text-xs font-medium text-red-700">Dismiss</button>
+          <button onClick={() => setPhotoError(null)} className="press inline-flex items-center min-h-11 px-2 -my-2 text-xs font-medium text-red-700">Dismiss</button>
         </div>
       )}
 
