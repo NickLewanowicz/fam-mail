@@ -4,7 +4,11 @@ import { visualizer } from 'rollup-plugin-visualizer';
 import path from 'path';
 
 export default defineConfig(({ mode }) => {
+  // process.env wins over .env files so staged runs can override the API
+  // target without writing a .env (vitest reads .env too, which broke the
+  // relative-URL assertions — tracker #108).
   const env = loadEnv(mode, process.cwd(), '');
+  if (process.env.VITE_API_URL) env.VITE_API_URL = process.env.VITE_API_URL;
 
   return {
     plugins: [
@@ -19,7 +23,19 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-    server: {
+  server: {
+      port: 5173,
+      proxy: {
+        '/api': {
+          target: env.VITE_API_URL || 'http://localhost:8484',
+          changeOrigin: true,
+        },
+      },
+    },
+    // `vite preview` serves a built dist with the same /api proxy — the
+    // deterministic way to validate a worktree build (dev-server watchers
+    // don't fire inside git-ignored worktree dirs).
+    preview: {
       port: 5173,
       proxy: {
         '/api': {
