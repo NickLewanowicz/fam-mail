@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -43,6 +43,8 @@ const basePostcard = {
     countryCode: 'CA',
   },
   setAddress: vi.fn(),
+  size: '6x4' as const,
+  setSize: vi.fn(),
   setReturnAddress: vi.fn(),
   isComplete: true,
   reset: vi.fn(),
@@ -266,8 +268,9 @@ describe('ReviewStep', () => {
     expect(screen.getByText(/Saving\.\.\./i)).toBeInTheDocument()
   })
 
-  it('shows PostGrid TEST mode banner when status is test', async () => {
-    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'test', mockMode: false })
+  // ISSUE-0117 (Decision 2): the three top banners are gone; mode arrives
+  // as a prop and renders as the truth line above Send
+  it('shows the test-mode truth line and drops the old top banner', () => {
     render(
       <ReviewStep
         postcard={basePostcard}
@@ -276,15 +279,16 @@ describe('ReviewStep', () => {
         onSaveDraft={onSaveDraft}
         sending={false}
         saving={false}
+        mode="test"
       />,
     )
-    await waitFor(() => {
-      expect(screen.getByText(/Test mode — no physical mail will be sent/i)).toBeInTheDocument()
-    })
+    const truth = screen.getByText('Practice send — nothing will be mailed.')
+    expect(truth.id).toBe('send-truth-panel')
+    expect(truth.getAttribute('role')).toBe('status')
+    expect(screen.queryByText(/Test mode — no physical mail will be sent/i)).not.toBeInTheDocument()
   })
 
-  it('shows LIVE mode warning banner when status is live', async () => {
-    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'live', mockMode: false })
+  it('shows the live truth line with recipient and estimate', () => {
     render(
       <ReviewStep
         postcard={basePostcard}
@@ -293,15 +297,28 @@ describe('ReviewStep', () => {
         onSaveDraft={onSaveDraft}
         sending={false}
         saving={false}
+        mode="live"
       />,
     )
-    await waitFor(() => {
-      expect(screen.getByText(/LIVE mode — this will be printed and mailed/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText('This mails a real card to Jane for about $1.11.')).toBeInTheDocument()
   })
 
-  it('shows MOCK mode banner when status is mock', async () => {
-    vi.mocked(fetchPostgridStatus).mockResolvedValue({ mode: 'mock', mockMode: true })
+  it('shows the mock-mode truth line', () => {
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+        mode="mock"
+      />,
+    )
+    expect(screen.getByText('Practice send — nothing will be mailed.')).toBeInTheDocument()
+  })
+
+  it('fails closed when mode is unavailable', () => {
     render(
       <ReviewStep
         postcard={basePostcard}
@@ -312,8 +329,25 @@ describe('ReviewStep', () => {
         saving={false}
       />,
     )
-    await waitFor(() => {
-      expect(screen.getByText(/MOCK mode/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText('Mode unavailable — check your connection before sending.')).toBeInTheDocument()
+  })
+
+  it('size buttons carry their price estimate and the qualifier ships beside the hint', () => {
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+        mode="test"
+      />,
+    )
+    expect(screen.getByText('about $1.11')).toBeInTheDocument()
+    expect(screen.getByText('about $1.86')).toBeInTheDocument()
+    expect(screen.getByText('about $2.24')).toBeInTheDocument()
+    expect(screen.getByText(/Estimates only — the final cost is set when the card is sent/)).toBeInTheDocument()
   })
 })
+
