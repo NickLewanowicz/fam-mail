@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'bun:test'
-import { jwtVerify } from 'jose'
+import { jwtVerify, SignJWT } from 'jose'
 import { JWTService, type JWTConfig } from './jwtService'
 import type { User } from '../models/user'
 
@@ -15,6 +15,22 @@ const mockUser: User = {
   avatarUrl: 'https://example.com/avatar.jpg',
   createdAt: '2024-01-01T00:00:00Z',
   updatedAt: '2024-01-01T00:00:00Z'
+}
+
+
+const TEST_SECRET = 'test-secret-key-for-testing-minimum-32-chars'
+
+/** Sign a token that expired in the past using the same secret and claim
+ *  shape as JWTService — exercises the production verify path's expiry
+ *  rejection without sleeping past a real expiry (#90). */
+async function signAlreadyExpired(sub: string, typ: 'access' | 'refresh'): Promise<string> {
+  const now = Math.floor(Date.now() / 1000)
+  const jwt = new SignJWT({ sub, typ })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt(now - 3600)
+    .setExpirationTime(now - 1800)
+  if (typ === 'refresh') jwt.setJti(crypto.randomUUID())
+  return await jwt.sign(new TextEncoder().encode(TEST_SECRET))
 }
 
 describe('JWTService', () => {
@@ -120,17 +136,7 @@ describe('JWTService', () => {
     })
 
     it('throws for an expired token', async () => {
-      // Create a service with a very short expiry
-      const expiredConfig: JWTConfig = {
-        secret: 'test-secret-key-for-testing-minimum-32-chars',
-        expiresIn: '1s',
-        refreshExpiresIn: '7d'
-      }
-      const expiredService = new JWTService(expiredConfig)
-      const token = await expiredService.generateAccessToken(mockUser)
-
-      // Wait to ensure it's expired
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      const token = await signAlreadyExpired(mockUser.id, 'access')
 
       try {
         await jwtService.verifyToken(token)
@@ -154,17 +160,7 @@ describe('JWTService', () => {
     })
 
     it('returns null for expired token', async () => {
-      // Create a service with a very short expiry
-      const expiredConfig: JWTConfig = {
-        secret: 'test-secret-key-for-testing-minimum-32-chars',
-        expiresIn: '1s',
-        refreshExpiresIn: '7d'
-      }
-      const expiredService = new JWTService(expiredConfig)
-      const token = await expiredService.generateAccessToken(mockUser)
-
-      // Wait to ensure it's expired
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      const token = await signAlreadyExpired(mockUser.id, 'access')
 
       const userId = await jwtService.extractUserIdFromToken(token)
       expect(userId).toBeNull()
@@ -204,15 +200,7 @@ describe('JWTService', () => {
     })
 
     it('rejects an expired refresh token', async () => {
-      const expiredConfig: JWTConfig = {
-        secret: 'test-secret-key-for-testing-minimum-32-chars',
-        expiresIn: '1h',
-        refreshExpiresIn: '1s'
-      }
-      const expiredService = new JWTService(expiredConfig)
-      const token = await expiredService.generateRefreshToken(mockUser)
-
-      await new Promise(resolve => setTimeout(resolve, 1100))
+      const token = await signAlreadyExpired(mockUser.id, 'refresh')
 
       try {
         await jwtService.verifyRefreshToken(token)
