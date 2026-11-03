@@ -22,9 +22,15 @@ test.describe('Postcard Creation Flow', () => {
   test('navbar shows Fam Mail and New link', async ({ page }) => {
     await page.goto('/')
     // #102: the wordmark text hides below sm on phones; the logo link keeps
-    // its accessible name so the brand is still exposed to AT and tests
+    // its accessible name so the brand is still exposed to AT and tests.
+    // M4: header New hides below md — phones use the tab bar's Create tab.
     await expect(page.getByRole('link', { name: 'Fam Mail home' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'New', exact: true })).toBeVisible()
+    const headerNew = page.getByRole('link', { name: 'New', exact: true })
+    if (await headerNew.isVisible().catch(() => false)) {
+      await expect(headerNew).toBeVisible()
+    } else {
+      await expect(page.getByRole('link', { name: 'Create' }).first()).toBeVisible()
+    }
   })
 
   test('wizard: full send flow with photo, rich text, and address', async ({ page }) => {

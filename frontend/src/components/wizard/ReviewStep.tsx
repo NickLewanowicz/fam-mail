@@ -101,7 +101,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             <button
               key={s}
               type="button"
-              className={`press flex-1 h-11 rounded-md text-sm font-medium border ${
+              className={`press flex-1 h-11 scroll-mb-24 rounded-md text-sm font-medium border ${
                 size === s
                   ? 'bg-zinc-900 text-white border-zinc-900'
                   : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
@@ -176,7 +176,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             Back
           </button>
           <button
-            className="press flex-1 h-11 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md disabled:opacity-50"
+            className="press flex-1 h-11 scroll-mb-24 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md disabled:opacity-50"
             disabled={!address?.firstName || saving}
             onClick={onSaveDraft}
           >

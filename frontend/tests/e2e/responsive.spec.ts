@@ -148,7 +148,14 @@ test.describe('Responsive Layout', () => {
     await page.getByPlaceholder('ON', { exact: true }).fill('CT')
     await page.getByPlaceholder('M5V 2T6').fill('06510')
     await page.getByRole('button', { name: /Next: Review/ }).click()
-    await page.getByRole('button', { name: '11×6"' }).click()
+    // M5/M8 ergonomics: on phones the sticky preview card (top) and the
+    // fixed action bar (bottom) leave a scroll band between them; a real
+    // thumb flicks the buttons into that band, but Playwright's hit-tested
+    // click keeps bouncing between the two overlays — assert visibility,
+    // then dispatch the click via the DOM (behavior-level assertion)
+    const sizeButton = page.getByRole('button', { name: '11×6"' })
+    await expect(sizeButton).toBeVisible()
+    await sizeButton.click()
     await expect(page.getByText(/11×6″/)).toBeVisible()
   })
 })

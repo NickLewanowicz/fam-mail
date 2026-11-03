@@ -424,8 +424,18 @@ export default function CreatePage() {
             ~15px past the viewport at mobile widths (perspective projection)
             — without this, flipping the card opens a horizontal scroll leak.
             clip (not hidden) so no scroll container is created; the 3D flip
-            itself lives one level deeper and is unaffected. */}
-        <div className="max-md:sticky max-md:top-14 max-md:z-30 max-md:bg-ink-bg max-md:pb-2 overflow-x-clip">
+            itself lives one level deeper and is unaffected.
+            The preview pins (sticky) only on steps 0–2: the nav-row steps
+            benefit from the always-visible card, while Address/Review are
+            forms a scrolling thumb must be able to tap — a pinned card
+            covers them (and intercepts their taps). */}
+        <div
+          className={
+            step >= 3
+              ? 'overflow-x-clip'
+              : 'max-md:sticky max-md:top-14 max-md:z-30 max-md:bg-ink-bg max-md:pb-2 overflow-x-clip'
+          }
+        >
         <div className="flex justify-center">
           {/* overflow-x-hidden: scroll containers CONFINe the 3D card's
               projected overflow; overflow-x-clip on an ancestor proved
