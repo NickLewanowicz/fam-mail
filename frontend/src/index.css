@@ -51,3 +51,36 @@
     }
   }
 }
+
+@layer base {
+  /* Tap/selection + scroll containment (spec slice 1: M9, M8) */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    overscroll-behavior-y: none;
+  }
+  button, a, [role="button"], input, select, textarea, summary {
+    touch-action: manipulation;
+  }
+
+  /* iOS focus zoom (M3): floor every text field at 16px on touch-width
+     viewports. The !important is deliberate (spec slice 8) — it must beat
+     per-component text-sm/text-[13px], e.g. the inline editor textarea. */
+  @media (max-width: 767px) {
+    input, select, textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Reduced-motion belt (M7): every CSS transition/animation degrades to
+     ~1 frame (DaisyUI pulse included). Framer surfaces are handled by
+     MotionConfig reducedMotion="user"; this covers the CSS side. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition-duration: 1ms !important;
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
