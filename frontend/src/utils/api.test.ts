@@ -72,6 +72,10 @@ describe('submitPostcard', () => {
 
     const result = await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
+    // #120: the raw photo rides along (backend persists it as card content)
+    const body = JSON.parse(vi.mocked(global.fetch).mock.calls[0][1].body as string)
+    expect(body.image).toBe('test')
+
     expect(global.fetch).toHaveBeenCalledWith(
       `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
