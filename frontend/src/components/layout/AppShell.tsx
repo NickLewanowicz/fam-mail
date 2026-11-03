@@ -39,6 +39,15 @@ const TABS = [
 export function AppShell({ children, variant = 'default' }: { children: ReactNode; variant?: 'default' | 'editor' }) {
   const { user, logout } = useAuth()
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
+  // M8: elevation is an opacity-animated pseudo-element shadow (transform/
+  // opacity only) — flips on once the page scrolls past 4px
+  const [elevated, setElevated] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setElevated(window.scrollY > 4)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   const toggleTheme = () => {
     const next = !dark
     setDark(next)
@@ -72,10 +81,11 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
       </a>
       <nav
         aria-label="Site"
+        data-elevated={elevated ? 'true' : 'false'}
         className={
           variant === 'editor'
-            ? 'sticky top-0 z-50 bg-ink-surface/90 backdrop-blur border-b border-ink-line/60'
-            : 'sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800'
+            ? 'sticky top-0 z-50 bg-ink-surface/90 backdrop-blur border-b border-ink-line/60 after:absolute after:inset-x-0 after:top-full after:h-4 after:shadow-[0_1px_3px_rgb(0_0_0/0.3)] after:opacity-0 after:transition-opacity after:duration-micro after:pointer-events-none data-[elevated=true]:after:opacity-100'
+            : 'sticky top-0 z-50 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 after:absolute after:inset-x-0 after:top-full after:h-4 after:shadow-[0_1px_3px_rgb(0_0_0/0.08)] after:opacity-0 after:transition-opacity after:duration-micro after:pointer-events-none data-[elevated=true]:after:opacity-100'
         }
       >
         <div className="container mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
