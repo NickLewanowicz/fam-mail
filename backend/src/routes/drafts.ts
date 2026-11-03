@@ -225,8 +225,10 @@ export class DraftRoutes {
       allErrors.push(...addressResult.errors)
     }
 
-    // Validate sender address if provided
-    if (draft.senderAddress) {
+    // Validate return address — required for physical mail
+    if (!draft.senderAddress) {
+      allErrors.push({ field: 'from', message: 'Return address (from) is required' })
+    } else {
       const fromResult = validateAddress(draft.senderAddress, 'from')
       if (!fromResult.valid) {
         allErrors.push(...fromResult.errors)
