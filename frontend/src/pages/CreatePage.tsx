@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
+import { WizardActionBar } from '../components/wizard/WizardActionBar'
+import type { WizardStepActions } from '../components/wizard/AddressStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
 import { getDraft, createDraft, updateDraft, scheduleDraft, listDrafts } from '../utils/draftApi'
@@ -43,6 +45,9 @@ export default function CreatePage() {
     setStepState(([prev]) => [next, next > prev ? 1 : -1])
   }, [])
   const [showBack, setShowBack] = useState(false)
+  // M5: steps 3–4 lift their actions to the sticky bar through these refs
+  const addressActionRef = useRef<WizardStepActions | null>(null)
+  const reviewActionRef = useRef<WizardStepActions | null>(null)
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
   const [saving, setSaving] = useState(false)
   const [autosaveState, setAutosaveState] = useState<'idle' | 'saving' | 'saved'>('idle')
@@ -472,6 +477,7 @@ export default function CreatePage() {
                     onBack={handleBack}
                     countryCode={postcard.countryCode ?? undefined}
                     recent={recentRecipients}
+                    actionRef={addressActionRef}
                   />
                 </div>
               </div>
@@ -504,6 +510,7 @@ export default function CreatePage() {
                     onSchedule={handleSchedule}
                     sending={submitting}
                     saving={saving}
+                    actionRef={reviewActionRef}
                   />
                 </div>
               </div>
@@ -511,22 +518,29 @@ export default function CreatePage() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Mobile: thumb-reach bottom toolbar — OUTSIDE AnimatePresence: a
-            fixed element inside a transformed (animating) parent degrades to
+        {/* Mobile: thumb-reach sticky action bar (M5) — OUTSIDE AnimatePresence:
+            a fixed element inside a transformed (animating) parent degrades to
             absolute positioning and would slide with the step content */}
-        {step > 0 && step < 4 && step !== 3 && (
-          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink-surface/90 backdrop-blur border-t border-ink-line/60 px-4 h-16 flex items-center justify-between pb-[env(safe-area-inset-bottom)]">
-            <button className="press px-4 h-11 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5" onClick={handleBack}>
-              ← Back
-            </button>
-            <button
-              className="press active:scale-[0.97] px-6 h-11 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover disabled:opacity-50"
-              onClick={handleNext}
-              disabled={step === 1 && !postcard.image}
-            >
-              {step === 1 ? 'Write Message →' : 'Add Address →'}
-            </button>
-          </div>
+        {step >= 1 && step <= 4 && (
+          <WizardActionBar
+            onBack={handleBack}
+            primaryLabel={
+              step === 4 ? 'Send Postcard'
+                : step === 3 ? 'Next: Review'
+                  : step === 1 ? 'Write Message →'
+                    : 'Add Address →'
+            }
+            onPrimary={() => {
+              if (step === 3) addressActionRef.current?.submit?.()
+              else if (step === 4) reviewActionRef.current?.send?.()
+              else handleNext()
+            }}
+            primaryDisabled={
+              (step === 1 && !postcard.image) ||
+              (step === 4 && (!!reviewActionRef.current?.sendDisabled || submitting))
+            }
+            sending={step === 4 && submitting}
+          />
         )}
       </div>
     </>

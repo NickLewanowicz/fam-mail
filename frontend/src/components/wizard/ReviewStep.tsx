@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type MutableRefObject } from 'react'
 import type { UsePostcardReturn } from '../../hooks/usePostcard'
+import type { WizardStepActions } from './AddressStep'
 import { toast } from 'sonner'
 import { fetchPostgridStatus, type PostgridApiMode } from '../../utils/postgridApi'
 
@@ -12,6 +13,8 @@ interface Props {
   sending: boolean
   saving: boolean
   keyboardHint?: string
+  /** M5: lifts send to the sticky bar; sendDisabled mirrors the in-panel gate */
+  actionRef?: MutableRefObject<WizardStepActions | null>
 }
 
 function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }) {
@@ -27,7 +30,7 @@ function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: st
   )
 }
 
-export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint }: Props) {
+export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint, actionRef }: Props) {
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const { image, message, address, returnAddress, size, setSize, isComplete } = postcard
@@ -45,6 +48,14 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
     })()
     return () => { cancelled = true }
   }, [])
+
+  // M5: lift send to the sticky bar; the disabled gate rides along so the
+  // bar's primary reflects this step's completeness
+  useEffect(() => {
+    if (!actionRef) return
+    actionRef.current = { send: () => onSend(), sendDisabled: !isComplete || sending }
+    return () => { actionRef.current = null }
+  })
 
   return (
     <div className="space-y-4">
@@ -144,7 +155,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
         </details>
 
         <button
-          className="press active:scale-[0.97] w-full h-11 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="press active:scale-[0.97] max-md:hidden w-full h-11 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50 flex items-center justify-center gap-2"
           disabled={!isComplete || sending}
           onClick={onSend}
         >
@@ -161,7 +172,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
           <p className="text-center text-[11px] text-zinc-500">{keyboardHint}</p>
         )}
         <div className="flex gap-2">
-          <button className="press flex-1 h-11 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md" onClick={onBack}>
+          <button className="press max-md:hidden flex-1 h-11 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md" onClick={onBack}>
             Back
           </button>
           <button

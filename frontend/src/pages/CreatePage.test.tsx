@@ -109,3 +109,41 @@ describe('#110 checkpoint P3 — Again prefill sets the wizard country', () => {
     expect(screen.queryByRole('combobox')).toBeNull()
   })
 })
+
+describe('#M5 — sticky action bar lifts AddressStep validation', () => {
+  const baseAddress = {
+    firstName: 'Jean', lastName: 'Tremblay', addressLine1: '456 Rue Principale',
+    city: 'Ottawa', provinceOrState: 'ON', postalOrZip: 'K1A 0B1', countryCode: 'CA',
+  }
+
+  function renderOnAddress(address: Partial<typeof baseAddress>) {
+    return renderWizard({
+      state: { prefillRecipient: { ...baseAddress, ...address } as typeof baseAddress },
+    })
+  }
+
+  it('blocks on a bad ZIP and advances only through the step\'s own validation', async () => {
+    renderOnAddress({ postalOrZip: 'NOT-A-ZIP', provinceOrState: 'ON' })
+
+    await waitFor(() => {
+      expect(screen.getByText('Recipient Address')).toBeVisible()
+    })
+
+    // The lifted action runs AddressStep's handleSubmit, not a blind onNext
+    fireEvent.click(screen.getByTestId('wizard-primary'))
+
+    // Still on Address — validation rejected, error surfaced in place
+    expect(screen.queryByText('Recipient Address')).toBeVisible()
+    expect(screen.getByText('Postal code must look like A1A 1A1')).toBeVisible()
+    expect(screen.queryByTestId('review-step')).not.toBeInTheDocument()
+
+    // Fix the ZIP through the same form, then the lifted action advances
+    fireEvent.change(screen.getByDisplayValue('NOT-A-ZIP'), { target: { value: 'K1A 0B1' } })
+    fireEvent.click(screen.getByTestId('wizard-primary'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('review-step')).toBeVisible()
+    })
+  })
+})
+

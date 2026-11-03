@@ -1,5 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type MutableRefObject } from 'react'
 import type { Address } from '../../types/address'
+
+export interface WizardStepActions {
+  submit?(): void
+  send?(): void
+  /** ReviewStep: primary should render disabled (mirrors the in-panel gate) */
+  sendDisabled?: boolean
+}
 
 interface Props {
   address: Address | null
@@ -10,6 +17,8 @@ interface Props {
   onBack: () => void
   countryCode?: string
   recent?: Address[]
+  /** M5: lifts this step's submit (with its validation) to the sticky bar */
+  actionRef?: MutableRefObject<WizardStepActions | null>
 }
 
 const EMPTY_ADDRESS: Address = {
@@ -17,7 +26,7 @@ const EMPTY_ADDRESS: Address = {
   city: '', provinceOrState: '', postalOrZip: '', countryCode: 'US',
 }
 
-export function AddressStep({ address, returnAddress, onAddressChange, onReturnAddressChange, onNext, onBack, countryCode, recent = [] }: Props) {
+export function AddressStep({ address, returnAddress, onAddressChange, onReturnAddressChange, onNext, onBack, countryCode, recent = [], actionRef }: Props) {
   const [form, setForm] = useState<Address>(address ?? { ...EMPTY_ADDRESS, countryCode: countryCode ?? 'US' })
   const [returnForm, setReturnForm] = useState<Address>(returnAddress ?? { ...EMPTY_ADDRESS, countryCode: countryCode ?? 'US' })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -95,6 +104,15 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       onNext()
     }
   }
+
+  // M5: keep the lifted action fresh — re-assign every render so the bar
+  // always calls this render's validation closure. Re-assigned after each
+  // render (no dep array); nulls out on unmount.
+  useEffect(() => {
+    if (!actionRef) return
+    actionRef.current = { submit: handleSubmit }
+    return () => { actionRef.current = null }
+  })
 
   // Standard autofill tokens so iOS/Chrome can fill the address form (#104)
   const AUTOCOMPLETE: Partial<Record<keyof Address, string>> = {
@@ -236,7 +254,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
         </>
       )}
 
-      <div className="flex justify-between pt-4">
+      <div className="flex justify-between pt-4 max-md:hidden">
         <button
           className="press px-4 h-11 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
           onClick={onBack}
