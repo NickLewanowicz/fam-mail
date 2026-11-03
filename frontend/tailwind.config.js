@@ -37,6 +37,35 @@ export default {
       borderRadius: {
         sheet: '20px',
       },
+      // Motion tokens (docs/design/motion-and-polish-spec.md slice 1) —
+      // CSS-side motion without framer; framer twin lives in utils/motion.ts
+      transitionTimingFunction: {
+        enter: 'cubic-bezier(0.2,0,0,1)',
+        exit: 'cubic-bezier(0.4,0,1,1)',
+        sheet: 'cubic-bezier(0.32,0.72,0,1)',
+      },
+      transitionDuration: {
+        micro: '120ms',
+        standard: '200ms',
+        large: '300ms',
+        flip: '400ms',
+      },
+      keyframes: {
+        'overlay-in': { from: { opacity: '0' }, to: { opacity: '1' } },
+        'overlay-out': { from: { opacity: '1' }, to: { opacity: '0' } },
+        'dialog-in': { from: { opacity: '0', transform: 'translate(-50%,-48.5%) scale(0.96)' }, to: { opacity: '1', transform: 'translate(-50%,-50%) scale(1)' } },
+        'dialog-out': { from: { opacity: '1', transform: 'translate(-50%,-50%) scale(1)' }, to: { opacity: '0', transform: 'translate(-50%,-51.5%) scale(0.97)' } },
+        'sheet-in': { from: { transform: 'translateY(100%)' }, to: { transform: 'translateY(0)' } },
+        'sheet-out': { from: { transform: 'translateY(0)' }, to: { transform: 'translateY(100%)' } },
+      },
+      animation: {
+        'overlay-in': 'overlay-in 150ms cubic-bezier(0.2,0,0,1) forwards',
+        'overlay-out': 'overlay-out 120ms cubic-bezier(0.4,0,1,1) forwards',
+        'dialog-in': 'dialog-in 200ms cubic-bezier(0.2,0,0,1) forwards',
+        'dialog-out': 'dialog-out 150ms cubic-bezier(0.4,0,1,1) forwards',
+        'sheet-in': 'sheet-in 300ms cubic-bezier(0.32,0.72,0,1) forwards',
+        'sheet-out': 'sheet-out 200ms cubic-bezier(0.4,0,1,1) forwards',
+      },
     },
   },
   plugins: [
