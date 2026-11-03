@@ -1,9 +1,40 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { T } from '../../utils/motion'
 import { useAuth } from '../auth/AuthContext'
 import { PostGridModeBadge } from './PostGridModeBadge'
 import { VersionFooter } from './VersionFooter'
+
+/** M4 tab bar icons — inline, theme-currentColor, no new deps */
+function HomeIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75" />
+    </svg>
+  )
+}
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  )
+}
+function ClockIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className={className} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
+
+const TABS = [
+  { to: '/', label: 'Home', Icon: HomeIcon },
+  { to: '/create', label: 'Create', Icon: PlusIcon },
+  { to: '/history', label: 'History', Icon: ClockIcon },
+] as const
 
 export function AppShell({ children, variant = 'default' }: { children: ReactNode; variant?: 'default' | 'editor' }) {
   const { user, logout } = useAuth()
@@ -40,6 +71,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
         Skip to content
       </a>
       <nav
+        aria-label="Site"
         className={
           variant === 'editor'
             ? 'sticky top-0 z-50 bg-ink-surface/90 backdrop-blur border-b border-ink-line/60'
@@ -74,7 +106,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
               <Link
                 to="/history"
                 aria-current={location.pathname === '/history' ? 'page' : undefined}
-                className={`inline-flex items-center h-11 px-2 sm:px-3 text-sm font-medium rounded-md transition-colors ${
+                className={`hidden md:inline-flex items-center h-11 px-2 sm:px-3 text-sm font-medium rounded-md transition-colors ${
                   location.pathname === '/history'
                     ? 'bg-clay text-ink-bg'
                     : variant === 'editor'
@@ -95,7 +127,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
             <Link
               to="/create"
               aria-current={location.pathname === '/create' ? 'page' : undefined}
-              className={`inline-flex items-center gap-1.5 h-11 px-2 sm:px-3 text-sm font-medium rounded-md transition-colors ${
+              className={`hidden md:inline-flex items-center gap-1.5 h-11 px-2 sm:px-3 text-sm font-medium rounded-md transition-colors ${
                 location.pathname === '/create'
                   ? 'bg-zinc-900 text-white'
                   : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
@@ -126,9 +158,48 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
           </div>
         </div>
       </nav>
-      <main id="main-content" className="flex-1">
+      <main
+        id="main-content"
+        className={
+          variant === 'editor'
+            ? 'flex-1'
+            // M4: phones scroll under the tab bar (h-14) — clear it plus the
+            // device safe area; md+ has no tab bar
+            : 'flex-1 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-8'
+        }
+      >
         {children}
       </main>
+      {variant === 'default' && (
+        <nav
+          aria-label="Primary"
+          className="md:hidden fixed inset-x-0 bottom-0 z-40 border-t border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur pb-[env(safe-area-inset-bottom,0px)]"
+        >
+          <div className="grid grid-cols-3 h-14">
+            {TABS.map(({ to, label, Icon }) => {
+              const active = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+              return (
+                <Link
+                  key={to}
+                  to={to}
+                  aria-current={active ? 'page' : undefined}
+                  className="relative flex flex-col items-center justify-center gap-0.5 min-h-11 text-zinc-500 aria-[current=page]:text-zinc-900 dark:aria-[current=page]:text-white transition-colors duration-micro ease-enter"
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="tab-pill"
+                      className="absolute inset-x-5 -top-px h-0.5 rounded-full bg-zinc-900 dark:bg-white"
+                      transition={T.micro}
+                    />
+                  )}
+                  <Icon className="w-6 h-6" />
+                  <span className="text-[11px]">{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        </nav>
+      )}
       <VersionFooter tone={variant} />
     </div>
   )
