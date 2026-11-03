@@ -38,6 +38,7 @@ tmp/
 .claude_sessions/
 frontend/.claude_sessions/
 .worktrees/
+.issues/
 
 # Test results
 test-results/
