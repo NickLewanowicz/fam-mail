@@ -13,14 +13,14 @@ export default {
       },
       colors: {
         ink: {
-          bg: '#221215',
-          surface: '#2E181A',
-          raised: '#3B2022',
-          line: '#4A2A2B',
+          bg: '#3B1D1E',
+          surface: '#482527',
+          raised: '#562D2E',
+          line: '#6B3A38',
         },
         clay: {
-          DEFAULT: '#C96F4F',
-          hover: '#D9805E',
+          DEFAULT: '#CE7A57',
+          hover: '#DD8F6C',
           soft: '#FFF6EF',
         },
         paper: {

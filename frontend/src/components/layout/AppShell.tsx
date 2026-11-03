@@ -43,7 +43,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
         <div className="container mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <span className="text-xl" aria-hidden="true">✉️</span>
-            <span className={`text-base font-semibold ${variant === "editor" ? "text-warm-text font-display tracking-tight" : "text-zinc-900"}`}>Fam Mail</span>
+            <span className={`text-base font-semibold whitespace-nowrap ${variant === "editor" ? "text-warm-text font-display tracking-tight" : "text-zinc-900"}`}>Fam Mail</span>
           </Link>
 
           <div className="flex items-center gap-2">
