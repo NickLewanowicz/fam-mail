@@ -6,8 +6,11 @@ import CreatePage from './CreatePage'
 
 vi.mock('framer-motion', () => ({
   motion: {
-    div: ({ children, initial: _initial, animate: _animate, exit: _exit, transition: _transition, ...props }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
+    div: ({ children, initial: _initial, animate: _animate, exit: _exit, transition: _transition, variants: _variants, custom: _custom, ...props }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
       <div {...props}>{children}</div>
+    ),
+    span: ({ children, initial: _initial, animate: _animate, exit: _exit, transition: _transition, layoutId: _layoutId, ...props }: HTMLAttributes<HTMLSpanElement> & Record<string, unknown>) => (
+      <span {...props}>{children}</span>
     ),
     button: ({ children, whileHover: _whileHover, whileTap: _whileTap, initial: _initial, animate: _animate, ...props }: ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => (
       <button {...props}>{children}</button>

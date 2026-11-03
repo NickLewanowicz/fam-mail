@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { T } from '../utils/motion'
 import { toast } from 'sonner'
 import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
@@ -21,11 +22,13 @@ const STEPS = [
 
 const STEP_ZONES: ActiveZone[] = [null, 'photo', 'message', 'address', null]
 
-const pageTransition = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-  transition: { duration: 0.2, ease: 'easeOut' as const },
+// D3: direction-aware step slide (June's spec, slice 3). Wrapper carries a
+// min-height so country/nav-only steps don't collapse mid-transition —
+// height itself never animates (transform/opacity only).
+const stepVariants = {
+  enter: (d: number) => ({ x: d * 32, opacity: 0 }),
+  center: { x: 0, opacity: 1 },
+  exit: (d: number) => ({ x: d * -32, opacity: 0 }),
 }
 
 export default function CreatePage() {
@@ -34,7 +37,11 @@ export default function CreatePage() {
   const location = useLocation()
   const postcard = usePostcard()
   const { setAddress, setReturnAddress, setMessage, setImage, setCountryCode, setSize } = postcard
-  const [step, setStep] = useState(0)
+  // [step, direction] — direction drives the D3 slide (1 = forward, -1 = back)
+  const [[step, dir], setStepState] = useState<[number, 1 | -1]>([0, 1])
+  const goTo = useCallback((next: number) => {
+    setStepState(([prev]) => [next, next > prev ? 1 : -1])
+  }, [])
   const [showBack, setShowBack] = useState(false)
   const [loadingDraft, setLoadingDraft] = useState(!!draftId)
   const [saving, setSaving] = useState(false)
@@ -50,7 +57,7 @@ export default function CreatePage() {
       // Full structured address (post-#109); fields stay editable on the
       // Address step the user lands on.
       postcard.setAddress(prefill)
-      setStep(3)
+      goTo(3)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -96,8 +103,8 @@ export default function CreatePage() {
     else if (step === 2 || step === 3) setShowBack(true)
   }, [step])
 
-  const handleNext = () => setStep(s => Math.min(s + 1, STEPS.length - 1))
-  const handleBack = () => setStep(s => Math.max(s - 1, 0))
+  const handleNext = () => goTo(Math.min(step + 1, STEPS.length - 1))
+  const handleBack = () => goTo(Math.max(step - 1, 0))
 
   /** The draft payload as the backend stores it (bare base64 image data). */
   const draftPayload = useCallback((address: Address) => ({
@@ -172,9 +179,9 @@ export default function CreatePage() {
       if (typing) return
       if (e.key === 'ArrowRight' && step < STEPS.length - 1) {
         // Same prerequisite rule as the step buttons
-        if (stepComplete[step]) setStep(step + 1)
+        if (stepComplete[step]) goTo(step + 1)
       } else if (e.key === 'ArrowLeft' && step > 0) {
-        setStep(step - 1)
+        goTo(step - 1)
       } else if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && step === 4) {
         handleSend()
       }
@@ -300,7 +307,7 @@ export default function CreatePage() {
 
             <div className="flex flex-col gap-2 mt-6">
               <button
-                onClick={() => { postcard.reset(); setResult(null); setStep(0); setActiveDraftId(null) }}
+                onClick={() => { postcard.reset(); setResult(null); goTo(0); setActiveDraftId(null) }}
                 className="w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors"
               >
                 Create Another
@@ -344,18 +351,25 @@ export default function CreatePage() {
                 <button
                   onClick={() => {
                     // Can't jump past steps whose prerequisites are missing
-                    if (i <= step || stepComplete[i] || stepComplete[i - 1]) setStep(i)
+                    if (i <= step || stepComplete[i] || stepComplete[i - 1]) goTo(i)
                   }}
                   className="flex flex-col items-center gap-1 p-1.5 -m-1.5"
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
+                  <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                     isActive
-                      ? 'bg-clay text-ink-bg'
+                      ? 'text-ink-bg'
                       : isDone
                         ? 'bg-zinc-900 text-white'
                         : 'border-2 border-ink-line text-warm-text3'
                   }`}>
-                    {isDone ? '✓' : i + 1}
+                    {isActive && (
+                      <motion.span
+                        layoutId="step-pill"
+                        className="absolute inset-0 rounded-full bg-clay"
+                        transition={T.micro}
+                      />
+                    )}
+                    <span className="relative z-10">{isDone ? '✓' : i + 1}</span>
                   </div>
                   <span className={`text-[11px] hidden sm:block ${
                     isActive ? 'text-warm-text font-medium' : 'text-warm-text3'
@@ -364,7 +378,14 @@ export default function CreatePage() {
                   </span>
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-5 md:w-12 h-px mx-1 ${i < step ? 'bg-clay' : 'bg-ink-line'}`} />
+                  <div className="relative w-5 md:w-12 h-px mx-1 bg-ink-line">
+                    <motion.div
+                      className="absolute inset-0 bg-clay origin-left"
+                      initial={false}
+                      animate={{ scaleX: i < step ? 1 : 0 }}
+                      transition={T.micro}
+                    />
+                  </div>
                 )}
               </div>
             )
@@ -402,41 +423,49 @@ export default function CreatePage() {
         </div>
         </div>
 
-        {/* Step content */}
-        <AnimatePresence mode="wait">
-          {step === 0 && (
-            <motion.div key="dest" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
-              <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
-                <CountryStep
-                  countryCode={postcard.countryCode ?? undefined}
-                  onCountryChange={setCountryCode}
-                  onNext={handleNext}
-                />
+        {/* Step content — one keyed panel; direction-aware slide (D3) */}
+        <AnimatePresence mode="wait" custom={dir} initial={false}>
+          <motion.div
+            key={step}
+            custom={dir}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={T.standard}
+            className="min-h-[320px] md:min-h-[300px]"
+          >
+            {step === 0 && (
+              <div className="max-w-[640px] mx-auto mt-6">
+                <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
+                  <CountryStep
+                    countryCode={postcard.countryCode ?? undefined}
+                    onCountryChange={setCountryCode}
+                    onNext={handleNext}
+                  />
+                </div>
               </div>
-            </motion.div>
-          )}
+            )}
 
-          {step === 3 && (
-            <motion.div key="addr" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
-              <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
-                <AddressStep
-                  address={postcard.address}
-                  returnAddress={postcard.returnAddress}
-                  onAddressChange={setAddress}
-                  onReturnAddressChange={setReturnAddress}
-                  onNext={handleNext}
-                  onBack={handleBack}
-                  countryCode={postcard.countryCode ?? undefined}
-                  recent={recentRecipients}
-                />
+            {step === 3 && (
+              <div className="max-w-[640px] mx-auto mt-6">
+                <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
+                  <AddressStep
+                    address={postcard.address}
+                    returnAddress={postcard.returnAddress}
+                    onAddressChange={setAddress}
+                    onReturnAddressChange={setReturnAddress}
+                    onNext={handleNext}
+                    onBack={handleBack}
+                    countryCode={postcard.countryCode ?? undefined}
+                    recent={recentRecipients}
+                  />
+                </div>
               </div>
-            </motion.div>
-          )}
+            )}
 
-          {step > 0 && step < 4 && step !== 3 && (
-            <>
-              {/* Desktop: inline nav row */}
-              <motion.div key={`nav-${step}`} {...pageTransition} className="hidden md:flex justify-between mt-6 max-w-[640px] mx-auto">
+            {step > 0 && step < 4 && step !== 3 && (
+              <div className="hidden md:flex justify-between mt-6 max-w-[640px] mx-auto">
                 <button className="press px-4 py-2 text-sm text-warm-text2 hover:text-warm-text hover:bg-white/5 rounded-md" onClick={handleBack}>
                   ← Back
                 </button>
@@ -447,40 +476,45 @@ export default function CreatePage() {
                 >
                   {step === 1 ? 'Write Message →' : 'Add Address →'}
                 </button>
-              </motion.div>
-              {/* Mobile: thumb-reach bottom toolbar */}
-              <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink-surface/90 backdrop-blur border-t border-ink-line/60 px-4 h-16 flex items-center justify-between pb-[env(safe-area-inset-bottom)]">
-                <button className="press px-4 h-11 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5" onClick={handleBack}>
-                  ← Back
-                </button>
-                <button
-                  className="press active:scale-[0.97] px-6 h-11 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover disabled:opacity-50"
-                  onClick={handleNext}
-                  disabled={step === 1 && !postcard.image}
-                >
-                  {step === 1 ? 'Write Message →' : 'Add Address →'}
-                </button>
               </div>
-            </>
-          )}
+            )}
 
-          {step === 4 && (
-            <motion.div key="review" {...pageTransition} className="max-w-[640px] mx-auto mt-6">
-              <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
-                <ReviewStep
-                  postcard={postcard}
-                  onBack={handleBack}
-                  onSend={handleSend}
-                  onSaveDraft={handleSaveDraft}
-                  keyboardHint="⌘/Ctrl+Enter to send"
-                  onSchedule={handleSchedule}
-                  sending={submitting}
-                  saving={saving}
-                />
+            {step === 4 && (
+              <div className="max-w-[640px] mx-auto mt-6">
+                <div className="bg-paper rounded-sheet border border-paper-border/60 shadow-xl p-5">
+                  <ReviewStep
+                    postcard={postcard}
+                    onBack={handleBack}
+                    onSend={handleSend}
+                    onSaveDraft={handleSaveDraft}
+                    keyboardHint="⌘/Ctrl+Enter to send"
+                    onSchedule={handleSchedule}
+                    sending={submitting}
+                    saving={saving}
+                  />
+                </div>
               </div>
-            </motion.div>
-          )}
+            )}
+          </motion.div>
         </AnimatePresence>
+
+        {/* Mobile: thumb-reach bottom toolbar — OUTSIDE AnimatePresence: a
+            fixed element inside a transformed (animating) parent degrades to
+            absolute positioning and would slide with the step content */}
+        {step > 0 && step < 4 && step !== 3 && (
+          <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink-surface/90 backdrop-blur border-t border-ink-line/60 px-4 h-16 flex items-center justify-between pb-[env(safe-area-inset-bottom)]">
+            <button className="press px-4 h-11 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5" onClick={handleBack}>
+              ← Back
+            </button>
+            <button
+              className="press active:scale-[0.97] px-6 h-11 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover disabled:opacity-50"
+              onClick={handleNext}
+              disabled={step === 1 && !postcard.image}
+            >
+              {step === 1 ? 'Write Message →' : 'Add Address →'}
+            </button>
+          </div>
+        )}
       </div>
     </>
   )
