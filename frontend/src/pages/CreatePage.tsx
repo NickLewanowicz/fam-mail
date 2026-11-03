@@ -57,6 +57,11 @@ export default function CreatePage() {
       // Full structured address (post-#109); fields stay editable on the
       // Address step the user lands on.
       postcard.setAddress(prefill)
+      // The preview's safe-zones/return-address derive from the destination
+      // country — an "Again" card for CA/GB must not render as US (P3)
+      if (prefill.countryCode === 'US' || prefill.countryCode === 'CA' || prefill.countryCode === 'GB') {
+        setCountryCode(prefill.countryCode)
+      }
       goTo(3)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ButtonHTMLAttributes, HTMLAttributes } from 'react'
 import CreatePage from './CreatePage'
@@ -41,9 +41,9 @@ vi.mock('../components/wizard/ReviewStep', () => ({
   ReviewStep: () => <div data-testid="review-step">Review</div>,
 }))
 
-function renderWizard() {
+function renderWizard(initialEntry?: Partial<Location>) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[{ pathname: '/create', ...initialEntry }]}>
       <CreatePage />
     </MemoryRouter>
   )
@@ -85,5 +85,27 @@ describe('CreatePage step indicator', () => {
     expect(screen.getByText('Upload your photo')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: /Destination/ }))
     expect(screen.getByRole('heading', { name: 'Where is this going?' })).toBeVisible()
+  })
+})
+
+describe('#110 checkpoint P3 — Again prefill sets the wizard country', () => {
+  it('lands on Address with the CA country wired through (no US default)', async () => {
+    renderWizard({
+      state: {
+        prefillRecipient: {
+          firstName: 'Jean', lastName: 'Tremblay', addressLine1: '456 Rue Principale',
+          city: 'Ottawa', provinceOrState: 'ON', postalOrZip: 'K1A 0B1', countryCode: 'CA',
+        },
+      },
+    })
+
+    // Jumps straight to the Address step
+    await waitFor(() => {
+      expect(screen.getByText('Recipient Address')).toBeVisible()
+    })
+    // Country readout comes from postcard.countryCode, not the US fallback:
+    // the recipient-country <select> must be replaced by the static readout
+    expect(screen.getByText('Canada')).toBeVisible()
+    expect(screen.queryByRole('combobox')).toBeNull()
   })
 })
