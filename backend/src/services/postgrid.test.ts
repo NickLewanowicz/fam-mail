@@ -433,3 +433,109 @@ describe('PostGridService', () => {
     })
   })
 })
+
+// ============================================================================
+// ISSUE-0100 — the sender (return address) must reach PostGrid, or
+// undeliverable mail is destroyed instead of returned. Coverage per the
+// maintainer dispatch: every from[...] field arrives; omitting from sends
+// no from-fields but still sends to[...].
+// ============================================================================
+
+describe('PostGridService — sender fields (#100)', () => {
+  const toAddress = {
+    firstName: 'John',
+    lastName: 'Doe',
+    addressLine1: '123 Main St',
+    city: 'Ottawa',
+    provinceOrState: 'ON',
+    postalOrZip: 'K1A 0B1',
+    countryCode: 'CA',
+  }
+  const fromAddress = {
+    firstName: 'Nick',
+    lastName: 'Sender',
+    addressLine1: '9 Return Ave',
+    addressLine2: 'Suite 5',
+    city: 'Portland',
+    provinceOrState: 'OR',
+    postalOrZip: '97205',
+    countryCode: 'US',
+  }
+
+  function serviceWithCapturedFetch() {
+    const mockFetch = mock(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ id: 'pc_100', status: 'ready' }),
+      })
+    )
+    global.fetch = mockFetch as unknown as typeof fetch
+    // Real (non-mock) mode: the branch under test builds a URLSearchParams
+    // body and performs the HTTP call.
+    const service = new PostGridService({
+      mode: 'test',
+      testApiKey: 'test_sk_PLACEHOLDER',
+      liveApiKey: 'live_sk_PLACEHOLDER',
+      forceTestMode: false,
+      mockMode: false,
+      webhookSecret: '',
+      size: '6x4',
+      senderId: '',
+    })
+    return { mockFetch, service }
+  }
+
+  function bodyOf(mockFetch: ReturnType<typeof mock>): URLSearchParams {
+    const call = mockFetch.mock.calls[0]
+    return call[1].body as URLSearchParams
+  }
+
+  it('sends every from[...] field alongside to[...]', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+
+    await service.createPostcard({
+      to: toAddress,
+      from: fromAddress,
+      frontHTML: '<html>Front</html>',
+    })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('from[firstName]')).toBe('Nick')
+    expect(body.get('from[lastName]')).toBe('Sender')
+    expect(body.get('from[addressLine1]')).toBe('9 Return Ave')
+    expect(body.get('from[addressLine2]')).toBe('Suite 5')
+    expect(body.get('from[city]')).toBe('Portland')
+    expect(body.get('from[provinceOrState]')).toBe('OR')
+    expect(body.get('from[postalOrZip]')).toBe('97205')
+    expect(body.get('from[countryCode]')).toBe('US')
+
+    // The proven to codepath stays intact on the same request
+    expect(body.get('to[firstName]')).toBe('John')
+    expect(body.get('to[countryCode]')).toBe('CA')
+  })
+
+  it('omits from[...] fields when from is undefined but still sends to[...]', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+
+    await service.createPostcard({
+      to: toAddress,
+      frontHTML: '<html>Front</html>',
+    })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('to[firstName]')).toBe('John')
+    expect(body.get('from[firstName]')).toBeNull()
+    expect(body.get('from[city]')).toBeNull()
+  })
+
+  it('drops addressLine2 when the sender has none', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+    const { addressLine2: _omit, ...withoutLine2 } = fromAddress
+
+    await service.createPostcard({ to: toAddress, from: withoutLine2, frontHTML: '<html>Front</html>' })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('from[addressLine1]')).toBe('9 Return Ave')
+    expect(body.get('from[addressLine2]')).toBeNull()
+  })
+})
