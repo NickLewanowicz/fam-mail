@@ -52,6 +52,10 @@ test.describe('Responsive Layout', () => {
     await page.getByPlaceholder('M5V 2T6').fill('06510')
     await page.getByRole('button', { name: /Next: Review/ }).click()
     await expect(page.getByRole('heading', { name: 'Review & Send' })).toBeVisible()
+    // D3: the step panel enters via a 32px slide (200ms). Measure the SETTLED
+    // page, mirroring the ux-audit protocol — mid-flight transforms add
+    // transient visual overflow by design.
+    await page.waitForTimeout(400)
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(0)
   })
