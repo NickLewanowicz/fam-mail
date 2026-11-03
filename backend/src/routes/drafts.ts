@@ -194,8 +194,11 @@ export class DraftRoutes {
       allErrors.push(...addressResult.errors)
     }
 
-    // Validate sender address if provided
-    if (draft.senderAddress) {
+    // Validate sender address — required; without it PostGrid receives no
+    // return address (postgrid.ts skips the whole from[...] block).
+    if (!draft.senderAddress) {
+      allErrors.push({ field: 'from', message: 'Return address (from) is required' })
+    } else {
       const fromResult = validateAddress(draft.senderAddress, 'from')
       if (!fromResult.valid) {
         allErrors.push(...fromResult.errors)
