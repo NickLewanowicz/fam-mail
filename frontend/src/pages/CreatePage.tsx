@@ -435,11 +435,11 @@ export default function CreatePage() {
             <>
               {/* Desktop: inline nav row */}
               <motion.div key={`nav-${step}`} {...pageTransition} className="hidden md:flex justify-between mt-6 max-w-[640px] mx-auto">
-                <button className="px-4 py-2 text-sm text-warm-text2 hover:text-warm-text hover:bg-white/5 rounded-md transition-colors" onClick={handleBack}>
+                <button className="press px-4 py-2 text-sm text-warm-text2 hover:text-warm-text hover:bg-white/5 rounded-md" onClick={handleBack}>
                   ← Back
                 </button>
                 <button
-                  className="px-5 py-2 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  className="press active:scale-[0.97] px-5 py-2 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover disabled:opacity-50"
                   onClick={handleNext}
                   disabled={step === 1 && !postcard.image}
                 >
@@ -448,11 +448,11 @@ export default function CreatePage() {
               </motion.div>
               {/* Mobile: thumb-reach bottom toolbar */}
               <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink-surface/90 backdrop-blur border-t border-ink-line/60 px-4 h-16 flex items-center justify-between pb-[env(safe-area-inset-bottom)]">
-                <button className="px-4 h-11 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5 transition-colors" onClick={handleBack}>
+                <button className="press px-4 h-11 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5" onClick={handleBack}>
                   ← Back
                 </button>
                 <button
-                  className="px-6 h-11 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  className="press active:scale-[0.97] px-6 h-11 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover disabled:opacity-50"
                   onClick={handleNext}
                   disabled={step === 1 && !postcard.image}
                 >

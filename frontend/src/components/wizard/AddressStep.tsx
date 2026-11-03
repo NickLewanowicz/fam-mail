@@ -238,13 +238,13 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
 
       <div className="flex justify-between pt-4">
         <button
-          className="px-4 h-11 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+          className="press px-4 h-11 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
           onClick={onBack}
         >
           Back
         </button>
         <button
-          className="px-4 h-11 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors"
+          className="press active:scale-[0.97] px-4 h-11 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800"
           onClick={handleSubmit}
         >
           Next: Review

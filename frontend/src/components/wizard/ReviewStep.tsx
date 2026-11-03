@@ -144,7 +144,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
         </details>
 
         <button
-          className="w-full h-11 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="press active:scale-[0.97] w-full h-11 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50 flex items-center justify-center gap-2"
           disabled={!isComplete || sending}
           onClick={onSend}
         >
@@ -161,7 +161,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
           <p className="text-center text-[11px] text-zinc-500">{keyboardHint}</p>
         )}
         <div className="flex gap-2">
-          <button className="flex-1 h-11 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors" onClick={onBack}>
+          <button className="press flex-1 h-11 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md" onClick={onBack}>
             Back
           </button>
           <button
