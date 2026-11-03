@@ -32,7 +32,7 @@ export default function HistoryPage() {
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Postcard History</h1>
-          <Link to="/create" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+          <Link to="/create" className="inline-flex items-center h-11 px-2 -mx-2 text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
             New postcard
           </Link>
         </div>
@@ -46,7 +46,8 @@ export default function HistoryPage() {
         ) : postcards.length === 0 ? (
           <div className="rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 p-10 text-center">
             <p className="text-zinc-500 dark:text-zinc-500">Nothing sent yet.</p>
-            <Link to="/create" className="text-sm text-zinc-900 dark:text-zinc-100 font-medium hover:underline">
+            {/* padding + negative margin: 44px target without breaking the prose rhythm */}
+            <Link to="/create" className="inline-block px-3 py-3 -mx-3 -my-3 text-sm text-zinc-900 dark:text-zinc-100 font-medium hover:underline">
               Send your first postcard
             </Link>
           </div>
@@ -75,14 +76,14 @@ export default function HistoryPage() {
                         () => toast.error('Could not copy'),
                       )
                     }}
-                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-1.5 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                     title="Copy address"
                   >
                     Copy
                   </button>
                   <button
                     onClick={() => navigate('/create', { state: { prefillRecipient: { firstName: card.recipientName.split(' ')[0], lastName: card.recipientName.split(' ').slice(1).join(' ') || '', addressLine1: card.recipientAddress } } })}
-                    className="text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white px-1.5 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                     title="Send another card to this recipient"
                   >
                     Again
@@ -98,7 +99,7 @@ export default function HistoryPage() {
             <div className="flex justify-center mt-4">
               <button
                 onClick={() => setLimit((l) => l + 25)}
-                className="px-4 h-9 rounded-md border border-zinc-300 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="px-4 h-11 rounded-md border border-zinc-300 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               >
                 Load more
               </button>

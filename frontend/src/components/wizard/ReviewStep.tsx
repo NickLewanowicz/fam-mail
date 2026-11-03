@@ -90,7 +90,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             <button
               key={s}
               type="button"
-              className={`flex-1 py-2 rounded-md text-sm font-medium transition-colors border ${
+              className={`flex-1 h-11 rounded-md text-sm font-medium transition-colors border ${
                 size === s
                   ? 'bg-zinc-900 text-white border-zinc-900'
                   : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
@@ -110,17 +110,17 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
         {/* Schedule for later — uses the drafts schedule API; the backend
             dispatcher mails the draft when the date passes */}
         <details className="rounded-md border border-zinc-200 px-3 py-2">
-          <summary className="text-sm text-zinc-600 cursor-pointer select-none">Schedule for later…</summary>
+          <summary className="text-sm text-zinc-600 cursor-pointer select-none py-3 -my-1">Schedule for later…</summary>
           <div className="flex items-center gap-2 mt-2">
             <input
               type="datetime-local"
-              className="flex-1 h-9 rounded-md border border-zinc-300 bg-white px-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
+              className="flex-1 min-w-0 h-11 rounded-md border border-zinc-300 bg-white px-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
               value={scheduleAt}
               min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
               onChange={(e) => setScheduleAt(e.target.value)}
             />
             <button
-              className="h-9 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 transition-colors disabled:opacity-50"
+              className="h-11 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 transition-colors disabled:opacity-50"
               disabled={!scheduleAt || !isComplete || scheduling}
               onClick={async () => {
                 const when = new Date(scheduleAt)
@@ -144,7 +144,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
         </details>
 
         <button
-          className="w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full h-11 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
           disabled={!isComplete || sending}
           onClick={onSend}
         >
@@ -161,11 +161,11 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
           <p className="text-center text-[11px] text-zinc-500">{keyboardHint}</p>
         )}
         <div className="flex gap-2">
-          <button className="flex-1 h-9 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors" onClick={onBack}>
+          <button className="flex-1 h-11 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md transition-colors" onClick={onBack}>
             Back
           </button>
           <button
-            className="flex-1 h-9 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md transition-colors disabled:opacity-50"
+            className="flex-1 h-11 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md transition-colors disabled:opacity-50"
             disabled={!address?.firstName || saving}
             onClick={onSaveDraft}
           >

@@ -102,7 +102,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       <input
         type="text"
         maxLength={key === 'provinceOrState' ? 2 : key === 'postalOrZip' ? 10 : 120}
-        className={`w-full rounded-md border bg-white px-2.5 py-1.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
+        className={`w-full rounded-md border bg-white px-2.5 h-11 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
           isReturn
             ? returnErrors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
             : errors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
@@ -133,7 +133,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
                 key={`${r.firstName}-${r.addressLine1}-${i}`}
                 type="button"
                 onClick={() => setForm({ ...EMPTY_ADDRESS, ...r })}
-                className="px-2.5 py-1 rounded-full border border-zinc-200 bg-white text-xs text-zinc-700 hover:border-zinc-500 hover:bg-zinc-50 transition-colors"
+                className="inline-flex items-center min-h-11 px-3 rounded-full border border-zinc-200 bg-white text-xs text-zinc-700 hover:border-zinc-500 hover:bg-zinc-50 transition-colors"
               >
                 {r.firstName} {r.lastName} · {r.city}
               </button>
@@ -162,7 +162,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
             </div>
           ) : (
             <select
-              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
               value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
               <option value="US">United States</option>
               <option value="CA">Canada</option>
@@ -176,7 +176,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
 
       {/* Return address toggle */}
       <div>
-        <label className="flex items-center gap-3 cursor-pointer">
+        <label className="flex items-center gap-3 cursor-pointer min-h-11">
           <input
             type="checkbox"
             className="h-4 w-4 rounded border-zinc-300 accent-zinc-900"
@@ -212,7 +212,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
             <div>
               <label className="block py-1 text-xs font-medium text-zinc-600">Country</label>
               <select
-                className="w-full rounded-md border border-zinc-300 bg-white px-2.5 py-1.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+                className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
                 value={returnForm.countryCode} onChange={e => updateReturn('countryCode', e.target.value)}>
                 <option value="US">United States</option>
                 <option value="CA">Canada</option>
@@ -225,13 +225,13 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
 
       <div className="flex justify-between pt-4">
         <button
-          className="px-4 h-10 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+          className="px-4 h-11 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
           onClick={onBack}
         >
           Back
         </button>
         <button
-          className="px-4 h-10 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors"
+          className="px-4 h-11 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors"
           onClick={handleSubmit}
         >
           Next: Review

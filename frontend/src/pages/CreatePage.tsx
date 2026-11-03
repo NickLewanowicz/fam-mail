@@ -347,7 +347,7 @@ export default function CreatePage() {
                     // Can't jump past steps whose prerequisites are missing
                     if (i <= step || stepComplete[i] || stepComplete[i - 1]) setStep(i)
                   }}
-                  className="flex flex-col items-center gap-1"
+                  className="flex flex-col items-center gap-1 p-1.5 -m-1.5"
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                     isActive
@@ -365,7 +365,7 @@ export default function CreatePage() {
                   </span>
                 </button>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-8 md:w-12 h-px mx-1 ${i < step ? 'bg-clay' : 'bg-ink-line'}`} />
+                  <div className={`w-5 md:w-12 h-px mx-1 ${i < step ? 'bg-clay' : 'bg-ink-line'}`} />
                 )}
               </div>
             )
@@ -451,11 +451,11 @@ export default function CreatePage() {
               </motion.div>
               {/* Mobile: thumb-reach bottom toolbar */}
               <div className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-ink-surface/90 backdrop-blur border-t border-ink-line/60 px-4 h-16 flex items-center justify-between pb-[env(safe-area-inset-bottom)]">
-                <button className="px-4 h-10 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5 transition-colors" onClick={handleBack}>
+                <button className="px-4 h-11 text-sm text-warm-text2 hover:text-warm-text rounded-full hover:bg-white/5 transition-colors" onClick={handleBack}>
                   ← Back
                 </button>
                 <button
-                  className="px-6 h-10 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
+                  className="px-6 h-11 text-sm font-medium bg-clay text-ink-bg rounded-full hover:bg-clay-hover transition-colors disabled:opacity-50"
                   onClick={handleNext}
                   disabled={step === 1 && !postcard.image}
                 >

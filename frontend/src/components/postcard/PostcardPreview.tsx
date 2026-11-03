@@ -139,7 +139,7 @@ export function PostcardPreview({
         </span>
         <button
           onClick={onFlip}
-          className="inline-flex items-center gap-1 text-xs font-medium text-warm-text2 hover:text-warm-text transition-colors"
+          className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-1 text-xs font-medium text-warm-text2 hover:text-warm-text transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -196,11 +196,14 @@ export function PostcardPreview({
                 )}
                 {isPhotoActive && (
                   <button
-                    className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center hover:bg-red-600 transition-colors"
+                    className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center group/remove"
                     onClick={(e) => { e.stopPropagation(); onImageChange?.(null) }}
                     title="Remove"
+                    aria-label="Remove photo"
                   >
-                    ×
+                    <span className="w-6 h-6 rounded-full bg-black/50 text-white text-xs flex items-center justify-center transition-colors group-hover/remove:bg-red-600">
+                      ×
+                    </span>
                   </button>
                 )}
               </>

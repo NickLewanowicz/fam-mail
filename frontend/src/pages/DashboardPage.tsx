@@ -69,7 +69,7 @@ export default function DashboardPage() {
           </p>
           <Link
             to="/create"
-            className="inline-flex items-center gap-2 mt-5 px-4 py-2 bg-white text-zinc-900 text-sm font-medium rounded-md hover:bg-zinc-100 transition-colors"
+            className="inline-flex items-center gap-2 mt-5 h-11 px-4 bg-white text-zinc-900 text-sm font-medium rounded-md hover:bg-zinc-100 transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
               <path d="M10.75 4.75a.75.75 0 00-1.5 0v4.5h-4.5a.75.75 0 000 1.5h4.5v4.5a.75.75 0 001.5 0v-4.5h4.5a.75.75 0 000-1.5h-4.5v-4.5z" />
@@ -87,13 +87,13 @@ export default function DashboardPage() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search drafts…"
               aria-label="Search drafts"
-              className="h-8 w-44 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-sm outline-none focus:border-zinc-400"
+              className="h-11 w-44 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-sm outline-none focus:border-zinc-400"
             />
           )}
           <button
             onClick={loadDrafts}
             aria-label="Refresh drafts"
-            className="text-sm text-zinc-500 hover:text-zinc-600 transition-colors disabled:opacity-50"
+            className="h-11 w-11 flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
             disabled={loading}
           >
             {loading ? (
