@@ -31,7 +31,17 @@ export function ConfirmDialog({
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className="fixed inset-0 z-50 bg-zinc-950/40 data-[state=open]:animate-overlay-in data-[state=closed]:animate-overlay-out" />
-        <AlertDialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-xl outline-none data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out">
+        <AlertDialog.Content
+          className={
+            // M6: centered scale-fade dialog on md+, bottom sheet on phones.
+            // Radix keeps the element mounted while the closed animation
+            // plays, so data-[state=closed]:animate-* unmounts cleanly.
+            'fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-xl outline-none ' +
+            'md:w-[calc(100vw-2rem)] md:max-w-sm md:data-[state=open]:animate-dialog-in md:data-[state=closed]:animate-dialog-out ' +
+            'max-md:inset-x-0 max-md:bottom-0 max-md:top-auto max-md:translate-x-0 max-md:translate-y-0 max-md:w-full max-md:rounded-b-none max-md:rounded-t-[20px] ' +
+            'max-md:data-[state=open]:animate-sheet-in max-md:data-[state=closed]:animate-sheet-out'
+          }
+        >
           <AlertDialog.Title className="text-base font-semibold text-zinc-900">{title}</AlertDialog.Title>
           {description && (
             <AlertDialog.Description className="mt-1.5 text-sm text-zinc-600">{description}</AlertDialog.Description>
