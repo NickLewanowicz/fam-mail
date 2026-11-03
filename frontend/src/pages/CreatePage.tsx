@@ -98,6 +98,13 @@ export default function CreatePage() {
         if (draft.size) {
           setSize(draft.size as '6x4' | '9x6' | '11x6')
         }
+        // #116: restore the destination country so preview safe-zones match
+        // the saved address (recipientAddress JSON carries countryCode; older
+        // drafts may omit it — leave the default rather than guessing)
+        const draftCountry = draft.recipientAddress?.countryCode
+        if (draftCountry === 'US' || draftCountry === 'CA' || draftCountry === 'GB') {
+          setCountryCode(draftCountry)
+        }
         setActiveDraftId(draft.id)
       } catch (err) {
         if (!cancelled) toast.error(err instanceof Error ? err.message : 'Failed to load draft')
@@ -106,7 +113,7 @@ export default function CreatePage() {
       }
     })()
     return () => { cancelled = true }
-  }, [draftId, setAddress, setReturnAddress, setMessage, setImage, setSize])
+  }, [draftId, setAddress, setReturnAddress, setMessage, setImage, setSize, setCountryCode])
 
   useEffect(() => {
     if (step === 1) setShowBack(false)

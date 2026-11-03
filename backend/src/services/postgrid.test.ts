@@ -530,7 +530,8 @@ describe('PostGridService — sender fields (#100)', () => {
 
   it('drops addressLine2 when the sender has none', async () => {
     const { mockFetch, service } = serviceWithCapturedFetch()
-    const { addressLine2: _omit, ...withoutLine2 } = fromAddress
+    const withoutLine2: PostGridAddress = { ...fromAddress }
+    delete withoutLine2.addressLine2
 
     await service.createPostcard({ to: toAddress, from: withoutLine2, frontHTML: '<html>Front</html>' })
 

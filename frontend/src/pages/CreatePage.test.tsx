@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ButtonHTMLAttributes, HTMLAttributes } from 'react'
 import CreatePage from './CreatePage'
 
@@ -143,6 +143,49 @@ describe('#M5 — sticky action bar lifts AddressStep validation', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('review-step')).toBeVisible()
+    })
+  })
+})
+
+describe('#116 — draft load restores the destination country', () => {
+  it('seeds a CA draft and restores countryCode onto the wizard', async () => {
+    // useParams needs a real route match — render through the drafts route
+    const renderWithDraftRoute = () =>
+      render(
+        <MemoryRouter initialEntries={[{ pathname: '/drafts/draft-ca' }]}>
+          <Routes>
+            <Route path="/drafts/:id" element={<CreatePage />} />
+          </Routes>
+        </MemoryRouter>
+      )
+    const { getDraft } = await import('../utils/draftApi')
+    ;(getDraft as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: 'draft-ca',
+      userId: 'user-e2e-test',
+      recipientAddress: {
+        firstName: 'Jean', lastName: 'Tremblay', addressLine1: '456 Rue Principale',
+        addressLine2: '', city: 'Ottawa', provinceOrState: 'ON',
+        postalOrZip: 'K1A 0B1', countryCode: 'CA',
+      },
+      senderAddress: {
+        firstName: 'Jean', lastName: 'Tremblay', addressLine1: '456 Rue Principale',
+        addressLine2: '', city: 'Ottawa', provinceOrState: 'ON',
+        postalOrZip: 'K1A 0B1', countryCode: 'CA',
+      },
+      message: 'Bonjour from a saved draft',
+      state: 'ready',
+      size: '6x4',
+      createdAt: '2026-11-02T00:00:00Z',
+      updatedAt: '2026-11-02T00:00:00Z',
+    })
+
+    renderWithDraftRoute()
+
+    // After the draft loads, the Canada card must show as the selected
+    // destination (postcard.countryCode === 'CA'), not the US default
+    await waitFor(() => {
+      const canada = screen.getByRole('button', { name: /Canada/ })
+      expect(canada.className).toContain('border-zinc-900')
     })
   })
 })
