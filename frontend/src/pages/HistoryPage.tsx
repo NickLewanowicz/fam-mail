@@ -38,8 +38,17 @@ export default function HistoryPage() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+          <div className="space-y-2" aria-busy="true">
+            <span className="sr-only">Loading…</span>
+            {[0, 1, 2].map(i => (
+              <div key={i} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 h-4 w-1/3" aria-hidden />
+                  <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 h-3 w-2/3" aria-hidden />
+                </div>
+                <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 h-6 w-16 rounded-full shrink-0" aria-hidden />
+              </div>
+            ))}
           </div>
         ) : error ? (
           <p className="text-sm text-red-600">{error}</p>

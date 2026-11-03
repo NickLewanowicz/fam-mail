@@ -265,8 +265,13 @@ export default function CreatePage() {
 
   if (loadingDraft) {
     return (
-      <div className="flex justify-center items-center py-32">
-        <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+      <div className="container mx-auto px-4 py-6 max-w-3xl" aria-busy="true">
+        <span className="sr-only">Loading…</span>
+        <div className="flex justify-center pt-2">
+          <div className="w-full max-w-[640px]">
+            <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 aspect-[3/2] rounded-lg" aria-hidden />
+          </div>
+        </div>
       </div>
     )
   }

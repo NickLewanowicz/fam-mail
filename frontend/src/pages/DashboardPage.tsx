@@ -135,8 +135,17 @@ export default function DashboardPage() {
         />
 
         {loading ? (
-          <div className="flex justify-center py-16">
-            <div className="w-6 h-6 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" aria-busy="true">
+            <span className="sr-only">Loading…</span>
+            {[0, 1, 2].map(i => (
+              <div key={i} className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
+                <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 aspect-[3/2] rounded-none" aria-hidden />
+                <div className="p-3 space-y-2">
+                  <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 h-3 w-2/3" aria-hidden />
+                  <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 h-3 w-1/2" aria-hidden />
+                </div>
+              </div>
+            ))}
           </div>
         ) : drafts.length === 0 ? (
           <div className="text-center py-16 border border-dashed border-zinc-200 rounded-lg">
