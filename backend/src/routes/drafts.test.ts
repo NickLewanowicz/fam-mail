@@ -58,6 +58,13 @@ function createMockPostgrid(overrides: Partial<{
   };
 }
 
+// Minimal 1x1 white JPEG (smallest valid JPEG) — same fixture as postcards.test.ts
+const minimalJPEG = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AKwA//9k=';
+
+// GIF89a header bytes — valid base64, but rejected format (JPEG/PNG/WebP only)
+const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
+const gifBase64 = Buffer.from(gifBytes).toString('base64');
+
 describe("DraftRoutes", () => {
   let db: Database;
   let draftRoutes: DraftRoutes;
@@ -549,6 +556,135 @@ describe("DraftRoutes", () => {
       // Should have exactly one content error
       const contentErrors = data.errors!.filter((e: { field?: string }) => e.field === "content");
       expect(contentErrors.length).toBe(1);
+    });
+
+    it("should publish an image-only draft (imageData counts as content)", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.message = undefined;
+      draft.frontHTML = undefined;
+      draft.backHTML = undefined;
+      draft.imageData = `data:image/jpeg;base64,${minimalJPEG}`;
+      db.insertDraft(draft);
+
+      let capturedRequest: Record<string, unknown> = null;
+      const spyPostgrid = createMockPostgrid({
+        createPostcard: async (req: unknown) => {
+          capturedRequest = req;
+          return {
+            id: 'postgrid-spy-id',
+            object: 'postcard' as const,
+            live: false,
+            to: req.to,
+            size: req.size,
+            status: 'ready' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { success?: boolean };
+
+      expect(response.status).toBe(200);
+      expect(data.success).toBe(true);
+      expect(capturedRequest).not.toBeNull();
+      // Image must reach PostGrid as the front, not be silently dropped
+      expect(capturedRequest.frontHTML).toContain("<img");
+      expect(capturedRequest.frontHTML).toContain(minimalJPEG);
+    });
+
+    it("should build frontHTML from imageData while message renders the back", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.frontHTML = undefined;
+      draft.backHTML = undefined;
+      draft.imageData = `data:image/jpeg;base64,${minimalJPEG}`;
+      db.insertDraft(draft);
+
+      let capturedRequest: Record<string, unknown> = null;
+      const spyPostgrid = createMockPostgrid({
+        createPostcard: async (req: unknown) => {
+          capturedRequest = req;
+          return {
+            id: 'postgrid-spy-id',
+            object: 'postcard' as const,
+            live: false,
+            to: req.to,
+            size: req.size,
+            status: 'ready' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      expect(response.status).toBe(200);
+      expect(capturedRequest).not.toBeNull();
+      expect(capturedRequest.frontHTML).toContain("<img");
+      expect(capturedRequest.frontHTML).toContain(minimalJPEG);
+      // Message still renders the back side
+      expect(capturedRequest.backHTML).toContain("Hello from the test!");
+    });
+
+    it("should return 400 when draft imageData is invalid", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.message = undefined;
+      draft.frontHTML = undefined;
+      draft.backHTML = undefined;
+      draft.imageData = `data:image/gif;base64,${gifBase64}`;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      const imageErrors = data.errors!.filter((e: { field?: string }) => e.field === "image");
+      expect(imageErrors.length).toBe(1);
+    });
+
+    it("should accept raw base64 imageData without a data URL prefix", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.message = undefined;
+      draft.frontHTML = undefined;
+      draft.backHTML = undefined;
+      draft.imageData = minimalJPEG;
+      db.insertDraft(draft);
+
+      let capturedRequest: Record<string, unknown> = null;
+      const spyPostgrid = createMockPostgrid({
+        createPostcard: async (req: unknown) => {
+          capturedRequest = req;
+          return {
+            id: 'postgrid-spy-id',
+            object: 'postcard' as const,
+            live: false,
+            to: req.to,
+            size: req.size,
+            status: 'ready' as const,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+        },
+      });
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      expect(response.status).toBe(200);
+      expect(capturedRequest).not.toBeNull();
+      expect(capturedRequest.frontHTML).toContain("<img");
+      expect(capturedRequest.frontHTML).toContain(minimalJPEG);
     });
 
     it("should return 500 when PostGrid service is not configured", async () => {
