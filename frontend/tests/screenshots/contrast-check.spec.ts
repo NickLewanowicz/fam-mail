@@ -55,7 +55,15 @@ test('contrast sweep: light (dashboard)', async ({ page }) => {
       if (el.closest('[aria-hidden="true"]')) continue
       if (/^[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}]+$/u.test(text)) continue
       const cs = getComputedStyle(el)
-      if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue
+      // display isn't inherited: a child of a display:none ancestor still
+      // reports its own display — walk up so hidden subtrees stay exempt
+      let anc: Element | null = el
+      let inHiddenSubtree = false
+      while (anc) {
+        if (getComputedStyle(anc).display === 'none') { inHiddenSubtree = true; break }
+        anc = anc.parentElement
+      }
+      if (inHiddenSubtree || cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue
       const fg = parse(cs.color)
       let bg = bgOf(el)
       const under = overlayBgOf(el)
@@ -141,7 +149,15 @@ test('contrast sweep: editor (create flow)', async ({ page }) => {
       if (el.closest('[aria-hidden="true"]')) continue
       if (/^[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}]+$/u.test(text)) continue
       const cs = getComputedStyle(el)
-      if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue
+      // display isn't inherited: a child of a display:none ancestor still
+      // reports its own display — walk up so hidden subtrees stay exempt
+      let anc: Element | null = el
+      let inHiddenSubtree = false
+      while (anc) {
+        if (getComputedStyle(anc).display === 'none') { inHiddenSubtree = true; break }
+        anc = anc.parentElement
+      }
+      if (inHiddenSubtree || cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue
       const fg = parse(cs.color)
       let bg = bgOf(el)
       const under = overlayBgOf(el)
