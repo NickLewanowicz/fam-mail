@@ -128,6 +128,9 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       senderEmail: user.email,
       recipientName: `${to.firstName} ${to.lastName}`,
       recipientAddress: `${to.addressLine1}, ${to.city}, ${to.provinceOrState} ${to.postalOrZip}`,
+      // #109: keep the structured address so History "Again" can prefill
+      // city/ZIP/country instead of a formatted string
+      recipientAddressJson: JSON.stringify(to),
       postgridPostcardId: result.id,
       postgridMode: postgridService.getTestMode() ? 'test' : 'live',
       forcedTestMode: false,

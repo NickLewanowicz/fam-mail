@@ -47,7 +47,9 @@ export default function CreatePage() {
   useEffect(() => {
     const prefill = (location.state as { prefillRecipient?: Address } | null)?.prefillRecipient
     if (prefill?.firstName) {
-      postcard.setAddress({ ...prefill, city: '', provinceOrState: '', postalOrZip: '', countryCode: 'US' })
+      // Full structured address (post-#109); fields stay editable on the
+      // Address step the user lands on.
+      postcard.setAddress(prefill)
       setStep(3)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

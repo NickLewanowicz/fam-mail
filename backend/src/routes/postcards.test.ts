@@ -2160,3 +2160,46 @@ describe('handlePostcardCreate — DOMPurify Comprehensive (#22)', () => {
     expect(res.status).not.toBe(400)
   })
 })
+
+// ============================================================================
+// Structured recipient persistence (#109)
+// History's "Again" needs the structured address back; the formatted
+// recipient_address string alone can't reconstruct country/city/ZIP.
+// ============================================================================
+
+describe('handlePostcardCreate — structured recipient persistence (#109)', () => {
+  let db: Database
+
+  beforeEach(() => {
+    db = new Database(':memory:')
+  })
+
+  it('persists the structured to-address and lists it back parseable', async () => {
+    const svc = new PostGridService({
+      mode: 'test', testApiKey: 't', liveApiKey: 'l',
+      forceTestMode: false, mockMode: true, webhookSecret: '', size: '6x4', senderId: '',
+    })
+    spyOn(svc, 'createPostcard').mockImplementation(async (request) => ({
+      id: 'pc_ca_109', object: 'postcard', live: false, status: 'ready',
+      to: request.to, size: request.size ?? '6x4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }) as never)
+    setPostgridService(svc)
+    try {
+      const req = makeRequest({
+        to: validCAAddress,
+        message: 'Again-test card',
+      })
+      const res = await handlePostcardCreate(req, mockUser, db)
+      expect(res.status).toBe(200)
+
+      const records = db.listPostcardsByUser(mockUser.id)
+      expect(records.length).toBe(1)
+      expect(records[0].recipientAddressJson).toBeTruthy()
+      const structured = JSON.parse(records[0].recipientAddressJson!)
+      expect(structured).toEqual(validCAAddress)
+    } finally {
+      setPostgridService(null as unknown as PostGridService)
+    }
+  })
+})

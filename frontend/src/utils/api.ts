@@ -81,11 +81,25 @@ export async function submitPostcard(
 
 
 
+/** Structured recipient address — persisted by the backend since #109. */
+export interface SentPostcardAddress {
+  firstName?: string
+  lastName?: string
+  addressLine1?: string
+  addressLine2?: string
+  city?: string
+  provinceOrState?: string
+  postalOrZip?: string
+  countryCode?: string
+}
+
 export interface SentPostcard {
   id: string
   postgridId?: string
   recipientName: string
   recipientAddress: string
+  /** Structured address, present on cards sent after #109; older records omit it. */
+  to?: SentPostcardAddress
   status: string
   mode: 'test' | 'live' | string
   createdAt: string

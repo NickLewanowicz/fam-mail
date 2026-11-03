@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS postcards (
   sender_email TEXT NOT NULL,
   recipient_name TEXT NOT NULL,
   recipient_address TEXT NOT NULL,
+  recipient_address_json TEXT,
   postgrid_postcard_id TEXT,
   postgrid_mode TEXT NOT NULL CHECK(postgrid_mode IN ('test', 'live')),
   forced_test_mode BOOLEAN NOT NULL DEFAULT 0,

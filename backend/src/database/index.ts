@@ -11,6 +11,8 @@ export interface PostcardRecord {
   senderEmail: string;
   recipientName: string;
   recipientAddress: string;
+  /** JSON-serialized structured recipient address (#109 — "Again" prefill). */
+  recipientAddressJson?: string;
   postgridPostcardId?: string;
   postgridMode: "test" | "live";
   forcedTestMode: boolean;
@@ -32,6 +34,7 @@ interface PostcardRow {
   sender_email: string;
   recipient_name: string;
   recipient_address: string;
+  recipient_address_json?: string | null;
   postgrid_postcard_id: string | null;
   postgrid_mode: string;
   forced_test_mode: number;
@@ -137,9 +140,32 @@ export class Database {
     try {
       const schema = readFileSync(join(__dirname, "schema.sql"), "utf-8");
       this.db.exec(schema);
+      this.migrateSchema();
     } catch (error) {
       throw new DatabaseError(
         `Failed to initialize database schema: ${(error as Error)?.message ?? String(error)}`,
+        error
+      );
+    }
+  }
+
+  /**
+   * Idempotent migrations for databases created before a column existed.
+   * schema.sql's CREATE TABLE IF NOT EXISTS won't touch an existing file DB,
+   * so new columns are added here with PRAGMA guards.
+   * @private
+   */
+  private migrateSchema(): void {
+    try {
+      const postcardColumns = this.db.prepare("PRAGMA table_info(postcards)").all() as Array<{ name: string }>;
+      const has = (name: string) => postcardColumns.some((c) => c.name === name);
+      // #109: structured recipient address for History "Again" prefill
+      if (!has("recipient_address_json")) {
+        this.db.exec("ALTER TABLE postcards ADD COLUMN recipient_address_json TEXT");
+      }
+    } catch (error) {
+      throw new DatabaseError(
+        `Failed to migrate database schema: ${(error as Error)?.message ?? String(error)}`,
         error
       );
     }
@@ -182,9 +208,10 @@ export class Database {
       const stmt = this.db.prepare(`
         INSERT INTO postcards (
           id, email_message_id, sender_email, recipient_name, recipient_address,
+          recipient_address_json,
           postgrid_postcard_id, postgrid_mode, forced_test_mode, status, error_message,
           user_id, draft_id, scheduled_for
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       stmt.run(
@@ -193,6 +220,7 @@ export class Database {
         data.senderEmail,
         data.recipientName,
         data.recipientAddress,
+        data.recipientAddressJson || null,
         data.postgridPostcardId || null,
         data.postgridMode,
         this.boolToInt(data.forcedTestMode),
@@ -324,6 +352,7 @@ export class Database {
       senderEmail: row.sender_email,
       recipientName: row.recipient_name,
       recipientAddress: row.recipient_address,
+      recipientAddressJson: row.recipient_address_json || undefined,
       postgridPostcardId: row.postgrid_postcard_id || undefined,
       postgridMode: row.postgrid_mode as PostcardRecord["postgridMode"],
       forcedTestMode: this.intToBool(row.forced_test_mode),
