@@ -64,6 +64,9 @@ describe('scheduled draft dispatcher', () => {
       id,
       userId,
       recipientAddress: address,
+      // #118: publish requires the sender — the scheduler tests exercise
+      // retry/clear behavior, not the sender gate
+      senderAddress: address,
       message: 'Happy birthday from the scheduler!',
       state: 'ready',
       size: '6x4',
