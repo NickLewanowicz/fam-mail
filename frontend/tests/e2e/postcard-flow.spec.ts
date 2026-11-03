@@ -21,7 +21,9 @@ test.describe('Postcard Creation Flow', () => {
 
   test('navbar shows Fam Mail and New link', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText('Fam Mail')).toBeVisible()
+    // #102: the wordmark text hides below sm on phones; the logo link keeps
+    // its accessible name so the brand is still exposed to AT and tests
+    await expect(page.getByRole('link', { name: 'Fam Mail home' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'New', exact: true })).toBeVisible()
   })
 
