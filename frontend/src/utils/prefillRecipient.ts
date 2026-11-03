@@ -43,3 +43,12 @@ export function prefillContentFrom(card: SentPostcard): PrefillContent | undefin
   return { ...(imageData ? { imageData } : {}), ...(message ? { message } : {}) }
 }
 
+/**
+ * ISSUE-0120: honest reuse toast — the copy names exactly what was
+ * restored, never more.
+ */
+export function restoredContentCopy(photo: boolean, message: boolean): string {
+  const what = photo && message ? 'Photo and message' : photo ? 'Photo' : message ? 'Message' : ''
+  return `${what} copied from your last card — edit anything you like`
+}
+

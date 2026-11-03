@@ -8,6 +8,7 @@ import { PostcardPreview, type ActiveZone } from '../components/postcard/Postcar
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { WizardActionBar } from '../components/wizard/WizardActionBar'
 import { truthCopy } from '../utils/postcardPricing'
+import { restoredContentCopy } from '../utils/prefillRecipient'
 import { fetchPostgridStatus, type PostgridApiMode } from '../utils/postgridApi'
 import type { WizardStepActions } from '../components/wizard/AddressStep'
 import { CountryStep } from '../components/wizard/CountryStep'
@@ -97,7 +98,12 @@ export default function CreatePage() {
       // editable. Legacy cards (no content) keep the recipient-only flow.
       const content = state?.prefillContent
       if (content?.imageData || content?.message) {
-        if (content.message) setMessage(content.message)
+        let photoRestored = false
+        let messageRestored = false
+        if (content.message) {
+          setMessage(content.message)
+          messageRestored = true
+        }
         if (content.imageData) {
           const dataUrl = content.imageData.startsWith('data:')
             ? content.imageData
@@ -106,13 +112,17 @@ export default function CreatePage() {
             const res = await fetch(dataUrl)
             const blob = await res.blob()
             const file = new File([blob], 'previous-card.jpg', { type: blob.type || 'image/jpeg' })
-            if (!cancelled) setImage({ file, preview: dataUrl })
+            if (!cancelled) {
+              setImage({ file, preview: dataUrl })
+              photoRestored = true
+            }
           } catch {
             if (!cancelled) toast.error('Could not restore the previous photo')
           }
         }
         if (!cancelled) {
-          toast.success('Photo and message copied from your last card — edit anything you like')
+          // #120: the toast names exactly what was restored — never more
+          toast.success(restoredContentCopy(photoRestored, messageRestored))
           goTo(2)
         }
         return
