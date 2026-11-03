@@ -111,7 +111,7 @@ export default function DashboardPage() {
           <button
             onClick={loadDrafts}
             aria-label="Refresh drafts"
-            className="h-11 w-11 flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className="press h-11 w-11 flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
             disabled={loading}
           >
             {loading ? (
@@ -210,13 +210,13 @@ export default function DashboardPage() {
                     </span>
                     <button
                         onClick={(e) => { e.stopPropagation(); exportDraftJson(draft) }}
-                        className="text-xs text-zinc-500 hover:text-zinc-900 transition-colors"
+                        className="press text-xs text-zinc-500 hover:text-zinc-900"
                         title="Export draft as JSON"
                       >
                         Export
                       </button>
                       <button
-                      className="text-xs text-zinc-500 hover:text-red-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 transition-all"
+                      className="press text-xs text-zinc-500 hover:text-red-600 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100"
                       onClick={(e) => { e.stopPropagation(); setDeleteTarget(draft) }}
                     >
                       Delete

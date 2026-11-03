@@ -30,7 +30,7 @@ export function CountryStep({ countryCode, onCountryChange, onNext }: Props) {
           <button
             key={c.code}
             type="button"
-            className={`rounded-lg border-2 p-4 text-center transition-colors ${
+            className={`press rounded-lg border-2 p-4 text-center ${
               countryCode === c.code
                 ? 'border-zinc-900 bg-zinc-50'
                 : 'border-zinc-200 hover:border-zinc-400 bg-white'

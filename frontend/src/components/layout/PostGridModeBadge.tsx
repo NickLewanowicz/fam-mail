@@ -75,7 +75,7 @@ export function PostGridModeBadge() {
   return (
     <>
       <Tag
-        className={`inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border ${cls} ${canToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
+        className={`press inline-flex items-center px-2 py-0.5 text-xs font-medium rounded border ${cls} ${canToggle ? 'cursor-pointer hover:opacity-80' : ''}`}
         {...(canToggle ? {
           onClick: requestToggle,
           disabled: loading,

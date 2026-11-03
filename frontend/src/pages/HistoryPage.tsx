@@ -85,14 +85,14 @@ export default function HistoryPage() {
                         () => toast.error('Could not copy'),
                       )
                     }}
-                    className="inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="press inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     title="Copy address"
                   >
                     Copy
                   </button>
                   <button
                     onClick={() => navigate('/create', { state: { prefillRecipient: prefillRecipientFrom(card) } })}
-                    className="inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    className="press inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     title="Send another card to this recipient"
                   >
                     Again
@@ -108,7 +108,7 @@ export default function HistoryPage() {
             <div className="flex justify-center mt-4">
               <button
                 onClick={() => setLimit((l) => l + 25)}
-                className="px-4 h-11 rounded-md border border-zinc-300 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                className="press px-4 h-11 rounded-md border border-zinc-300 dark:border-zinc-700 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
               >
                 Load more
               </button>

@@ -59,7 +59,7 @@ export function InlineAddressForm({ address, onAddressChange, onClose, countryCo
         <span className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">Recipient</span>
         <button
           type="button"
-          className="px-2.5 py-0.5 rounded-md font-medium bg-zinc-900 text-white text-[10px] hover:bg-zinc-800 transition-colors"
+          className="press px-2.5 py-0.5 rounded-md font-medium bg-zinc-900 text-white text-[10px] hover:bg-zinc-800"
           onClick={handleDone}
         >
           Done

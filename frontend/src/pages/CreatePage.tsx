@@ -316,14 +316,14 @@ export default function CreatePage() {
             <div className="flex flex-col gap-2 mt-6">
               <button
                 onClick={() => { postcard.reset(); setResult(null); goTo(0); setActiveDraftId(null) }}
-                className="w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors"
+                className="press active:scale-[0.97] w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800"
               >
                 Create Another
               </button>
-              <button onClick={() => navigate('/')} className="text-sm text-zinc-500 hover:text-zinc-700 py-2">
+              <button onClick={() => navigate('/')} className="press text-sm text-zinc-500 hover:text-zinc-700 py-2">
                 Back to Dashboard
               </button>
-              <button onClick={() => navigate('/history')} className="text-sm text-zinc-500 hover:text-zinc-700 py-2">
+              <button onClick={() => navigate('/history')} className="press text-sm text-zinc-500 hover:text-zinc-700 py-2">
                 View postcard history
               </button>
             </div>
@@ -361,7 +361,7 @@ export default function CreatePage() {
                     // Can't jump past steps whose prerequisites are missing
                     if (i <= step || stepComplete[i] || stepComplete[i - 1]) goTo(i)
                   }}
-                  className="flex flex-col items-center gap-1 p-1.5 -m-1.5"
+                  className="press flex flex-col items-center gap-1 p-1.5 -m-1.5"
                 >
                   <div className={`relative w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium transition-colors ${
                     isActive

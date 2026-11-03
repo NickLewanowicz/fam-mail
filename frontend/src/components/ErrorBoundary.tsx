@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               )}
               <div className="card-actions justify-center mt-6 gap-2">
                 <button
-                  className="h-10 px-4 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800 transition-colors"
+                  className="press h-10 px-4 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800"
                   onClick={this.handleReset}
                 >
                   Try again

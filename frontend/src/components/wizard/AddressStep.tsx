@@ -146,7 +146,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
                 key={`${r.firstName}-${r.addressLine1}-${i}`}
                 type="button"
                 onClick={() => setForm({ ...EMPTY_ADDRESS, ...r })}
-                className="inline-flex items-center min-h-11 px-3 rounded-full border border-zinc-200 bg-white text-xs text-zinc-700 hover:border-zinc-500 hover:bg-zinc-50 transition-colors"
+                className="press inline-flex items-center min-h-11 px-3 rounded-full border border-zinc-200 bg-white text-xs text-zinc-700 hover:border-zinc-500 hover:bg-zinc-50"
               >
                 {r.firstName} {r.lastName} · {r.city}
               </button>

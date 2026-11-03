@@ -60,8 +60,8 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
               title="Toggle dark mode"
               className={
                 variant === 'editor'
-                  ? 'h-11 w-11 inline-flex items-center justify-center rounded-md text-warm-text2 hover:text-warm-text hover:bg-white/5 transition-colors'
-                  : 'h-11 w-11 inline-flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors'
+                  ? 'press h-11 w-11 inline-flex items-center justify-center rounded-md text-warm-text2 hover:text-warm-text hover:bg-white/5'
+                  : 'press h-11 w-11 inline-flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800'
               }
             >
               {dark ? (
@@ -119,7 +119,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
                 <ul tabIndex={0} className="menu menu-sm dropdown-content bg-white rounded-lg z-[1] mt-2 w-52 p-1.5 shadow-lg border border-zinc-200">
                   <li className="px-2 py-1.5 text-xs font-medium text-zinc-500">Account</li>
                   <li><span className="text-sm text-zinc-500 cursor-default">{user.email}</span></li>
-                  <li><button onClick={logout} className="text-sm text-red-600 hover:bg-red-50">Sign out</button></li>
+                  <li><button onClick={logout} className="press text-sm text-red-600 hover:bg-red-50">Sign out</button></li>
                 </ul>
               </div>
             )}

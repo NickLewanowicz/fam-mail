@@ -90,7 +90,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             <button
               key={s}
               type="button"
-              className={`flex-1 h-11 rounded-md text-sm font-medium transition-colors border ${
+              className={`press flex-1 h-11 rounded-md text-sm font-medium border ${
                 size === s
                   ? 'bg-zinc-900 text-white border-zinc-900'
                   : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
@@ -120,7 +120,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               onChange={(e) => setScheduleAt(e.target.value)}
             />
             <button
-              className="h-11 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 transition-colors disabled:opacity-50"
+              className="press h-11 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:opacity-50"
               disabled={!scheduleAt || !isComplete || scheduling}
               onClick={async () => {
                 const when = new Date(scheduleAt)
@@ -165,7 +165,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             Back
           </button>
           <button
-            className="flex-1 h-11 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md transition-colors disabled:opacity-50"
+            className="press flex-1 h-11 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md disabled:opacity-50"
             disabled={!address?.firstName || saving}
             onClick={onSaveDraft}
           >

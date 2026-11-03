@@ -53,7 +53,7 @@ export function LoginPage() {
           )}
 
           <button
-            className="w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 transition-colors disabled:opacity-50"
+            className="press active:scale-[0.97] w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50"
             onClick={handleLogin}
             disabled={isLoading}
           >

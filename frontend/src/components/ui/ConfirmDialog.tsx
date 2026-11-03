@@ -40,7 +40,7 @@ export function ConfirmDialog({
             <AlertDialog.Cancel asChild>
               <button
                 type="button"
-                className="h-9 rounded-md px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 transition-colors"
+                className="press h-9 rounded-md px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
               >
                 {cancelLabel}
               </button>
@@ -49,7 +49,7 @@ export function ConfirmDialog({
               <button
                 type="button"
                 onClick={onConfirm}
-                className={`h-9 rounded-md px-3 text-sm font-medium text-white transition-colors ${
+                className={`press h-9 rounded-md px-3 text-sm font-medium text-white ${
                   destructive ? 'bg-red-600 hover:bg-red-700' : 'bg-zinc-900 hover:bg-zinc-800'
                 }`}
               >

@@ -143,7 +143,7 @@ export function PostcardPreview({
           onClick={onFlip}
           aria-keyshortcuts="F"
           title="Flip card (F)"
-          className="inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-1 text-xs font-medium text-warm-text2 hover:text-warm-text transition-colors"
+          className="press inline-flex items-center justify-center gap-1 min-h-11 min-w-11 px-1 text-xs font-medium text-warm-text2 hover:text-warm-text"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -155,7 +155,7 @@ export function PostcardPreview({
       {photoError && (
         <div className="flex items-center justify-between px-3 py-2 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm">
           <span>{photoError}</span>
-          <button onClick={() => setPhotoError(null)} className="text-xs font-medium text-red-700">Dismiss</button>
+          <button onClick={() => setPhotoError(null)} className="press text-xs font-medium text-red-700">Dismiss</button>
         </div>
       )}
 
@@ -205,7 +205,7 @@ export function PostcardPreview({
                 )}
                 {isPhotoActive && (
                   <button
-                    className="absolute top-1 right-1 w-11 h-11 flex items-center justify-center group/remove"
+                    className="press absolute top-1 right-1 w-11 h-11 flex items-center justify-center group/remove"
                     onClick={(e) => { e.stopPropagation(); onImageChange?.(null) }}
                     title="Remove"
                     aria-label="Remove photo"

@@ -156,7 +156,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
           <button
             key={action.label}
             type="button"
-            className={`w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center ${action.iconClass ?? ''}`}
+            className={`press w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center ${action.iconClass ?? ''}`}
             title={action.label}
             aria-label={action.label}
             // Keep focus (and any text selection) in the textarea — clicking a
@@ -170,7 +170,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div>
           <button
             type="button"
-            className="w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 transition-colors flex items-center justify-center"
+            className="press w-9 h-9 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center"
             title="Text color"
             aria-label="Text color"
             aria-haspopup="true"
@@ -193,7 +193,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
                   role="menuitem"
                   aria-label={`${color.name} (${color.hex})`}
                   title={color.name}
-                  className="w-6 h-6 rounded-full border border-zinc-200 hover:ring-2 hover:ring-offset-1 hover:ring-zinc-300 transition-shadow"
+                  className="press w-6 h-6 rounded-full border border-zinc-200 hover:ring-2 hover:ring-offset-1 hover:ring-zinc-300"
                   style={{ backgroundColor: color.hex }}
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => applyTextColor(color.hex)}
@@ -222,7 +222,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div className="flex-1" />
         <button
           type="button"
-          className="px-3 py-1.5 rounded-lg font-medium bg-zinc-900 text-white text-xs hover:bg-zinc-800 transition-colors"
+          className="press px-3 py-1.5 rounded-lg font-medium bg-zinc-900 text-white text-xs hover:bg-zinc-800"
           onClick={onClose}
         >
           Done
