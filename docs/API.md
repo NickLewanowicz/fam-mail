@@ -459,7 +459,7 @@ Content-Type: application/json
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | recipientAddress | Address | Yes | Recipient's mailing address |
-| senderAddress | Address | No | Return address (optional, may use default) |
+| senderAddress | Address | No | Return address. Optional to store, but **required to publish** — publishing a draft without one fails with 400, `field: "from"` (ADR 0002: the server never invents a return address; the wizard materializes recipient-as-return client-side before submit) |
 | message | string | No | Markdown message for the postcard |
 | frontHTML | string | No | HTML content for the front side |
 | backHTML | string | No | HTML content for the back side |
@@ -733,7 +733,7 @@ Authorization: Bearer <access_token>
 Before publishing, the following validations are performed:
 
 1. **Recipient Address**: All required fields present, valid postal code for country
-2. **Sender Address** (if provided): Same validation as recipient
+2. **Sender Address**: required — same validation as recipient when present; a draft without a sender address fails with 400 and `field: "from"` (ADR 0002: without a sender, PostGrid receives no return address)
 3. **Content**: At least one of `frontHTML`, `backHTML`, or `message` must be present
 4. **Message** (if present): Length limits, sanitized HTML
 5. **Size**: Must be valid PostGrid size (`6x4`, `9x6`, or `11x6`)
