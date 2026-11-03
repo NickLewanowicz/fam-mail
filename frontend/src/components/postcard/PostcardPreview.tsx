@@ -231,7 +231,7 @@ export function PostcardPreview({
                     <span className="text-xs text-warm-text3">or drag and drop</span>
                   </div>
                 ) : (
-                  <span className="text-sm text-stone-600">Photo</span>
+                  <span className="text-sm text-warm-text2">Photo</span>
                 )}
               </div>
             )}
@@ -272,7 +272,7 @@ export function PostcardPreview({
                 ) : messageHtml ? (
                   <div className="prose prose-sm max-w-none text-stone-800" style={{ fontSize: '12px', lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: messageHtml }} />
                 ) : (
-                  <p className="text-stone-500 text-xs italic">
+                  <p className="text-stone-600 text-xs italic">
                     {isMessageActive ? 'Click to write...' : 'Your message'}
                   </p>
                 )}
@@ -320,7 +320,7 @@ export function PostcardPreview({
                           <p className="text-stone-400">{address.countryCode}</p>
                         </div>
                       ) : (
-                        <p className="text-stone-500 text-xs italic">
+                        <p className="text-stone-600 text-xs italic">
                           {isAddressActive ? 'Click to add...' : 'Address'}
                         </p>
                       )}

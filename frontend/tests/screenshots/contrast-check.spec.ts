@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { test } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import { setupMockAuth, setupMockApi } from '../e2e/helpers'
 
 test('contrast sweep: light (dashboard)', async ({ page }) => {
@@ -27,6 +27,22 @@ test('contrast sweep: light (dashboard)', async ({ page }) => {
       }
       return [255, 255, 255, 1]
     }
+    // Absolutely-positioned underlays (e.g. layoutId pills) paint behind text
+    // without being ancestors — check opaque siblings that geometrically
+    // contain the text's rect (fixes the step-indicator morph false positive)
+    function overlayBgOf(el: Element): [number, number, number, number] | null {
+      const r = el.getBoundingClientRect()
+      const parent = el.parentElement
+      if (!parent) return null
+      for (const sib of Array.from(parent.children)) {
+        if (sib === el) continue
+        const c = parse(getComputedStyle(sib).backgroundColor)
+        if (!c || c[3] < 0.9) continue
+        const sr = sib.getBoundingClientRect()
+        if (sr.left <= r.left && sr.right >= r.right && sr.top <= r.top && sr.bottom >= r.bottom) return c
+      }
+      return null
+    }
     const out: string[] = []
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
     let n: Node | null
@@ -41,7 +57,9 @@ test('contrast sweep: light (dashboard)', async ({ page }) => {
       const cs = getComputedStyle(el)
       if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue
       const fg = parse(cs.color)
-      const bg = bgOf(el)
+      let bg = bgOf(el)
+      const under = overlayBgOf(el)
+      if (under) bg = under
       if (!fg || !bg) continue
       const a = fg[3]
       const comp = [fg[0] * a + bg[0] * (1 - a), fg[1] * a + bg[1] * (1 - a), fg[2] * a + bg[2] * (1 - a)] as [number, number, number]
@@ -58,6 +76,7 @@ test('contrast sweep: light (dashboard)', async ({ page }) => {
   })
   console.log('LIGHT-MODE CONTRAST FAILURES:')
   failures.forEach((f) => console.log('  ' + f))
+  expect(failures, 'light-mode contrast failures').toEqual([])
 })
 
 test('contrast sweep: editor (create flow)', async ({ page }) => {
@@ -94,6 +113,22 @@ test('contrast sweep: editor (create flow)', async ({ page }) => {
       }
       return acc
     }
+    // Absolutely-positioned underlays (e.g. layoutId pills) paint behind text
+    // without being ancestors — check opaque siblings that geometrically
+    // contain the text's rect (fixes the step-indicator morph false positive)
+    function overlayBgOf(el: Element): [number, number, number, number] | null {
+      const r = el.getBoundingClientRect()
+      const parent = el.parentElement
+      if (!parent) return null
+      for (const sib of Array.from(parent.children)) {
+        if (sib === el) continue
+        const c = parse(getComputedStyle(sib).backgroundColor)
+        if (!c || c[3] < 0.9) continue
+        const sr = sib.getBoundingClientRect()
+        if (sr.left <= r.left && sr.right >= r.right && sr.top <= r.top && sr.bottom >= r.bottom) return c
+      }
+      return null
+    }
     const out: string[] = []
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
     let n: Node | null
@@ -108,7 +143,9 @@ test('contrast sweep: editor (create flow)', async ({ page }) => {
       const cs = getComputedStyle(el)
       if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) continue
       const fg = parse(cs.color)
-      const bg = bgOf(el)
+      let bg = bgOf(el)
+      const under = overlayBgOf(el)
+      if (under) bg = under
       if (!fg || !bg) continue
       const a = fg[3]
       const comp = [fg[0] * a + bg[0] * (1 - a), fg[1] * a + bg[1] * (1 - a), fg[2] * a + bg[2] * (1 - a)] as [number, number, number]
@@ -125,4 +162,5 @@ test('contrast sweep: editor (create flow)', async ({ page }) => {
   })
   console.log('EDITOR CONTRAST FAILURES:')
   failures.forEach((f) => console.log('  ' + f))
+  expect(failures, 'editor contrast failures').toEqual([])
 })
