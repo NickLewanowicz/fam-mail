@@ -96,13 +96,26 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
     }
   }
 
+  // Standard autofill tokens so iOS/Chrome can fill the address form (#104)
+  const AUTOCOMPLETE: Partial<Record<keyof Address, string>> = {
+    firstName: 'given-name',
+    lastName: 'family-name',
+    addressLine1: 'address-line1',
+    addressLine2: 'address-line2',
+    city: 'address-level2',
+    provinceOrState: 'address-level1',
+    postalOrZip: 'postal-code',
+  }
+
   const field = (label: string, key: keyof Address, placeholder: string, half = false, isReturn = false) => (
     <div className={half ? 'w-full' : 'w-full'}>
       <label className="block py-1 text-xs font-medium text-zinc-600">{label}</label>
       <input
         type="text"
         maxLength={key === 'provinceOrState' ? 2 : key === 'postalOrZip' ? 10 : 120}
-        className={`w-full rounded-md border bg-white px-2.5 h-11 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
+        autoComplete={AUTOCOMPLETE[key]}
+        inputMode={key === 'postalOrZip' ? ((isReturn ? returnForm.countryCode : form.countryCode).toUpperCase() === 'US' ? 'numeric' : 'text') : undefined}
+        className={`w-full rounded-md border bg-white px-2.5 h-11 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
           isReturn
             ? returnErrors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
             : errors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
@@ -162,7 +175,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
             </div>
           ) : (
             <select
-              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
               value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
               <option value="US">United States</option>
               <option value="CA">Canada</option>
@@ -212,7 +225,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
             <div>
               <label className="block py-1 text-xs font-medium text-zinc-600">Country</label>
               <select
-                className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+                className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
                 value={returnForm.countryCode} onChange={e => updateReturn('countryCode', e.target.value)}>
                 <option value="US">United States</option>
                 <option value="CA">Canada</option>

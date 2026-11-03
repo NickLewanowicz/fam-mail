@@ -114,7 +114,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
           <div className="flex items-center gap-2 mt-2">
             <input
               type="datetime-local"
-              className="flex-1 min-w-0 h-11 rounded-md border border-zinc-300 bg-white px-2.5 text-sm text-zinc-900 outline-none transition-colors focus:border-zinc-500"
+              className="flex-1 min-w-0 h-11 rounded-md border border-zinc-300 bg-white px-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-500"
               value={scheduleAt}
               min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
               onChange={(e) => setScheduleAt(e.target.value)}

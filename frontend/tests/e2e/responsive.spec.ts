@@ -56,6 +56,32 @@ test.describe('Responsive Layout', () => {
     expect(overflow).toBeLessThanOrEqual(0)
   })
 
+  test('address ZIP field has numeric inputmode, postal-code autocomplete, and no iOS zoom', async ({ page }) => {
+    // #104: iOS Safari zooms into inputs < 16px; autofill needs standard tokens
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/create')
+    await page.getByRole('button', { name: /United States/ }).click()
+    await page.locator('input[type="file"]').setInputFiles(IMAGE_PATH)
+    await page.getByRole('button', { name: /Write Message/ }).click()
+    await page.getByRole('button', { name: 'Click to write...' }).click()
+    await page.getByRole('textbox').fill('Hello!')
+    await page.getByRole('button', { name: 'Done' }).click()
+    await page.getByRole('button', { name: /Add Address/ }).click()
+
+    const zip = page.getByPlaceholder('M5V 2T6')
+    await expect(zip).toHaveAttribute('inputmode', 'numeric')
+    await expect(zip).toHaveAttribute('autocomplete', 'postal-code')
+    const zipFontSize = await zip.evaluate(el => parseFloat(getComputedStyle(el).fontSize))
+    expect(zipFontSize).toBeGreaterThanOrEqual(16)
+
+    await expect(page.getByPlaceholder('Jane')).toHaveAttribute('autocomplete', 'given-name')
+    await expect(page.getByPlaceholder('Doe')).toHaveAttribute('autocomplete', 'family-name')
+    await expect(page.getByPlaceholder('123 Main Street')).toHaveAttribute('autocomplete', 'address-line1')
+    await expect(page.getByPlaceholder('Apt 4B (optional)')).toHaveAttribute('autocomplete', 'address-line2')
+    await expect(page.getByPlaceholder('Toronto')).toHaveAttribute('autocomplete', 'address-level2')
+    await expect(page.getByPlaceholder('ON', { exact: true })).toHaveAttribute('autocomplete', 'address-level1')
+  })
+
   test('step labels show on desktop and collapse to numbers on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await page.goto('/create')

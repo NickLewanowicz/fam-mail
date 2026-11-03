@@ -87,7 +87,7 @@ export default function DashboardPage() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search drafts…"
               aria-label="Search drafts"
-              className="h-11 w-44 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-sm outline-none focus:border-zinc-400"
+              className="h-11 w-44 rounded-md border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 text-base outline-none focus:border-zinc-400"
             />
           )}
           <button
