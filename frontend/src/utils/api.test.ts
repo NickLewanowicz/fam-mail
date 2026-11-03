@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { submitPostcard } from './api'
+import { API_BASE_URL } from './apiConfig'
 import type { Address } from '../types/address'
 
 describe('submitPostcard', () => {
@@ -72,7 +73,7 @@ describe('submitPostcard', () => {
     const result = await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/postcards',
+      `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -146,7 +147,7 @@ describe('submitPostcard', () => {
     await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/postcards',
+      `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
         method: 'POST',
         headers: {
@@ -168,7 +169,7 @@ describe('submitPostcard', () => {
     await submitPostcard(mockAddress, mockReturnAddress, mockFile)
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/postcards',
+      `${API_BASE_URL}/api/postcards`,
       expect.objectContaining({
         method: 'POST',
         headers: {

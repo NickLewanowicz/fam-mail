@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { API_BASE_URL } from '../utils/apiConfig'
 import {
   getToken,
   setToken,
@@ -60,7 +61,7 @@ describe('authApi', () => {
       const result = await initiateLogin()
       expect(result.type).toBe('redirect')
       expect(result.authUrl).toBe('https://auth.example.com/authorize?state=abc')
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/login', {
+      expect(global.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -125,7 +126,7 @@ describe('authApi', () => {
 
       const user = await fetchCurrentUser('my-token')
       expect(user).toEqual(mockUser)
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/me', {
+      expect(global.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/auth/me`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -153,7 +154,7 @@ describe('authApi', () => {
       } as Response)
 
       await logoutUser('my-token')
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/logout', {
+      expect(global.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/auth/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -254,7 +255,7 @@ describe('authApi', () => {
       expect(result.refreshToken).toBe('new-refresh')
       expect(getToken()).toBe('new-access')
       expect(getRefreshToken()).toBe('new-refresh')
-      expect(global.fetch).toHaveBeenCalledWith('/api/auth/refresh', {
+      expect(global.fetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: 'old-refresh' }),
@@ -424,7 +425,7 @@ describe('authApi', () => {
 
       // Refresh endpoint called exactly once
       const refreshCalls = vi.mocked(global.fetch).mock.calls.filter(
-        c => (c[0] as string)?.includes?.('/api/auth/refresh'),
+        c => (c[0] as string)?.includes?.(`${API_BASE_URL}/api/auth/refresh`),
       )
       expect(refreshCalls).toHaveLength(1)
     })
