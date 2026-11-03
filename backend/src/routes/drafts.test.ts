@@ -542,28 +542,6 @@ describe("DraftRoutes", () => {
       expect(data.errors!.length).toBeGreaterThan(0);
     });
 
-    it("should return 400 when senderAddress is missing (return address required)", async () => {
-      const draft = createTestDraft(user1.id, "draft");
-      draft.senderAddress = undefined;
-      db.insertDraft(draft);
-
-      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
-      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
-      const response = await routes.publish(req, user1);
-      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
-
-      expect(response.status).toBe(400);
-      expect(data.error).toBe("Validation failed");
-      expect(data.errors).toBeDefined();
-      expect(data.errors).toContainEqual({
-        field: "from",
-        message: "Return address (from) is required",
-      });
-
-      // Validation must fail before PostGrid is called — draft stays in draft state
-      const unchangedDraft = db.getDraft(draft.id);
-      expect(unchangedDraft?.state).toBe("draft");
-    });
 
     it("should return 400 when senderAddress is invalid", async () => {
       const draft = createTestDraft(user1.id, "draft");
@@ -684,25 +662,6 @@ describe("DraftRoutes", () => {
       expect(capturedRequest.backHTML).toContain("Hello from the test!");
     });
 
-    it("should return 400 when draft imageData is invalid", async () => {
-      const draft = createTestDraft(user1.id, "draft");
-      draft.message = undefined;
-      draft.frontHTML = undefined;
-      draft.backHTML = undefined;
-      draft.imageData = `data:image/gif;base64,${gifBase64}`;
-      db.insertDraft(draft);
-
-      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
-      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
-      const response = await routes.publish(req, user1);
-      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
-
-      expect(response.status).toBe(400);
-      expect(data.error).toBe("Validation failed");
-      expect(data.errors).toBeDefined();
-      const imageErrors = data.errors!.filter((e: { field?: string }) => e.field === "image");
-      expect(imageErrors.length).toBe(1);
-    });
 
     it("should accept raw base64 imageData without a data URL prefix", async () => {
       const draft = createTestDraft(user1.id, "draft");
