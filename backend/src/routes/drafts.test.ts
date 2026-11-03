@@ -538,6 +538,54 @@ describe("DraftRoutes", () => {
       expect(data.errors!.length).toBeGreaterThan(0);
     });
 
+    it("should return 400 when senderAddress is missing (return address required)", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.senderAddress = undefined;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      expect(data.errors).toContainEqual({
+        field: "from",
+        message: "Return address (from) is required",
+      });
+
+      // Validation must fail before PostGrid is called — draft stays in draft state
+      const unchangedDraft = db.getDraft(draft.id);
+      expect(unchangedDraft?.state).toBe("draft");
+    });
+
+    it("should return 400 when senderAddress is invalid", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.senderAddress = {
+        firstName: "",
+        lastName: "",
+        addressLine1: "",
+        city: "",
+        provinceOrState: "",
+        postalOrZip: "",
+        countryCode: "",
+      };
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      const fromErrors = data.errors!.filter((e: { field?: string }) => e.field?.startsWith("from."));
+      expect(fromErrors.length).toBeGreaterThan(0);
+    });
+
     it("should return 400 when draft has no content (no frontHTML, backHTML, or message)", async () => {
       const draft = createTestDraft(user1.id, "draft");
       draft.message = undefined;
