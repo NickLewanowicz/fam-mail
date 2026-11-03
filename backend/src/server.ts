@@ -414,14 +414,22 @@ async function routeRequest(req: Request): Promise<Response> {
     const limitParam = parseInt(new URL(req.url).searchParams.get('limit') ?? '50', 10)
     const limit = Number.isNaN(limitParam) ? 50 : limitParam
     const postcards = db.listPostcardsByUser(authResult.user!.id, limit).map((record) => {
-      // #109: expose the persisted structured address as `to`; the raw JSON
-      // column stays internal
-      const { recipientAddressJson, ...card } = record
-      if (!recipientAddressJson) return card
+      // #109/#114: expose the persisted structured address as `to` and the
+      // card content as `content`; the raw JSON columns stay internal
+      const { recipientAddressJson, contentJson, ...card } = record
+      const withContent: Record<string, unknown> = { ...card }
+      if (contentJson) {
+        try {
+          withContent.content = JSON.parse(contentJson)
+        } catch {
+          /* tolerate a malformed row: omit content */
+        }
+      }
+      if (!recipientAddressJson) return withContent
       try {
-        return { ...card, to: JSON.parse(recipientAddressJson) }
+        return { ...withContent, to: JSON.parse(recipientAddressJson) }
       } catch {
-        return card
+        return withContent
       }
     })
     return withSecurityHeaders(jsonResponse({ data: postcards }, 200, req), req)

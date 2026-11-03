@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { listSentPostcards, type SentPostcard } from '../utils/api'
-import { prefillRecipientFrom } from '../utils/prefillRecipient'
+import { prefillContentFrom, prefillRecipientFrom } from '../utils/prefillRecipient'
 import { timeAgo } from '../utils/time'
 
 const STATUS_STYLES: Record<string, string> = {
@@ -91,7 +91,12 @@ export default function HistoryPage() {
                     Copy
                   </button>
                   <button
-                    onClick={() => navigate('/create', { state: { prefillRecipient: prefillRecipientFrom(card) } })}
+                    onClick={() => navigate('/create', {
+                      state: {
+                        prefillRecipient: prefillRecipientFrom(card),
+                        prefillContent: prefillContentFrom(card),
+                      },
+                    })}
                     className="press inline-flex items-center justify-center h-11 min-w-11 px-2 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white rounded hover:bg-zinc-100 dark:hover:bg-zinc-800"
                     title="Send another card to this recipient"
                   >

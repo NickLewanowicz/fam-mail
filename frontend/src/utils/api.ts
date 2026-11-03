@@ -100,6 +100,11 @@ export interface SentPostcard {
   recipientAddress: string
   /** Structured address, present on cards sent after #109; older records omit it. */
   to?: SentPostcardAddress
+  /** Card content (photo + message), present on cards sent after #114; older records omit it. */
+  content?: {
+    imageData?: string
+    message?: string
+  }
   status: string
   mode: 'test' | 'live' | string
   createdAt: string

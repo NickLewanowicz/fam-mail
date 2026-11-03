@@ -2202,4 +2202,65 @@ describe('handlePostcardCreate — structured recipient persistence (#109)', () 
       setPostgridService(null as unknown as PostGridService)
     }
   })
+
+  // ISSUE-114: "Again" restores the previous card's photo + message — the
+  // content must persist on the postcard record
+  it('persists the card content (image + message) for the Again flow (#114)', async () => {
+    const svc = new PostGridService({
+      mode: 'test', testApiKey: 't', liveApiKey: 'l',
+      forceTestMode: false, mockMode: true, webhookSecret: '', size: '6x4', senderId: '',
+    })
+    spyOn(svc, 'createPostcard').mockImplementation(async (request) => ({
+      id: 'pc_content_114', object: 'postcard', live: false, status: 'ready',
+      to: request.to, size: request.size ?? '6x4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }) as never)
+    setPostgridService(svc)
+    const minimalJpeg = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARCAABAAEDASIAAhEBAxEB/8QAFBABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AVQA//9k='
+    try {
+      const req = makeRequest({
+        to: validCAAddress,
+        image: minimalJpeg,
+        message: 'Monthly photo card for grandma',
+      })
+      const res = await handlePostcardCreate(req, mockUser, db)
+      expect(res.status).toBe(200)
+
+      const records = db.listPostcardsByUser(mockUser.id)
+      expect(records.length).toBe(1)
+      expect(records[0].contentJson).toBeTruthy()
+      const content = JSON.parse(records[0].contentJson!)
+      expect(content.imageData).toBe(minimalJpeg)
+      expect(content.message).toBe('Monthly photo card for grandma')
+    } finally {
+      setPostgridService(null as unknown as PostGridService)
+    }
+  })
+
+  it('persists no contentJson when a card carries neither image nor message (#114)', async () => {
+    const svc = new PostGridService({
+      mode: 'test', testApiKey: 't', liveApiKey: 'l',
+      forceTestMode: false, mockMode: true, webhookSecret: '', size: '6x4', senderId: '',
+    })
+    spyOn(svc, 'createPostcard').mockImplementation(async (request) => ({
+      id: 'pc_html_114', object: 'postcard', live: false, status: 'ready',
+      to: request.to, size: request.size ?? '6x4',
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    }) as never)
+    setPostgridService(svc)
+    try {
+      const req = makeRequest({
+        to: validCAAddress,
+        frontHTML: '<html>Front only</html>',
+      })
+      const res = await handlePostcardCreate(req, mockUser, db)
+      expect(res.status).toBe(200)
+
+      const records = db.listPostcardsByUser(mockUser.id)
+      expect(records.length).toBe(1)
+      expect(records[0].contentJson).toBeUndefined()
+    } finally {
+      setPostgridService(null as unknown as PostGridService)
+    }
+  })
 })
