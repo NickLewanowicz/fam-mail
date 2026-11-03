@@ -5,7 +5,7 @@ import type { User } from '../models/user'
 import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
-import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
+import { validateAddress, validateImage, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
 import { marked } from 'marked'
 import DOMPurify from 'isomorphic-dompurify'
 
@@ -16,6 +16,43 @@ function draftSizeToPostGridSize(size: string): '6x4' | '9x6' | '11x6' {
     return size as '6x4' | '9x6' | '11x6'
   }
   return '6x4'
+}
+
+/**
+ * Extract the base64 payload from stored image data.
+ * The frontend saves drafts with data URLs (`data:image/jpeg;base64,...`);
+ * raw base64 (no prefix) is also accepted.
+ */
+function extractImageBase64(imageData: string): string {
+  const match = /^data:[^,]*;base64,(.*)$/.exec(imageData)
+  return match ? match[1] : imageData
+}
+
+/**
+ * Build a full-bleed front page from the draft's image data.
+ * Mirrors the frontend's `generateFrontHTML` so an image-only draft prints
+ * the photo as the postcard front instead of a blank side.
+ */
+function buildImageFrontHTML(imageData: string): string {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { width: 100%; height: 100%; overflow: hidden; position: relative; }
+        .full-bleed { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .full-bleed img { width: 100%; height: 100%; object-fit: cover; }
+      </style>
+    </head>
+    <body>
+      <div class="full-bleed">
+        <img src="${imageData}" alt="Postcard front" />
+      </div>
+    </body>
+    </html>
+  `.trim()
 }
 
 export class DraftRoutes {
@@ -197,8 +234,16 @@ export class DraftRoutes {
     }
 
     // Must have at least one content field
-    if (!draft.frontHTML && !draft.backHTML && !draft.message) {
-      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, or message is required' })
+    if (!draft.frontHTML && !draft.backHTML && !draft.message && !draft.imageData) {
+      allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or imageData is required' })
+    }
+
+    // Validate image if present (same rules as the direct postcard creation route)
+    if (draft.imageData) {
+      const imageResult = validateImage(extractImageBase64(draft.imageData))
+      if (!imageResult.valid) {
+        allErrors.push(...imageResult.errors)
+      }
     }
 
     // Validate message if present
@@ -283,12 +328,18 @@ export class DraftRoutes {
         `.trim()
       }
 
+      // Build frontHTML from the draft image when no explicit frontHTML
+      let finalFrontHTML = draft.frontHTML
+      if (!finalFrontHTML && draft.imageData) {
+        finalFrontHTML = buildImageFrontHTML(draft.imageData)
+      }
+
       // Call PostGrid API
       const postcardRequest: PostGridPostcardRequest = {
         to: draft.recipientAddress,
         from: draft.senderAddress,
         size: postGridSize,
-        frontHTML: draft.frontHTML ? sanitizeHTML(draft.frontHTML) : undefined,
+        frontHTML: finalFrontHTML ? sanitizeHTML(finalFrontHTML) : undefined,
         backHTML: finalBackHTML ? sanitizeHTML(finalBackHTML) : undefined,
       }
 
