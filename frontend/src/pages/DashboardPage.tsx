@@ -6,6 +6,18 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { listDrafts, deleteDraft, exportDraftJson } from '../utils/draftApi'
 import type { Draft } from '../types/postcard'
 import { timeAgo } from '../utils/time'
+import { staggerParent, staggerChild } from '../utils/motion'
+
+// D5: the entry reveal runs once per browser session; back-nav remounts
+// jump straight to the settled state (reload resets — intended).
+let dashboardAnimated = false
+
+// Draft cards nest under the section parent and stagger 75ms apart on top
+// of it, so cards land at ~200/275/350ms (each 200ms → last ≈550ms ≤ 600).
+const cardStagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.075 } },
+}
 
 export default function DashboardPage() {
   const navigate = useNavigate()
@@ -53,11 +65,18 @@ export default function DashboardPage() {
   return (
     <>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Entry reveal (D5): hero → header → cards, staggered 75ms apart,
+            ~550ms total. Reduced motion: MotionConfig skips the y-shift,
+            keeps the fade. Runs once per session (module flag). */}
+        <motion.div
+          variants={staggerParent}
+          initial={dashboardAnimated ? false : 'hidden'}
+          animate="show"
+          onAnimationComplete={() => { dashboardAnimated = true }}
+        >
         {/* Hero */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
+          variants={staggerChild}
           className="bg-zinc-900 rounded-lg p-8 md:p-10 mb-8"
         >
           <h1 className="text-2xl md:text-3xl font-semibold text-white tracking-tight">
@@ -78,7 +97,7 @@ export default function DashboardPage() {
         </motion.div>
 
         {/* Drafts */}
-        <div className="flex items-center justify-between mb-4 gap-3">
+        <motion.div variants={staggerChild} className="flex items-center justify-between mb-4 gap-3">
           <h2 className="text-lg font-semibold text-zinc-900">Your Drafts</h2>
           {drafts.length > 0 && (
             <input
@@ -103,7 +122,7 @@ export default function DashboardPage() {
               </svg>
             )}
           </button>
-        </div>
+        </motion.div>
 
         <ConfirmDialog
           open={!!deleteTarget}
@@ -126,12 +145,12 @@ export default function DashboardPage() {
           </div>
         ) : (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            variants={cardStagger}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
           >
             {visibleDrafts.map(draft => (
-              <div
+              <motion.div
+                variants={staggerChild}
                 key={draft.id}
                 role="button"
                 tabIndex={0}
@@ -195,10 +214,11 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </motion.div>
         )}
+        </motion.div>
       </div>
     </>
   )
