@@ -1,7 +1,7 @@
 # pnpm install runs reliably on Tower; bun install can hang on "Resolving..." in this environment.
 FROM node:20-bookworm-slim AS install
 WORKDIR /app
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN corepack enable && corepack prepare pnpm@10 --activate
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY backend/package.json ./backend/
 COPY frontend/package.json ./frontend/
