@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { API_BASE_URL } from '../utils/apiConfig'
+import { authFetch, SESSION_EXPIRED_EVENT } from './authApi'
 import {
   getToken,
   setToken,
@@ -429,5 +430,24 @@ describe('authApi', () => {
       )
       expect(refreshCalls).toHaveLength(1)
     })
+  })
+})
+
+describe('#111 — session-expired signal', () => {
+  it('authFetch dispatches SESSION_EXPIRED_EVENT when the silent refresh fails', async () => {
+    const events: string[] = []
+    const listener = (e: Event) => events.push(e.type)
+    window.addEventListener(SESSION_EXPIRED_EVENT, listener)
+
+    // First call (the API request) 401s; the refresh endpoint refuses too
+    vi.mocked(global.fetch)
+      .mockResolvedValueOnce({ ok: false, status: 401 } as Response)
+      .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ error: 'dev mode' }) } as Response)
+
+    const res = await authFetch('/api/drafts')
+
+    expect(res.status).toBe(401)
+    expect(events).toContain(SESSION_EXPIRED_EVENT)
+    window.removeEventListener(SESSION_EXPIRED_EVENT, listener)
   })
 })

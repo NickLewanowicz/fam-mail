@@ -424,4 +424,49 @@ describe('AuthProvider', () => {
       expect(contextValue!.token).toBe('refreshed-token')
     })
   })
+
+  it('resets to unauthenticated and clears tokens when SESSION_EXPIRED_EVENT fires (#111)', async () => {
+    const { getToken, fetchCurrentUser, clearAllTokens, SESSION_EXPIRED_EVENT } = await import('../../services/authApi')
+    const mockUser = {
+      id: 'user-1',
+      oidcSub: 'sub-1',
+      oidcIssuer: 'https://auth.example.com',
+      email: 'test@example.com',
+      emailVerified: true,
+      firstName: 'Test',
+      lastName: 'User',
+      createdAt: '2024-01-01T00:00:00Z',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }
+    ;(getToken as ReturnType<typeof vi.fn>).mockReturnValue('expired-token')
+    ;(fetchCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue(mockUser)
+
+    let contextValue: AuthContextType | null = null
+    renderWithRouter(
+      <AuthProvider>
+        <AuthContext.Consumer>
+          {(value) => {
+            contextValue = value
+            return <div>child</div>
+          }}
+        </AuthContext.Consumer>
+      </AuthProvider>
+    )
+
+    // Starts authenticated
+    await waitFor(() => {
+      expect(contextValue!.isAuthenticated).toBe(true)
+    })
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT))
+    })
+
+    await waitFor(() => {
+      expect(clearAllTokens).toHaveBeenCalled()
+      expect(contextValue!.isAuthenticated).toBe(false)
+      expect(contextValue!.user).toBeNull()
+      expect(contextValue!.token).toBeNull()
+    })
+  })
 })

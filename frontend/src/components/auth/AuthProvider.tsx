@@ -13,7 +13,9 @@ import {
   logoutUser,
   refreshAccessToken,
   TOKEN_REFRESHED_EVENT,
+  SESSION_EXPIRED_EVENT,
 } from '../../services/authApi'
+import { toast } from 'sonner'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -67,6 +69,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener(TOKEN_REFRESHED_EVENT, handleTokenRefreshed)
     return () => window.removeEventListener(TOKEN_REFRESHED_EVENT, handleTokenRefreshed)
+  }, [])
+
+  // Unrecoverable auth failure (401 + refresh refused): tell the user and
+  // reset state — ProtectedRoute then redirects to /login (#111)
+  useEffect(() => {
+    function handleSessionExpired() {
+      clearAllTokens()
+      toast.error('Session expired — sign in again')
+      setState({ user: null, token: null, isLoading: false, isAuthenticated: false })
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired)
   }, [])
 
   // Method to handle tokens received from callback

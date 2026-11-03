@@ -163,6 +163,11 @@ export async function refreshAccessToken(): Promise<RefreshResult> {
 /** Custom event dispatched on `window` when a silent token refresh succeeds. */
 export const TOKEN_REFRESHED_EVENT = 'fam-mail:token-refreshed'
 
+/** Custom event dispatched on `window` when a request 401s and the silent
+ *  refresh fails — the unrecoverable-auth-failure signal (#111). AuthProvider
+ *  listens, resets state, and the ProtectedRoute redirect lands on /login. */
+export const SESSION_EXPIRED_EVENT = 'fam-mail:session-expired'
+
 /** Singleton promise used to coalesce concurrent refresh attempts. */
 let pendingRefresh: Promise<RefreshResult> | null = null
 
@@ -215,8 +220,9 @@ export async function authFetch(
 
     return fetch(input, retryInit)
   } catch {
-    // Refresh failed — return the original 401 response so the caller
-    // can handle it (e.g. show an error, redirect to login)
+    // Refresh failed — unrecoverable: signal session expiry so the app can
+    // toast + bounce to /login (#111), then return the original 401 response
+    window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT))
     return response
   }
 }
