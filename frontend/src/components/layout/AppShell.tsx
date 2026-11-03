@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { useAuth } from '../auth/AuthContext'
@@ -17,6 +17,13 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
     try { localStorage.setItem('fam_mail_theme', next ? 'dark' : 'light') } catch { /* private mode */ }
   }
   const location = useLocation()
+
+  // The shell now persists across navigations (layout route), so it owns
+  // scroll restoration: reset to top on every route change. No intra-page
+  // anchors exist, so back-nav-to-top is acceptable (June's spec, slice 2).
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [location.pathname])
 
   return (
     <div

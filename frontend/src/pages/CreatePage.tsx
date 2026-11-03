@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
-import { AppShell } from '../components/layout/AppShell'
 import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
@@ -254,17 +253,15 @@ export default function CreatePage() {
 
   if (loadingDraft) {
     return (
-      <AppShell variant="editor">
-        <div className="flex justify-center items-center py-32">
-          <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
-        </div>
-      </AppShell>
+      <div className="flex justify-center items-center py-32">
+        <div className="w-5 h-5 border-2 border-zinc-300 border-t-zinc-600 rounded-full animate-spin" />
+      </div>
     )
   }
 
   if (result?.success) {
     return (
-      <AppShell variant="editor">
+      <>
         <div className="container mx-auto px-4 py-16 max-w-md">
           <motion.div
             initial={{ opacity: 0, y: 8 }}
@@ -315,7 +312,7 @@ export default function CreatePage() {
             </div>
           </motion.div>
         </div>
-      </AppShell>
+      </>
     )
   }
 
@@ -332,7 +329,7 @@ export default function CreatePage() {
   ]
 
   return (
-    <AppShell variant="editor">
+    <>
       <div className="container mx-auto px-4 py-6 pb-28 md:pb-10 max-w-3xl">
         <h1 className="sr-only">Create a postcard</h1>
         {/* Step indicator — numbered circles with connecting lines */}
@@ -483,6 +480,6 @@ export default function CreatePage() {
           )}
         </AnimatePresence>
       </div>
-    </AppShell>
+    </>
   )
 }

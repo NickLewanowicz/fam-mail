@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { AppShell } from '../components/layout/AppShell'
 import { ConfirmDialog } from '../components/ui/ConfirmDialog'
 import { listDrafts, deleteDraft, exportDraftJson } from '../utils/draftApi'
 import type { Draft } from '../types/postcard'
@@ -52,7 +51,7 @@ export default function DashboardPage() {
   })
 
   return (
-    <AppShell>
+    <>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Hero */}
         <motion.div
@@ -201,6 +200,6 @@ export default function DashboardPage() {
           </motion.div>
         )}
       </div>
-    </AppShell>
+    </>
   )
 }

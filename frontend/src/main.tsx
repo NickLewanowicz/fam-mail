@@ -5,8 +5,8 @@ import { Toaster } from 'sonner'
 import { MotionConfig } from 'framer-motion'
 import { AuthProvider } from './components/auth/AuthProvider'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import { AppLoader } from './components/layout/AppLoader'
+import { AppLayout } from './components/layout/AppLayout'
 import './index.css'
 import { RouteTitle } from './components/layout/RouteTitle'
 
@@ -29,11 +29,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             <Routes>
               <Route path="/login" element={<><RouteTitle title="Sign in" /><LoginPage /></>} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              <Route path="/" element={<ProtectedRoute><><RouteTitle title="Dashboard" /><DashboardPage /></></ProtectedRoute>} />
-              <Route path="/create" element={<ProtectedRoute><><RouteTitle title="New postcard" /><CreatePage /></></ProtectedRoute>} />
-              <Route path="/drafts/:id" element={<ProtectedRoute><><RouteTitle title="Draft" /><CreatePage /></></ProtectedRoute>} />
-              <Route path="/history" element={<ProtectedRoute><><RouteTitle title="History" /><HistoryPage /></></ProtectedRoute>} />
-              <Route path="*" element={<ProtectedRoute><><RouteTitle title="Not found" /><NotFoundPage /></></ProtectedRoute>} />
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<><RouteTitle title="Dashboard" /><DashboardPage /></>} />
+                <Route path="/create" element={<><RouteTitle title="New postcard" /><CreatePage /></>} />
+                <Route path="/drafts/:id" element={<><RouteTitle title="Draft" /><CreatePage /></>} />
+                <Route path="/history" element={<><RouteTitle title="History" /><HistoryPage /></>} />
+                <Route path="*" element={<><RouteTitle title="Not found" /><NotFoundPage /></>} />
+              </Route>
             </Routes>
           </Suspense>
           <Toaster richColors position="top-center" />

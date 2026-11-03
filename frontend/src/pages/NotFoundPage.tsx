@@ -1,9 +1,8 @@
 import { Link } from 'react-router-dom'
-import { AppShell } from '../components/layout/AppShell'
 
 export default function NotFoundPage() {
   return (
-    <AppShell>
+    <>
       <div className="container mx-auto px-4 py-20 max-w-md text-center">
         <p className="text-5xl">🗺️</p>
         <h1 className="mt-4 text-xl font-semibold text-zinc-900 dark:text-zinc-100">Page not found</h1>
@@ -19,6 +18,6 @@ export default function NotFoundPage() {
           </Link>
         </div>
       </div>
-    </AppShell>
+    </>
   )
 }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { AppShell } from '../components/layout/AppShell'
 import { listSentPostcards, type SentPostcard } from '../utils/api'
 import { timeAgo } from '../utils/time'
 
@@ -28,7 +27,7 @@ export default function HistoryPage() {
   }, [limit])
 
   return (
-    <AppShell>
+    <>
       <div className="container mx-auto px-4 py-8 max-w-3xl">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Postcard History</h1>
@@ -108,6 +107,6 @@ export default function HistoryPage() {
           </>
         )}
       </div>
-    </AppShell>
+    </>
   )
 }
