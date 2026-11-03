@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { prefillContentFrom, prefillRecipientFrom } from './prefillRecipient'
+import { prefillContentFrom, prefillRecipientFrom, restoredContentCopy } from './prefillRecipient'
 import type { SentPostcard } from './api'
 
 // ISSUE-0109: "Again" must reconstruct the STRUCTURED recipient address —
@@ -103,6 +103,26 @@ describe('prefillContentFrom (#114 — Again restores the card content)', () => 
       imageData: 'img',
     })
     expect(prefillContentFrom({ ...caCard, content: {} })).toBeUndefined()
+  })
+})
+
+describe('restoredContentCopy (#120 — the toast names what was restored)', () => {
+  it('names both when photo and message restored', () => {
+    expect(restoredContentCopy(true, true)).toBe(
+      'Photo and message copied from your last card — edit anything you like'
+    )
+  })
+
+  it('names message only when the card had no photo', () => {
+    expect(restoredContentCopy(false, true)).toBe(
+      'Message copied from your last card — edit anything you like'
+    )
+  })
+
+  it('names photo only when the card had no message', () => {
+    expect(restoredContentCopy(true, false)).toBe(
+      'Photo copied from your last card — edit anything you like'
+    )
   })
 })
 

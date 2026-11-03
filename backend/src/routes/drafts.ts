@@ -277,6 +277,11 @@ export class DraftRoutes {
         senderEmail: user.email,
         recipientName: `${draft.recipientAddress.firstName} ${draft.recipientAddress.lastName}`,
         recipientAddress: `${draft.recipientAddress.addressLine1}, ${draft.recipientAddress.city}, ${draft.recipientAddress.provinceOrState} ${draft.recipientAddress.postalOrZip}`,
+        // #120: persist the card content so History "Again" can restore the
+        // photo + message (same shape as the direct send path)
+        ...((draft.imageData || draft.message)
+          ? { contentJson: JSON.stringify({ imageData: draft.imageData || undefined, message: draft.message || undefined }) }
+          : {}),
         postgridPostcardId: result.id,
         postgridMode: this.postgrid.getTestMode() ? 'test' : 'live',
         forcedTestMode: false,

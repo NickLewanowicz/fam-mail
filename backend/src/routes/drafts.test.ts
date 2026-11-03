@@ -686,6 +686,26 @@ describe("DraftRoutes", () => {
       expect(capturedRequest.backHTML).toContain("Hello from the test!");
     });
 
+    it("should persist card content on the postcard record for the Again flow (#120)", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.imageData = minimalJPEG;
+      draft.message = "Hello from the test!";
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      expect(response.status).toBe(200);
+
+      const sent = db.listPostcardsByUser(user1.id);
+      expect(sent.length).toBeGreaterThan(0);
+      const record = sent.find((p) => p.draftId === draft.id)!;
+      expect(record).toBeDefined();
+      const content = JSON.parse(record.contentJson!);
+      expect(content.imageData).toBe(minimalJPEG);
+      expect(content.message).toBe("Hello from the test!");
+    });
+
 
     it("should accept raw base64 imageData without a data URL prefix", async () => {
       const draft = createTestDraft(user1.id, "draft");

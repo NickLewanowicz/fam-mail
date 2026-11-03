@@ -11,6 +11,10 @@ export interface PostcardSubmission {
   frontHTML: string
   backHTML?: string
   message?: string
+  /** Bare base64 photo (no data: prefix) — lets the backend persist card
+   *  content for the History "Again" flow (#120; the frontHTML already
+   *  carries the same image as a data URL for printing). */
+  image?: string
   size: '6x4' | '9x6' | '11x6'
 }
 
@@ -50,14 +54,22 @@ export async function submitPostcard(
   message?: string,
   size: PostcardSize = '6x4'
 ): Promise<PostcardResponse> {
-  const imageBase64 = await fileToDataUrl(imageFile)
-  const frontHTML = generateFrontHTML(imageBase64)
+  const imageDataUrl = await fileToDataUrl(imageFile)
+  const frontHTML = generateFrontHTML(imageDataUrl)
 
   const submission: PostcardSubmission = {
     to: address,
     from: returnAddress,
     frontHTML,
     size
+  }
+
+  // #120: ship the raw photo so the backend persists it as card content
+  // (History "Again") — bare base64, matching the backend's image contract
+  // and the drafts pipeline. The data URL stays in frontHTML for printing.
+  const rawBase64 = imageDataUrl.split(',')[1]
+  if (rawBase64) {
+    submission.image = rawBase64
   }
 
   if (message) {
