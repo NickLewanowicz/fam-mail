@@ -163,6 +163,12 @@ export class Database {
       if (!has("recipient_address_json")) {
         this.db.exec("ALTER TABLE postcards ADD COLUMN recipient_address_json TEXT");
       }
+      // #88: drop the orphaned email_processing table (paused IMAP pipeline
+      // leftover; removed from schema.sql). DROP ... IF EXISTS is naturally
+      // idempotent — fresh databases never had the table.
+      this.db.exec("DROP INDEX IF EXISTS idx_email_processing_email_message_id");
+      this.db.exec("DROP INDEX IF EXISTS idx_email_processing_status");
+      this.db.exec("DROP TABLE IF EXISTS email_processing");
     } catch (error) {
       throw new DatabaseError(
         `Failed to migrate database schema: ${(error as Error)?.message ?? String(error)}`,
