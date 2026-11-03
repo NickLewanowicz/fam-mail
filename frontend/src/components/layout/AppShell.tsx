@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { motion } from 'framer-motion'
 import { useAuth } from '../auth/AuthContext'
 import { PostGridModeBadge } from './PostGridModeBadge'
 import { VersionFooter } from './VersionFooter'
@@ -128,14 +127,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
         </div>
       </nav>
       <main id="main-content" className="flex-1">
-        <motion.div
-          key={location.pathname}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-        >
-          {children}
-        </motion.div>
+        {children}
       </main>
       <VersionFooter tone={variant} />
     </div>
