@@ -32,6 +32,30 @@ test.describe('Responsive Layout', () => {
     await expect(page.getByText(/Front — 6×4″/)).toBeVisible()
   })
 
+  test('wizard Review step fits mobile viewport without horizontal overflow', async ({ page }) => {
+    // #102: the Review step was never asserted, so a +16px overflow shipped.
+    // 390×844 mirrors the ux-audit mobile measurement.
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/create')
+    await page.getByRole('button', { name: /United States/ }).click()
+    await page.locator('input[type="file"]').setInputFiles(IMAGE_PATH)
+    await page.getByRole('button', { name: /Write Message/ }).click()
+    await page.getByRole('button', { name: 'Click to write...' }).click()
+    await page.getByRole('textbox').fill('Hello!')
+    await page.getByRole('button', { name: 'Done' }).click()
+    await page.getByRole('button', { name: /Add Address/ }).click()
+    await page.getByPlaceholder('Jane').fill('Grace')
+    await page.getByPlaceholder('Doe').fill('Hopper')
+    await page.getByPlaceholder('123 Main Street').fill('1 Way')
+    await page.getByPlaceholder('Toronto').fill('New Haven')
+    await page.getByPlaceholder('ON', { exact: true }).fill('CT')
+    await page.getByPlaceholder('M5V 2T6').fill('06510')
+    await page.getByRole('button', { name: /Next: Review/ }).click()
+    await expect(page.getByRole('heading', { name: 'Review & Send' })).toBeVisible()
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(0)
+  })
+
   test('step labels show on desktop and collapse to numbers on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
     await page.goto('/create')

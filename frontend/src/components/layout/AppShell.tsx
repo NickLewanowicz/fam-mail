@@ -41,20 +41,21 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
         }
       >
         <div className="container mx-auto max-w-5xl px-4 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link to="/" className="flex items-center gap-2 min-w-11 h-11 hover:opacity-80 transition-opacity" aria-label="Fam Mail home">
             <span className="text-xl" aria-hidden="true">✉️</span>
-            <span className={`text-base font-semibold whitespace-nowrap ${variant === "editor" ? "text-warm-text font-display tracking-tight" : "text-zinc-900"}`}>Fam Mail</span>
+            {/* Wordmark hides below sm — the nav row must fit 320px viewports */}
+            <span className={`text-base font-semibold whitespace-nowrap hidden sm:inline ${variant === "editor" ? "text-warm-text font-display tracking-tight" : "text-zinc-900"}`}>Fam Mail</span>
           </Link>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={toggleTheme}
               aria-label="Toggle dark mode"
               title="Toggle dark mode"
               className={
                 variant === 'editor'
-                  ? 'p-1.5 rounded-md text-warm-text2 hover:text-warm-text hover:bg-white/5 transition-colors'
-                  : 'p-1.5 rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors'
+                  ? 'h-11 w-11 inline-flex items-center justify-center rounded-md text-warm-text2 hover:text-warm-text hover:bg-white/5 transition-colors'
+                  : 'h-11 w-11 inline-flex items-center justify-center rounded-md text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors'
               }
             >
               {dark ? (
@@ -67,7 +68,7 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
               <Link
                 to="/history"
                 aria-current={location.pathname === '/history' ? 'page' : undefined}
-                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`inline-flex items-center h-11 px-2 sm:px-3 text-sm font-medium rounded-md transition-colors ${
                   location.pathname === '/history'
                     ? 'bg-clay text-ink-bg'
                     : variant === 'editor'
@@ -78,11 +79,17 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
                 History
               </Link>
             )}
-            {user && <PostGridModeBadge />}
+            {/* Mode badge hides on phones (nav row width); Review shows the same
+                mode banner above Send, the surface where it matters */}
+            {user && (
+              <div className="hidden sm:flex items-center">
+                <PostGridModeBadge />
+              </div>
+            )}
             <Link
               to="/create"
               aria-current={location.pathname === '/create' ? 'page' : undefined}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              className={`inline-flex items-center gap-1.5 h-11 px-2 sm:px-3 text-sm font-medium rounded-md transition-colors ${
                 location.pathname === '/create'
                   ? 'bg-zinc-900 text-white'
                   : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100'
@@ -95,13 +102,18 @@ export function AppShell({ children, variant = 'default' }: { children: ReactNod
             </Link>
             {user && (
               <div className="dropdown dropdown-end">
-                <div tabIndex={0} role="button" className="w-8 h-8 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-600 text-sm font-medium cursor-pointer hover:bg-zinc-300 transition-colors">
-                  {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
+                {/* 44px hit surface; the visual circle stays 32px */}
+                <div tabIndex={0} role="button" aria-label="Account menu" className={`h-11 w-11 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                  variant === 'editor' ? 'hover:bg-white/5' : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`}>
+                  <div className="w-8 h-8 rounded-full bg-zinc-200 flex items-center justify-center text-zinc-600 text-sm font-medium">
+                    {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
+                  </div>
                 </div>
                 <ul tabIndex={0} className="menu menu-sm dropdown-content bg-white rounded-lg z-[1] mt-2 w-52 p-1.5 shadow-lg border border-zinc-200">
                   <li className="px-2 py-1.5 text-xs font-medium text-zinc-500">Account</li>
                   <li><span className="text-sm text-zinc-500 cursor-default">{user.email}</span></li>
-                  <li className="mt-1"><button onClick={logout} className="text-sm text-red-600 hover:bg-red-50">Sign out</button></li>
+                  <li><button onClick={logout} className="text-sm text-red-600 hover:bg-red-50">Sign out</button></li>
                 </ul>
               </div>
             )}
