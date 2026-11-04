@@ -28,6 +28,8 @@ curl -H "Authorization: Bearer fam_9f2c1ab8" ...
 
 JWTs from the web UI are **not accepted** on `/api/v1` — a leaked browser token can't be replayed as a machine credential.
 
+The web auth flow changed with ADR 0003 (#86): the OIDC callback now hands the SPA a one-time ticket exchanged via `POST /api/auth/callback/exchange` — tokens no longer travel in redirect URLs. Zero `/api/v1` impact; agents keep using static API keys.
+
 Rate limit: 10 requests/minute per IP (postcard creation is deliberately tight — it costs real money).
 
 ## Endpoints

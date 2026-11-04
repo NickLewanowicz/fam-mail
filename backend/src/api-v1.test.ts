@@ -43,11 +43,33 @@ describe('Agent API /api/v1', () => {
     process.env.ADMIN_EMAILS = 'admin@example.com'
     // One key with label, one without ("key::email" form)
     process.env.API_KEYS = 'fam_test_agent_key:hermes-agent:agent-user@example.com,fam_second_key::agent-user@example.com'
-    // #89: this file owns the process-wide ./server module — DEV_MODE keeps
-    // import-time OIDC discovery offline (bare/no-env runs must not egress)
-    process.env.DEV_MODE = 'true'
+    // #89/#121: this file owns the process-wide ./server module (first
+    // importer alphabetically — its env fixes the cached module shape for
+    // EVERY later file). Pin non-dev so authRoutes constructs process-wide,
+    // and serve a fake OIDC discovery/jwks document across the import so
+    // the import-time discovery stays hermetic (zero real egress).
+    delete process.env.DEV_MODE
+    const oidcIssuer = process.env.OIDC_ISSUER_URL
+    const realFetch = globalThis.fetch
+    globalThis.fetch = (async (input: unknown) => {
+      const url = String(typeof input === 'object' && input && 'url' in (input as Record<string, unknown>) ? (input as { url: unknown }).url : input)
+      if (url.includes('jwks')) {
+        return new Response(JSON.stringify({ keys: [] }), { headers: { 'Content-Type': 'application/json' } })
+      }
+      return new Response(
+        JSON.stringify({
+          issuer: oidcIssuer,
+          authorization_endpoint: 'https://idp.example.com/authorize',
+          token_endpoint: 'https://idp.example.com/token',
+          jwks_uri: `${oidcIssuer.replace(/\.well-known\/openid-configuration$/, '')}jwks.json`,
+          userinfo_endpoint: 'https://idp.example.com/userinfo',
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
+    }) as unknown as typeof fetch
 
     const module = await import('./server')
+    globalThis.fetch = realFetch
     handleRequest = module.handleRequest
     db = module.db
     postgrid = module.postgrid

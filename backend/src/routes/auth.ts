@@ -35,7 +35,10 @@ let cleanupTimer: ReturnType<typeof setInterval> | null = null
 
 function startCleanupTimer(): void {
   if (cleanupTimer === null) {
-    cleanupTimer = setInterval(evictExpired, CLEANUP_INTERVAL_MS)
+    cleanupTimer = setInterval(() => {
+      evictExpired()
+      evictExpiredTickets()
+    }, CLEANUP_INTERVAL_MS)
     // Allow the process to exit even if the timer is still running
     if (cleanupTimer && typeof cleanupTimer === 'object' && 'unref' in cleanupTimer) {
       cleanupTimer.unref()
@@ -53,6 +56,42 @@ export function stopCleanupTimer(): void {
 
 // Auto-start the cleanup timer when this module is imported
 startCleanupTimer()
+
+// ---------------------------------------------------------------------------
+// One-time ticket store (ADR 0003 / #86): the OIDC callback hands the SPA a
+// 60-second single-use ticket; the SPA POSTs it to the exchange endpoint to
+// receive the token pair in a JSON body. Nothing long-lived rides in a URL.
+// Clone of the oidcStateStore machinery above.
+// ---------------------------------------------------------------------------
+const TICKET_TTL_MS = 60 * 1000 // 60 seconds
+
+interface TicketEntry {
+  accessToken: string
+  refreshToken: string
+  createdAt: number
+}
+
+const ticketStore = new Map<string, TicketEntry>()
+
+/** Remove entries older than TICKET_TTL_MS. */
+function evictExpiredTickets(): void {
+  const now = Date.now()
+  for (const [key, entry] of ticketStore) {
+    if (now - entry.createdAt > TICKET_TTL_MS) {
+      ticketStore.delete(key)
+    }
+  }
+}
+
+/** Exposed for testing only — not part of the public API. */
+export function _clearTicketStore(): void {
+  ticketStore.clear()
+}
+
+/** Exposed for testing only — returns the number of entries in the store. */
+export function _ticketStoreSize(): number {
+  return ticketStore.size
+}
 
 /** Exposed for testing only — not part of the public API. */
 export function _clearStateStore(): void {
@@ -114,7 +153,14 @@ export function setupAuthRoutes(
 
       oidcStateStore.delete(state)
 
-      const redirectUrl = `${new URL(req.url).origin}/auth/callback?token=${accessToken}&refreshToken=${encodeURIComponent(refreshToken)}`
+      // ADR 0003 (#86): the redirect carries a one-time ticket — never
+      // tokens. The SPA POSTs the ticket to /api/auth/callback/exchange to
+      // receive the pair in a JSON body.
+      const ticket = crypto.randomUUID()
+      ticketStore.set(ticket, { accessToken, refreshToken, createdAt: Date.now() })
+      evictExpiredTickets()
+
+      const redirectUrl = `${new URL(req.url).origin}/auth/callback?ticket=${ticket}`
       return applyHeaders(Response.redirect(redirectUrl), req)
     } catch (error) {
       logger.error('OIDC callback error', { error: error instanceof Error ? error.message : String(error) })
@@ -208,9 +254,51 @@ export function setupAuthRoutes(
     }
   }
 
+  // Exchange a one-time callback ticket for the token pair (ADR 0003/#86).
+  // Single-use: the ticket is consumed atomically before any other work —
+  // replay, expiry, a vanished session row, and malformed input all fail.
+  async function handleTokenExchange(req: Request): Promise<Response> {
+    let body: { ticket?: unknown }
+    try {
+      body = await req.json() as { ticket?: unknown }
+    } catch {
+      return jsonResponse({ error: 'Invalid request body' }, 400, req)
+    }
+
+    const ticket = body.ticket
+    if (typeof ticket !== 'string' || ticket.length === 0) {
+      return jsonResponse({ error: 'Missing or invalid ticket' }, 400, req)
+    }
+
+    evictExpiredTickets()
+    const entry = ticketStore.get(ticket)
+    if (!entry) {
+      // Unknown, expired (60s TTL), or already consumed
+      return jsonResponse({ error: 'Invalid or expired ticket' }, 401, req)
+    }
+    ticketStore.delete(ticket)
+
+    // The session row is the system of record — logout or cleanup during
+    // the 60s window kills the handoff
+    const session = db.getSessionByToken(entry.accessToken)
+    if (!session) {
+      return jsonResponse({ error: 'Session no longer exists' }, 401, req)
+    }
+
+    const response = jsonResponse(
+      { accessToken: entry.accessToken, refreshToken: entry.refreshToken },
+      200,
+      req
+    )
+    // Token-bearing response — never cached anywhere
+    response.headers.set('Cache-Control', 'no-store')
+    return response
+  }
+
   return {
     handleAuthLogin,
     handleAuthCallback,
+    handleTokenExchange,
     handleGetMe: authMiddleware.requireAuth(handleGetMe),
     handleLogout: authMiddleware.requireAuth(handleLogout),
     handleAuthRefresh,
