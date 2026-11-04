@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterEach, afterAll, beforeAll } from 'bun:test'
-import { setupAuthRoutes, _clearStateStore, _stateStoreSize, _clearTicketStore, _ticketStoreSize, stopCleanupTimer } from './auth'
+import { setupAuthRoutes, _clearStateStore, _stateStoreSize, _ticketStoreSize, stopCleanupTimer } from './auth'
 import { JWTService } from '../services/jwtService'
 import { AuthMiddleware } from '../middleware/auth'
 import { Database } from '../database'
@@ -276,7 +276,6 @@ describe('Auth Routes - handleAuthCallback', () => {
     expect(lastCall[1]).toBe('verifier123')
 
     // Exchange the ticket exactly once
-    const exchangeReq = createRequest('http://localhost/auth/callback/exchange')
     const exchangeResponse = await routes.handleTokenExchange(
       new Request('http://localhost/auth/callback/exchange', {
         method: 'POST',
@@ -299,7 +298,6 @@ describe('Auth Routes - handleAuthCallback', () => {
     expect(_ticketStoreSize()).toBe(0)
 
     // Replay: the same ticket never resolves again
-    const replayReq = createRequest('http://localhost/auth/callback/exchange')
     const replayResponse = await routes.handleTokenExchange(
       new Request('http://localhost/auth/callback/exchange', {
         method: 'POST',
