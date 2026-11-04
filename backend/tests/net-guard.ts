@@ -10,6 +10,7 @@ import { appendFileSync, unlinkSync } from 'fs'
 
 const LOG = new URL('./e2e-attempts.jsonl', import.meta.url).pathname
 try { unlinkSync(LOG) } catch {}
+;(globalThis as Record<string, unknown>).__NET_GUARD_ACTIVE__ = true
 
 // @ts-expect-error QA probe replaces global fetch
 globalThis.fetch = async (input: unknown, init?: RequestInit) => {
