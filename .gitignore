@@ -42,6 +42,7 @@ frontend/.claude_sessions/
 
 # Test results
 test-results/
+backend/tests/e2e-attempts.jsonl
 frontend/test-results/
 frontend/playwright-report/
 
