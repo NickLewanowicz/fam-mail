@@ -65,8 +65,19 @@ describe("Configuration", () => {
   });
 
   it("should throw on missing required config", () => {
+    // #89: under POSTGRID_MOCK the keys are no longer required
+    // (config falls back to mock keys) — remove the flag too, and restore
+    // both afterwards so surrounding suites keep their env
+    const prevMock = process.env.POSTGRID_MOCK;
+    const prevKey = process.env.POSTGRID_TEST_API_KEY;
+    delete process.env.POSTGRID_MOCK;
     delete process.env.POSTGRID_TEST_API_KEY;
-    expect(() => getConfig()).toThrow("POSTGRID_TEST_API_KEY is required");
+    try {
+      expect(() => getConfig()).toThrow("POSTGRID_TEST_API_KEY is required");
+    } finally {
+      if (prevMock !== undefined) process.env.POSTGRID_MOCK = prevMock;
+      if (prevKey !== undefined) process.env.POSTGRID_TEST_API_KEY = prevKey;
+    }
   });
 
   it("should require IMAP_USER when IMAP_HOST is set (#18)", () => {
