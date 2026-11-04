@@ -81,7 +81,10 @@ export async function setupMockApi(page: Page) {
     })
   )
 
-  await page.route('**/api/postcards', route => {
+  // Regex (not a glob): the history list requests /api/postcards?limit=…,
+  // and a '**/api/postcards' glob does not match URLs with query strings —
+  // the request would fall through to the real backend and 401 the page.
+  await page.route(/\/api\/postcards(\?.*)?$/, route => {
     // History list (GET) — a shaped card so /history renders content
     if (route.request().method() === 'GET') {
       return route.fulfill({

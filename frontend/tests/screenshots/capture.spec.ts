@@ -69,3 +69,28 @@ test('capture mobile dashboard screenshot', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Send something real' })).toBeVisible()
   await page.screenshot({ path: path.join(OUT_DIR, 'mobile-dashboard.png') })
 })
+
+// D6 (#79): the mobile capture set — the full flow (create destination,
+// review, history) alongside the desktop set. Same explicit 390×844
+// viewport as the dashboard capture, so the output is project-independent.
+test('capture mobile create postcard - destination step', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/create')
+  await expect(page.getByRole('heading', { name: 'Where is this going?' })).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'mobile-create.png') })
+})
+
+test('capture mobile review screenshot', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await walkToReview(page)
+  await expect(page.getByRole('heading', { name: 'Review & Send' })).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'mobile-review.png') })
+})
+
+test('capture mobile history screenshot', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/history')
+  await expect(page.getByRole('heading', { name: 'Postcard History' })).toBeVisible()
+  await expect(page.getByText('Grace Hopper')).toBeVisible()
+  await page.screenshot({ path: path.join(OUT_DIR, 'mobile-history.png') })
+})
