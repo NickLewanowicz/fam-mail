@@ -5,8 +5,17 @@ import type { User } from '../models/user'
 import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
-import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown } from '../utils/validation'
+import { validateAddress, validateMessage, validateSize, sanitizeHTML, sanitizeMarkdown, validateImage } from '../utils/validation'
 import { buildImageFrontHTML, buildMessageBackHTML, isCardSize } from '../utils/htmlSanitizer'
+
+/**
+ * The frontend saves drafts with data URLs (`data:image/jpeg;base64,...`);
+ * raw base64 (no prefix) is also accepted.
+ */
+function extractImageBase64(imageData: string): string {
+  const match = /^data:[^,]*;base64,(.*)$/.exec(imageData)
+  return match ? match[1] : imageData
+}
 
 export class DraftRoutes {
   private db: Database
@@ -208,6 +217,15 @@ export class DraftRoutes {
     // Must have at least one content field
     if (!draft.frontHTML && !draft.backHTML && !draft.message && !draft.imageData) {
       allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or an image is required' })
+    }
+
+    // Validate image if present (same rules as the direct postcard creation
+    // route — ADR 0002 amendment: builder builds, route validates)
+    if (draft.imageData) {
+      const imageResult = validateImage(extractImageBase64(draft.imageData))
+      if (!imageResult.valid) {
+        allErrors.push(...imageResult.errors)
+      }
     }
 
     // Validate message if present

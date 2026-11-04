@@ -10,6 +10,10 @@ export interface PostGridConfig {
   webhookSecret: string;
   size: "6x4" | "9x6" | "11x6";
   senderId: string;
+  /** ADR 0004: decimal strings parsed for the status payload; absent/invalid -> null */
+  price6x4?: string;
+  price9x6?: string;
+  price11x6?: string;
 }
 
 export class PostGridService {
@@ -79,11 +83,25 @@ export class PostGridService {
   /**
    * Payload for GET /api/postgrid/status — effective mailing mode, or `mock` when POSTGRID_MOCK is on.
    */
-  getStatusPayload(): { mode: "test" | "live" | "mock"; mockMode: boolean } {
-    if (this.mockMode) {
-      return { mode: "mock", mockMode: true }
+  getStatusPayload(): {
+    mode: "test" | "live" | "mock"
+    mockMode: boolean
+    pricing: { "6x4": number | null; "9x6": number | null; "11x6": number | null }
+  } {
+    const parsePrice = (value?: string): number | null => {
+      if (value === undefined || value.trim() === '') return null
+      const parsed = Number(value)
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
     }
-    return { mode: this.getEffectiveMode(), mockMode: false }
+    const pricing = {
+      '6x4': parsePrice(this.config.price6x4),
+      '9x6': parsePrice(this.config.price9x6),
+      '11x6': parsePrice(this.config.price11x6),
+    }
+    if (this.mockMode) {
+      return { mode: "mock", mockMode: true, pricing }
+    }
+    return { mode: this.getEffectiveMode(), mockMode: false, pricing }
   }
 
   /**

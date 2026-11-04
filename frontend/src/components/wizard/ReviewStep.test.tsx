@@ -298,9 +298,27 @@ describe('ReviewStep', () => {
         sending={false}
         saving={false}
         mode="live"
+        pricing={{ '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }}
       />,
     )
     expect(screen.getByText('This mails a real card to Jane for about $1.11.')).toBeInTheDocument()
+  })
+
+  it('live truth line omits the price clause when the server has no price for the size', () => {
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+        mode="live"
+        pricing={{ '6x4': null, '9x6': null, '11x6': null }}
+      />,
+    )
+    expect(screen.getByText('This mails a real card to Jane.')).toBeInTheDocument()
+    expect(screen.queryByText(/about \$/)).not.toBeInTheDocument()
   })
 
   it('shows the mock-mode truth line', () => {
@@ -342,12 +360,31 @@ describe('ReviewStep', () => {
         sending={false}
         saving={false}
         mode="test"
+        pricing={{ '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }}
       />,
     )
     expect(screen.getByText('about $1.11')).toBeInTheDocument()
     expect(screen.getByText('about $1.86')).toBeInTheDocument()
     expect(screen.getByText('about $2.24')).toBeInTheDocument()
     expect(screen.getByText(/Estimates only — the final cost is set when the card is sent/)).toBeInTheDocument()
+  })
+
+  it('size buttons show no estimate line when the server has no price for a size', () => {
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+        mode="test"
+        pricing={{ '6x4': 1.11, '9x6': null, '11x6': null }}
+      />,
+    )
+    expect(screen.getByText('about $1.11')).toBeInTheDocument()
+    expect(screen.queryByText('about $1.86')).not.toBeInTheDocument()
+    expect(screen.queryByText('about $2.24')).not.toBeInTheDocument()
   })
 })
 
