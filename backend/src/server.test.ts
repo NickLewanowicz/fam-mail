@@ -462,7 +462,8 @@ describe('Backend Server', () => {
             // The endpoint mirrors the service truthfully — assert the
             // mirror relationship, not an env-dependent constant (#89)
             expect(data.mockMode).toBe(postgrid.isMockMode())
-            expect(data.mode === 'test' || data.mode === 'live').toBe(true)
+            // Under POSTGRID_MOCK the service truthfully reports 'mock'
+            expect(data.mode).toBe(postgrid.isMockMode() ? 'mock' : postgrid.getEffectiveMode())
         })
 
         it('POST /api/postgrid/mode returns 401 without auth', async () => {
@@ -984,6 +985,10 @@ describe('Backend Server', () => {
 describe("POST /api/auth/callback/exchange — routed integration (ISSUE-0121)", () => {
     let authUrlSpy: ReturnType<typeof spyOn>
     let callbackSpy: ReturnType<typeof spyOn>
+    // Unique per run: the DATABASE_PATH file persists across runs and the
+    // users table has UNIQUE(email) — fixed fixtures collide (ISSUE-0122)
+    let integrationUserId = ""
+    let integrationEmail = 
 
     beforeEach(() => {
         // Stub OIDC discovery-dependent methods so the login/callback flow
@@ -992,12 +997,14 @@ describe("POST /api/auth/callback/exchange — routed integration (ISSUE-0121)",
             authUrl: "https://idp.example.com/authorize?probe=1",
             codeVerifier: "verifier-123",
         }))
+        integrationUserId = crypto.randomUUID()
+        integrationEmail = `integration-${integrationUserId}@example.com`
         callbackSpy = spyOn(oidcService, "handleCallback").mockImplementation(async () => ({
             user: {
-                id: "integration-user-121",
-                oidcSub: "integration-sub-121",
+                id: integrationUserId,
+                oidcSub: crypto.randomUUID(),
                 oidcIssuer: "https://idp.example.com",
-                email: "integration@example.com",
+                email: integrationEmail,
                 emailVerified: true,
                 firstName: "Integration",
                 lastName: "Probe",
@@ -1021,10 +1028,10 @@ describe("POST /api/auth/callback/exchange — routed integration (ISSUE-0121)",
         const { state } = await loginRes.json() as { state: string }
 
         await db.insertUser({
-            id: "integration-user-121",
-            oidcSub: "integration-sub-121",
+            id: integrationUserId,
+            oidcSub: crypto.randomUUID(),
             oidcIssuer: "https://idp.example.com",
-            email: "integration@example.com",
+            email: integrationEmail,
             emailVerified: true,
             firstName: "Integration",
             lastName: "Probe",
@@ -1062,7 +1069,7 @@ describe("POST /api/auth/callback/exchange — routed integration (ISSUE-0121)",
 
         // Pair verifies and matches the persisted session row
         const payload = await jwtService.verifyToken(data.accessToken)
-        expect(payload.sub).toBe("integration-user-121")
+        expect(payload.sub).toBe(integrationUserId)
         const session = db.getSessionByToken(data.accessToken)
         expect(session?.refreshToken).toBe(data.refreshToken)
 
