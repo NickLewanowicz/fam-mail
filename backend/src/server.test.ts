@@ -1,13 +1,16 @@
-import { describe, it, expect, beforeAll, afterEach, spyOn } from 'bun:test'
+import { describe, it, expect, beforeAll, beforeEach, afterEach, spyOn } from 'bun:test'
 import { JWTService } from './services/jwtService'
 import type { User } from './models/user'
 import { Database } from './database'
 import type { PostGridService } from './services/postgrid'
+import type { OIDCService } from './services/oidcService'
 
 describe('Backend Server', () => {
     // Import after environment setup
     let handleRequest: (req: Request) => Promise<Response>
     let devRefresh: (req: Request, database: Database, jwt: JWTService) => Promise<Response>
+    let oidcService: OIDCService
+    const originalFetch = globalThis.fetch
     let db: Database
     let jwtService: JWTService
     let postgrid: PostGridService
@@ -37,12 +40,38 @@ describe('Backend Server', () => {
         process.env.JWT_EXPIRES_IN = '7d'
         process.env.JWT_REFRESH_EXPIRES_IN = '30d'
         process.env.ADMIN_EMAILS = 'admin@example.com'
+        // #121: this harness exercises the REAL authRoutes dispatch (the
+        // ticket-exchange integration tests require it) — dev mode would
+        // leave authRoutes null. Pin non-dev before importing the module.
+        delete process.env.DEV_MODE
+        // #89: import-time OIDC discovery must not touch the network (the
+        // net-guard would throw at import). Serve a fake discovery+jwks
+        // document across the import, then hand the net-guard back.
+        const oidcIssuer = process.env.OIDC_ISSUER_URL
+        globalThis.fetch = (async (input: unknown) => {
+          const url = String(typeof input === 'object' && input && 'url' in (input as Record<string, unknown>) ? (input as { url: unknown }).url : input)
+          if (url.includes('jwks')) {
+            return new Response(JSON.stringify({ keys: [] }), { headers: { 'Content-Type': 'application/json' } })
+          }
+          return new Response(
+            JSON.stringify({
+              issuer: oidcIssuer,
+              authorization_endpoint: 'https://idp.example.com/authorize',
+              token_endpoint: 'https://idp.example.com/token',
+              jwks_uri: `${oidcIssuer.replace(/\.well-known\/openid-configuration$/, '')}jwks.json`,
+              userinfo_endpoint: 'https://idp.example.com/userinfo',
+            }),
+            { headers: { 'Content-Type': 'application/json' } }
+          )
+        }) as unknown as typeof fetch
 
         const module = await import('./server')
+        globalThis.fetch = originalFetch
         handleRequest = module.handleRequest
         devRefresh = module.devRefreshResponse
         db = module.db
         postgrid = module.postgrid
+        oidcService = module.oidcService as OIDCService
 
         jwtService = new JWTService({
             secret: 'test-secret-key-minimum-32-characters-long',
@@ -952,4 +981,145 @@ describe('Backend Server', () => {
         })
     })
 
+describe("POST /api/auth/callback/exchange — routed integration (ISSUE-0121)", () => {
+    let authUrlSpy: ReturnType<typeof spyOn>
+    let callbackSpy: ReturnType<typeof spyOn>
+
+    beforeEach(() => {
+        // Stub OIDC discovery-dependent methods so the login/callback flow
+        // succeeds over HTTP without a real provider (hermetic per #89)
+        authUrlSpy = spyOn(oidcService, "generateAuthUrl").mockImplementation(async () => ({
+            authUrl: "https://idp.example.com/authorize?probe=1",
+            codeVerifier: "verifier-123",
+        }))
+        callbackSpy = spyOn(oidcService, "handleCallback").mockImplementation(async () => ({
+            user: {
+                id: "integration-user-121",
+                oidcSub: "integration-sub-121",
+                oidcIssuer: "https://idp.example.com",
+                email: "integration@example.com",
+                emailVerified: true,
+                firstName: "Integration",
+                lastName: "Probe",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            },
+        }))
+    })
+
+    afterEach(() => {
+        authUrlSpy.mockRestore()
+        callbackSpy.mockRestore()
+    })
+
+    /** Full chain over HTTP: login -> callback -> ticket. */
+    async function loginAndCollectTicket(): Promise<string> {
+        const loginRes = await handleRequest(
+            new Request("http://localhost:8484/api/auth/login", { method: "POST" })
+        )
+        expect(loginRes.status).toBe(200)
+        const { state } = await loginRes.json() as { state: string }
+
+        await db.insertUser({
+            id: "integration-user-121",
+            oidcSub: "integration-sub-121",
+            oidcIssuer: "https://idp.example.com",
+            email: "integration@example.com",
+            emailVerified: true,
+            firstName: "Integration",
+            lastName: "Probe",
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        })
+
+        const callbackRes = await handleRequest(
+            new Request(`http://localhost:8484/api/auth/callback?code=auth-code&state=${state}`)
+        )
+        expect(callbackRes.status).toBe(302)
+        const location = callbackRes.headers.get("Location")!
+        // ADR 0003: the redirect carries a ticket — never token material
+        expect(location).toContain("ticket=")
+        expect(location).not.toContain("token=")
+        expect(location).not.toContain("refreshToken=")
+        return location.match(/ticket=([^&]+)/)![1]
+    }
+
+    it("200: a ticket minted through the callback exchanges over the routed dispatch", async () => {
+        const ticket = await loginAndCollectTicket()
+
+        const res = await handleRequest(
+            new Request("http://localhost:8484/api/auth/callback/exchange", {
+                method: "POST",
+                body: JSON.stringify({ ticket }),
+            })
+        )
+        // THE regression assertion: 404 here means the route block fell
+        // out of server.ts again (the exact wave-2 failure)
+        expect(res.status).toBe(200)
+        const data = await res.json() as { accessToken: string; refreshToken: string }
+        expect(typeof data.accessToken).toBe("string")
+        expect(typeof data.refreshToken).toBe("string")
+
+        // Pair verifies and matches the persisted session row
+        const payload = await jwtService.verifyToken(data.accessToken)
+        expect(payload.sub).toBe("integration-user-121")
+        const session = db.getSessionByToken(data.accessToken)
+        expect(session?.refreshToken).toBe(data.refreshToken)
+
+        // Security headers on the token-bearing response + no-store
+        expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff")
+        expect(res.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin")
+        expect(res.headers.get("Cache-Control")).toBe("no-store")
+
+        // Single use: replay over HTTP -> 401
+        const replay = await handleRequest(
+            new Request("http://localhost:8484/api/auth/callback/exchange", {
+                method: "POST",
+                body: JSON.stringify({ ticket }),
+            })
+        )
+        expect(replay.status).toBe(401)
+    })
+
+    it("400: the exchange route serves the handler guard — missing ticket routes, 404 is impossible", async () => {
+        // Probe that would have caught the wave-2 P0: a missing ticket must
+        // reach the HANDLER's 400, not the router's 404
+        const res = await handleRequest(
+            new Request("http://localhost:8484/api/auth/callback/exchange", {
+                method: "POST",
+                body: JSON.stringify({}),
+            })
+        )
+        expect(res.status).toBe(400)
+        const data = await res.json() as { error: string }
+        expect(data.error).toContain("ticket")
+    })
+
+    it("429: the eleventh exchange from one IP inside the window is rate limited", async () => {
+        const ip = `10.121.0.${Date.now() % 200 + 10}`
+        const send = () =>
+            handleRequest(
+                new Request("http://localhost:8484/api/auth/callback/exchange", {
+                    method: "POST",
+                    headers: { "x-forwarded-for": ip },
+                    body: JSON.stringify({ ticket: `probe-${Math.random()}` }),
+                })
+            )
+
+        let last = 0
+        for (let i = 1; i <= 11; i++) {
+            const res = await send()
+            last = res.status
+        }
+        // 10/min/IP — the 11th in the window must be the limiter's 429
+        expect(last).toBe(429)
+    })
 })
+
+})
+
+// ============================================================================
+// ISSUE-0121 — the ticket exchange must be reachable over the ROUTED
+// dispatch. These are HTTP-level tests against handleRequest: a 404 here
+// means the route block regressed out of server.ts again.
+// ============================================================================

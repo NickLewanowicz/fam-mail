@@ -111,10 +111,12 @@ const jwtService = new JWTService({
 // Initialize auth middleware
 const authMiddleware = new AuthMiddleware(jwtService, db)
 
-// Setup auth routes (uses a dummy OIDC service in dev mode)
-const authRoutes = oidcService
-  ? setupAuthRoutes(oidcService, jwtService, authMiddleware, db)
-  : null
+// Setup auth routes — ALWAYS constructed (ISSUE-0121: the ticket-exchange
+// route must exist in every boot mode). In dev mode the oidc service is
+// null and the login/callback routes are pre-empted by the dev branches
+// above, so the oidcService parameter is never dereferenced through the
+// dispatch.
+const authRoutes = setupAuthRoutes(oidcService as OIDCService, jwtService, authMiddleware, db)
 
 // Initialize PostGrid (before DraftRoutes, which depends on it)
 const postgrid = new PostGridService({
@@ -304,6 +306,17 @@ async function routeRequest(req: Request): Promise<Response> {
     const rateLimitResponse = checkRateLimit(authRateLimiter, req)
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
     return withSecurityHeaders(await authRoutes!.handleAuthCallback(req), req)
+  }
+
+  // ISSUE-0121 / ADR 0003: the SPA exchanges its one-time callback ticket
+  // for the token pair here. authRoutes is ALWAYS constructed (see below),
+  // so this serves in production and dev alike — dev mode never mints
+  // tickets (the callback 400s), so the exchange simply hits the handler's
+  // own guard (400/401).
+  if (url.pathname === '/api/auth/callback/exchange' && req.method === 'POST') {
+    const rateLimitResponse = checkRateLimit(authRateLimiter, req) // 10/min per IP, login-adjacent
+    if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
+    return withSecurityHeaders(await authRoutes!.handleTokenExchange(req), req)
   }
 
   if (url.pathname === '/api/auth/me' && req.method === 'GET') {
@@ -636,4 +649,4 @@ async function routeRequest(req: Request): Promise<Response> {
 }
 
 // Export for testing
-export { db, jwtService, postgrid, imap, config }
+export { db, jwtService, postgrid, imap, config, oidcService }
