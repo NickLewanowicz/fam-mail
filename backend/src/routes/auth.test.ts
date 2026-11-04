@@ -1,5 +1,5 @@
 import { describe, it, expect, mock, beforeEach, afterEach, afterAll, beforeAll } from 'bun:test'
-import { setupAuthRoutes, _clearStateStore, _stateStoreSize, stopCleanupTimer } from './auth'
+import { setupAuthRoutes, _clearStateStore, _stateStoreSize, _clearTicketStore, _ticketStoreSize, stopCleanupTimer } from './auth'
 import { JWTService } from '../services/jwtService'
 import { AuthMiddleware } from '../middleware/auth'
 import { Database } from '../database'
@@ -240,47 +240,73 @@ describe('Auth Routes - handleAuthCallback', () => {
     expect(data).toEqual({ error: 'Authentication failed' })
   })
 
-  it('successful callback creates a session in DB and redirects', async () => {
-    // First, call login to populate the state store
+  it('successful callback redirects with a one-time ticket (no tokens in the URL) and the ticket resolves exactly once', async () => {
     const loginReq = createRequest('http://localhost/auth/login')
     const loginResponse = await routes.handleAuthLogin(loginReq)
     const loginData = await loginResponse.json()
     const state = loginData.state
 
-    // Ensure the user exists in the database
     insertTestUser()
 
-    // Call callback
     const callbackReq = createRequest(
       `http://localhost/auth/callback?code=auth-code&state=${state}`
     )
     const response = await routes.handleAuthCallback(callbackReq)
 
-    // Should be a redirect (status 302)
+    // 302 redirect to the SPA with a ticket — never tokens
     expect(response.status).toBe(302)
-
-    // Verify redirect URL contains token
     const redirectUrl = response.headers.get('Location')
     expect(redirectUrl).toBeTruthy()
-    expect(redirectUrl).toContain('/auth/callback?token=')
+    expect(redirectUrl).toContain('/auth/callback?ticket=')
+    // ADR 0003 required assertion: no token material anywhere in the target
+    expect(redirectUrl).not.toContain('token=')
+    expect(redirectUrl).not.toContain('refreshToken=')
 
-    // Extract token from redirect URL
-    const tokenMatch = redirectUrl?.match(/token=([^&]+)/)
-    const token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : null
-    expect(token).toBeTruthy()
+    const ticketMatch = redirectUrl?.match(/ticket=([^&]+)/)
+    const ticket = ticketMatch ? ticketMatch[1] : null
+    expect(ticket).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    )
 
-    // Verify session was created in database
-    // We need to check the sessions table, but Database class doesn't have getSession method
-    // We can verify the token exists by using it for authentication
-    expect(token).toBeTruthy()
-
-    // Verify handleCallback was called with URLSearchParams and code verifier
+    // The session row is the system of record
     expect(mockHandleCallback).toHaveBeenCalled()
     const lastCall = mockHandleCallback.mock.calls[mockHandleCallback.mock.calls.length - 1]
     const passedParams = lastCall[0] as URLSearchParams
     expect(passedParams.get('code')).toBe('auth-code')
-    expect(passedParams.get('state')).toBe(state)
     expect(lastCall[1]).toBe('verifier123')
+
+    // Exchange the ticket exactly once
+    const exchangeReq = createRequest('http://localhost/auth/callback/exchange')
+    const exchangeResponse = await routes.handleTokenExchange(
+      new Request('http://localhost/auth/callback/exchange', {
+        method: 'POST',
+        body: JSON.stringify({ ticket }),
+      })
+    )
+    expect(exchangeResponse.status).toBe(200)
+    const data = await exchangeResponse.json() as { accessToken: string; refreshToken: string }
+
+    // Tokens verify with the suite's service (same instance as the routes)
+    const payload = await jwtService.verifyToken(data.accessToken)
+    expect(payload.sub).toBe(testUser.id)
+
+    // The pair matches what was persisted in the session row
+    const session = db.getSessionByToken(data.accessToken)
+    expect(session?.token).toBe(data.accessToken)
+    expect(session?.refreshToken).toBe(data.refreshToken)
+
+    // Ticket consumed
+    expect(_ticketStoreSize()).toBe(0)
+
+    // Replay: the same ticket never resolves again
+    const replayReq = createRequest('http://localhost/auth/callback/exchange')
+    const replayResponse = await routes.handleTokenExchange(
+      new Request('http://localhost/auth/callback/exchange', {
+        method: 'POST',
+        body: JSON.stringify({ ticket }),
+      })
+    )
+    expect(replayResponse.status).toBe(401)
   })
 
   it('state is removed from store after successful callback', async () => {
@@ -787,3 +813,82 @@ describe('Auth Routes - handleAuthRefresh', () => {
     expect(data).toEqual({ error: 'User not found' })
   })
 })
+
+// ============================================================================
+// ADR 0003 / ISSUE-0086 — one-time ticket exchange (handleTokenExchange)
+// ============================================================================
+
+describe('Auth Routes - handleTokenExchange (ADR 0003)', () => {
+  /** Walk login -> callback -> ticket for a valid user. */
+  async function loginAndCollectTicket(): Promise<string> {
+    const loginReq = createRequest('http://localhost/auth/login')
+    const loginResponse = await routes.handleAuthLogin(loginReq)
+    const loginData = await loginResponse.json()
+    const state = loginData.state
+    insertTestUser()
+    const callbackReq = createRequest(
+      `http://localhost/auth/callback?code=auth-code&state=${state}`
+    )
+    const response = await routes.handleAuthCallback(callbackReq)
+    expect(response.status).toBe(302)
+    const redirectUrl = response.headers.get('Location')!
+    const match = redirectUrl.match(/ticket=([^&]+)/)
+    return match![1]
+  }
+
+  const exchange = (ticket: string) =>
+    routes.handleTokenExchange(
+      new Request('http://localhost/auth/callback/exchange', {
+        method: 'POST',
+        body: JSON.stringify({ ticket }),
+      })
+    )
+
+  it('expired ticket is rejected after the 60s TTL (force-evicted via clock)', async () => {
+    const ticket = await loginAndCollectTicket()
+
+    const realDateNow = Date.now
+    try {
+      Date.now = () => realDateNow() + 61 * 1000
+      const res = await exchange(ticket)
+      expect(res.status).toBe(401)
+      const data = await res.json()
+      expect(data).toEqual({ error: 'Invalid or expired ticket' })
+    } finally {
+      Date.now = realDateNow
+    }
+  })
+
+  it('rejects malformed bodies with 400: no body, empty object, non-string, empty string', async () => {
+    const cases: Array<BodyInit | undefined> = [
+      undefined,
+      JSON.stringify({}),
+      JSON.stringify({ ticket: 42 }),
+      JSON.stringify({ ticket: '' }),
+    ]
+    for (const body of cases) {
+      const req = new Request('http://localhost/auth/callback/exchange', {
+        method: 'POST',
+        ...(body !== undefined ? { body } : {}),
+      })
+      const res = await routes.handleTokenExchange(req)
+      expect(res.status).toBe(400)
+      const data = await res.json()
+      expect(data).toHaveProperty('error')
+    }
+  })
+
+  it('session deletion during the handoff window kills the exchange (401)', async () => {
+    const ticket = await loginAndCollectTicket()
+
+    // Logout/cleanup during the 60s window removes the session row the
+    // ticket points at — the exchange must fail, not mint a live session
+    db.deleteAllSessionsForUser(testUser.id)
+
+    const res = await exchange(ticket)
+    expect(res.status).toBe(401)
+    const data = await res.json()
+    expect(data).toEqual({ error: 'Session no longer exists' })
+  })
+})
+

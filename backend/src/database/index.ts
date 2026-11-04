@@ -615,6 +615,31 @@ export class Database {
   }
 
   /**
+   * Looks up a session by its access token (ADR 0003 ticket exchange:
+   * verifies the session row still exists during the 60s handoff window).
+   */
+  getSessionByToken(token: string): { id: string; userId: string; token: string; refreshToken: string | null; expiresAt: string } | undefined {
+    const stmt = this.db.prepare("SELECT * FROM sessions WHERE token = ?");
+    const row = stmt.get(token) as SessionRow | undefined;
+    if (!row) return undefined;
+    return {
+      id: row.id,
+      userId: row.user_id,
+      token: row.token,
+      refreshToken: row.refresh_token,
+      expiresAt: row.expires_at,
+    };
+  }
+
+  /**
+   * Deletes every session for a user (ADR 0003 test support: simulating a
+   * session-row deletion during the ticket handoff window).
+   */
+  deleteAllSessionsForUser(userId: string): void {
+    this.db.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
+  }
+
+  /**
    * Deletes all expired sessions (where expires_at < now).
    * Runs as a cleanup to prevent database bloat from unused refresh tokens.
    * @returns Number of deleted sessions

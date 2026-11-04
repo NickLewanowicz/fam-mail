@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeAll, afterEach, spyOn } from 'bun:test'
 import { JWTService } from './services/jwtService'
-import { devRefreshResponse } from './server'
 import type { User } from './models/user'
 import { Database } from './database'
 import type { PostGridService } from './services/postgrid'
@@ -8,6 +7,7 @@ import type { PostGridService } from './services/postgrid'
 describe('Backend Server', () => {
     // Import after environment setup
     let handleRequest: (req: Request) => Promise<Response>
+    let devRefresh: (req: Request, database: Database, jwt: JWTService) => Promise<Response>
     let db: Database
     let jwtService: JWTService
     let postgrid: PostGridService
@@ -40,6 +40,7 @@ describe('Backend Server', () => {
 
         const module = await import('./server')
         handleRequest = module.handleRequest
+        devRefresh = module.devRefreshResponse
         db = module.db
         postgrid = module.postgrid
 
@@ -925,7 +926,7 @@ describe('Backend Server', () => {
                 method: 'POST',
                 body: JSON.stringify({ refreshToken }),
             })
-            const res = await devRefreshResponse(req, localDb, localJwt)
+            const res = await devRefresh(req, localDb, localJwt)
             expect(res.status).toBe(200)
             const data = await res.json() as { accessToken?: string; refreshToken?: string }
             expect(typeof data.accessToken).toBe('string')
@@ -945,7 +946,7 @@ describe('Backend Server', () => {
                 method: 'POST',
                 body: JSON.stringify({ refreshToken: 'not-a-real-jwt' }),
             })
-            const res = await devRefreshResponse(req, localDb, localJwt)
+            const res = await devRefresh(req, localDb, localJwt)
             expect([400, 401]).toContain(res.status)
             localDb.close()
         })
