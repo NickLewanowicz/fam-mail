@@ -190,3 +190,42 @@ describe('#116 — draft load restores the destination country', () => {
   })
 })
 
+describe('D1 — soft-print dimension warning (warn, never reject)', () => {
+  it('warns on the Photo step when the uploaded photo is under the print minimum, and clears when a crisp photo replaces it', async () => {
+    // jsdom never decodes image bytes; stub Image to report controlled dims.
+    let decoded = { width: 1500, height: 1000 }
+    class FakeImage {
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      naturalWidth = 0
+      naturalHeight = 0
+      set src(_v: string) {
+        this.naturalWidth = decoded.width
+        this.naturalHeight = decoded.height
+        queueMicrotask(() => this.onload?.())
+      }
+    }
+    vi.stubGlobal('Image', FakeImage)
+    try {
+      renderWizard()
+      fireEvent.click(screen.getByRole('button', { name: /United States/ }))
+
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement
+      fireEvent.change(input, { target: { files: [new File(['small'], 'small.jpg', { type: 'image/jpeg' })] } })
+
+      // Amber, non-blocking status banner on the Photo step (index 1)
+      const banner = await screen.findByText(/may print soft at 6×4"/)
+      expect(banner.textContent).toContain('about 1875×1275 px looks crisper')
+
+      // Replacing the photo with a high-res one clears the warning
+      decoded = { width: 3000, height: 2000 }
+      fireEvent.change(input, { target: { files: [new File(['big'], 'big.jpg', { type: 'image/jpeg' })] } })
+      await waitFor(() => {
+        expect(screen.queryByText(/may print soft/)).not.toBeInTheDocument()
+      })
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+})
+

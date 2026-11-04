@@ -67,12 +67,58 @@ export async function setupMockApi(page: Page) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ mode: 'test', mockMode: false }),
+      // D3 (country-aware ADR 0004): the status payload carries per-country
+      // price estimates — US/CA sourced dashboard rates, GB unpriced
+      body: JSON.stringify({
+        mode: 'test',
+        mockMode: false,
+        pricing: {
+          US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+          CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+          GB: { '6x4': null, '9x6': null, '11x6': null },
+        },
+      }),
     })
   )
 
-  await page.route('**/api/postcards', route =>
-    route.fulfill({
+  // Regex (not a glob): the history list requests /api/postcards?limit=…,
+  // and a '**/api/postcards' glob does not match URLs with query strings —
+  // the request would fall through to the real backend and 401 the page.
+  await page.route(/\/api\/postcards(\?.*)?$/, route => {
+    // History list (GET) — a shaped card so /history renders content
+    if (route.request().method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: [
+            {
+              id: 'pc-e2e-history-1',
+              postgridId: 'mock_postcard_history_1',
+              recipientName: 'Grace Hopper',
+              recipientAddress: '1 Spectacular Way, New Haven, CT 06510',
+              to: {
+                firstName: 'Grace',
+                lastName: 'Hopper',
+                addressLine1: '1 Spectacular Way',
+                city: 'New Haven',
+                provinceOrState: 'CT',
+                postalOrZip: '06510',
+                countryCode: 'US',
+              },
+              content: {
+                message: 'Happy birthday Grace! Wishing you a wonderful year ahead.',
+              },
+              status: 'sent',
+              mode: 'test',
+              createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+            },
+          ],
+        }),
+      })
+    }
+    // Send (POST) — the create flow's success payload
+    return route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
@@ -98,7 +144,7 @@ export async function setupMockApi(page: Page) {
         },
       }),
     })
-  )
+  })
 }
 
 export const TEST_IMAGE_PATH = 'tests/e2e/fixtures/test-postcard.jpg'

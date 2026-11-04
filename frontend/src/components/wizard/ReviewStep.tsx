@@ -2,9 +2,9 @@ import { useEffect, useState, type MutableRefObject } from 'react'
 import type { UsePostcardReturn } from '../../hooks/usePostcard'
 import type { WizardStepActions } from './AddressStep'
 import { toast } from 'sonner'
-import type { PostgridApiMode } from '../../utils/postgridApi'
+import type { PostgridApiMode, PostgridCountryPricing } from '../../utils/postgridApi'
 import { PRICE_QUALIFIER, estimateLabel, priceFor, truthCopy } from '../../utils/postcardPricing'
-import type { PostcardSizePricing } from '../../utils/postgridApi'
+import type { CountryCode } from '../../utils/postcardTemplate'
 
 interface Props {
   postcard: UsePostcardReturn
@@ -20,8 +20,10 @@ interface Props {
   /** ISSUE-0117: PostGrid mode, lifted to CreatePage (single fetch). Absent
    *  = unavailable — the truth line fails closed. */
   mode?: PostgridApiMode | null
-  /** ADR 0004: server-side price estimates per size; absent = no estimates */
-  pricing?: PostcardSizePricing | null
+  /** D3: server-side price estimates keyed by destination country; absent = no estimates */
+  pricing?: PostgridCountryPricing | null
+  /** D3: the recipient's destination country — prices resolve against it */
+  countryCode?: CountryCode | null
 }
 
 function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }) {
@@ -37,7 +39,7 @@ function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: st
   )
 }
 
-export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint, actionRef, mode = null, pricing = null }: Props) {
+export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint, actionRef, mode = null, pricing = null, countryCode = null }: Props) {
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const { image, message, address, returnAddress, size, setSize, isComplete } = postcard
@@ -87,8 +89,9 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               onClick={() => setSize(s)}
             >
               <span>{s === '6x4' ? '6×4"' : s === '9x6' ? '9×6"' : '11×6"'}</span>
-              {priceFor(pricing, s) !== null && (
-                <span className="text-[11px] text-current opacity-80">{estimateLabel(priceFor(pricing, s) as number)}</span>
+              {/* D3: estimate priced for the recipient's country; hidden when unpriced */}
+              {priceFor(pricing, countryCode, s) !== null && (
+                <span className="text-[11px] text-current opacity-80">{estimateLabel(priceFor(pricing, countryCode, s) as number)}</span>
               )}
             </button>
           ))}
@@ -112,7 +115,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
                 : 'bg-zinc-50 border border-zinc-200 text-zinc-500'
           }`}
         >
-          {truthCopy(mode, address?.firstName, priceFor(pricing, size))}
+          {truthCopy(mode, address?.firstName, priceFor(pricing, countryCode, size))}
         </p>
         {/* Schedule for later — uses the drafts schedule API; the backend
             dispatcher mails the draft when the date passes */}

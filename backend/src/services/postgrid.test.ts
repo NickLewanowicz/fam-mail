@@ -283,7 +283,7 @@ describe('PostGridService', () => {
         size: "6x4",
         senderId: "",
       })
-      expect(service.getStatusPayload()).toEqual({ mode: "mock", mockMode: true, pricing: { "6x4": null, "9x6": null, "11x6": null } })
+      expect(service.getStatusPayload()).toEqual({ mode: "mock", mockMode: true, pricing: { US: { "6x4": null, "9x6": null, "11x6": null }, CA: { "6x4": null, "9x6": null, "11x6": null }, GB: { "6x4": null, "9x6": null, "11x6": null } } })
     })
 
     it("getStatusPayload returns effective test when forceTestMode", () => {
@@ -297,7 +297,7 @@ describe('PostGridService', () => {
         size: "6x4",
         senderId: "",
       })
-      expect(service.getStatusPayload()).toEqual({ mode: "test", mockMode: false, pricing: { "6x4": null, "9x6": null, "11x6": null } })
+      expect(service.getStatusPayload()).toEqual({ mode: "test", mockMode: false, pricing: { US: { "6x4": null, "9x6": null, "11x6": null }, CA: { "6x4": null, "9x6": null, "11x6": null }, GB: { "6x4": null, "9x6": null, "11x6": null } } })
     })
 
     it("setRuntimeMode throws in mock mode", () => {
@@ -328,7 +328,7 @@ describe('PostGridService', () => {
       expect(service.getActiveKey()).toBe("pg_test_x")
       service.setRuntimeMode("live")
       expect(service.getActiveKey()).toBe("pg_live_y")
-      expect(service.getStatusPayload()).toEqual({ mode: "live", mockMode: false, pricing: { "6x4": null, "9x6": null, "11x6": null } })
+      expect(service.getStatusPayload()).toEqual({ mode: "live", mockMode: false, pricing: { US: { "6x4": null, "9x6": null, "11x6": null }, CA: { "6x4": null, "9x6": null, "11x6": null }, GB: { "6x4": null, "9x6": null, "11x6": null } } })
       service.setRuntimeMode("test")
       expect(service.getActiveKey()).toBe("pg_test_x")
     })
@@ -550,10 +550,80 @@ describe('PostGridService — sender fields (#100)', () => {
 })
 
 // ============================================================================
+// D2 (decision board 2026-11-04) — no silent back content: backHTML goes to
+// PostGrid verbatim; the old 'Thank you!' fallback is gone. The billable
+// routes gate presence before this service is called.
+// ============================================================================
+
+describe('PostGridService — backHTML passthrough (D2)', () => {
+  const toAddress = {
+    firstName: 'John',
+    lastName: 'Doe',
+    addressLine1: '123 Main St',
+    city: 'Ottawa',
+    provinceOrState: 'ON',
+    postalOrZip: 'K1A 0B1',
+    countryCode: 'CA',
+  }
+
+  function serviceWithCapturedFetch() {
+    const mockFetch = mock(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ id: 'pc_d2', status: 'ready' }),
+      })
+    )
+    global.fetch = mockFetch as unknown as typeof fetch
+    const service = new PostGridService({
+      mode: 'test',
+      testApiKey: 'test_sk_PLACEHOLDER',
+      liveApiKey: 'live_sk_PLACEHOLDER',
+      forceTestMode: false,
+      mockMode: false,
+      webhookSecret: '',
+      size: '6x4',
+      senderId: '',
+    })
+    return { mockFetch, service }
+  }
+
+  function bodyOf(mockFetch: ReturnType<typeof mock>): URLSearchParams {
+    const call = mockFetch.mock.calls[0]
+    return call[1].body as URLSearchParams
+  }
+
+  it('sends backHTML verbatim, with no Thank you! fallback', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+
+    await service.createPostcard({
+      to: toAddress,
+      frontHTML: '<html>Front</html>',
+      backHTML: '<html><body>Custom words</body></html>',
+    })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('backHTML')).toBe('<html><body>Custom words</body></html>')
+  })
+
+  it('omits the backHTML field when absent (routes gate presence before PostGrid)', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+
+    await service.createPostcard({
+      to: toAddress,
+      frontHTML: '<html>Front</html>',
+    })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('backHTML')).toBeNull()
+    expect(body.get('frontHTML')).toBe('<html>Front</html>')
+  })
+})
+
+// ============================================================================
 // ADR 0004 — pricing surfaces via the status payload
 // ============================================================================
 
-describe('PostGridService — status payload pricing (ADR 0004)', () => {
+describe('PostGridService — status payload pricing (D3, country-aware ADR 0004)', () => {
   const base = {
     mode: 'test' as const,
     testApiKey: 't',
@@ -565,47 +635,71 @@ describe('PostGridService — status payload pricing (ADR 0004)', () => {
     senderId: '',
   }
 
-  it('defaults pricing to the placeholder decimals when env is absent', () => {
-    // config/index.ts defaults: 1.11 / 1.86 / 2.24
+  it('carries the sourced dashboard defaults for US and CA, null for GB', () => {
+    // config/index.ts defaults: US 0.902/1.023/1.289, CA 2.12/2.22/2.97,
+    // GB keys absent ("Talk to sales") -> null
     const service = new PostGridService({
       ...base,
-      price6x4: '1.11',
-      price9x6: '1.86',
-      price11x6: '2.24',
+      pricing: {
+        US: { '6x4': '0.902', '9x6': '1.023', '11x6': '1.289' },
+        CA: { '6x4': '2.12', '9x6': '2.22', '11x6': '2.97' },
+        GB: { '6x4': '', '9x6': '', '11x6': '' },
+      },
     })
     const payload = service.getStatusPayload()
-    expect(payload.pricing).toEqual({ '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 })
+    expect(payload.pricing).toEqual({
+      US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+      CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+      GB: { '6x4': null, '9x6': null, '11x6': null },
+    })
     expect(payload.mode).toBe('mock')
     expect(payload.mockMode).toBe(true)
   })
 
-  it('parses valid decimal-string overrides to numbers', () => {
+  it('parses valid decimal-string overrides to numbers, per country', () => {
     const service = new PostGridService({
       ...base,
-      price6x4: '1.23',
-      price9x6: '2',
-      price11x6: '0.5',
+      pricing: {
+        US: { '6x4': '1.23', '9x6': '2', '11x6': '0.5' },
+        CA: { '6x4': '3', '9x6': '4.25', '11x6': '5.125' },
+      },
     })
-    expect(service.getStatusPayload().pricing).toEqual({ '6x4': 1.23, '9x6': 2, '11x6': 0.5 })
+    expect(service.getStatusPayload().pricing).toEqual({
+      US: { '6x4': 1.23, '9x6': 2, '11x6': 0.5 },
+      CA: { '6x4': 3, '9x6': 4.25, '11x6': 5.125 },
+      GB: { '6x4': null, '9x6': null, '11x6': null },
+    })
   })
 
-  it('surfaces null per size for invalid or empty price strings', () => {
+  it('surfaces null per country+size for invalid, negative, or empty strings', () => {
     const service = new PostGridService({
       ...base,
-      price6x4: 'cheap',
-      price9x6: '-3',
-      price11x6: '   ',
+      pricing: {
+        US: { '6x4': 'cheap', '9x6': '-3', '11x6': '   ' },
+        GB: { '6x4': '5', '9x6': 'nope', '11x6': '' },
+      },
     })
-    expect(service.getStatusPayload().pricing).toEqual({ '6x4': null, '9x6': null, '11x6': null })
+    expect(service.getStatusPayload().pricing).toEqual({
+      US: { '6x4': null, '9x6': null, '11x6': null },
+      CA: { '6x4': null, '9x6': null, '11x6': null },
+      GB: { '6x4': 5, '9x6': null, '11x6': null },
+    })
   })
 
-  it('surfaces all-null pricing when the constructor carries no price fields (legacy shape)', () => {
+  it('surfaces all-null pricing when the constructor carries no pricing fields (legacy shape)', () => {
     const service = new PostGridService('test_sk_PLACEHOLDER', true)
-    expect(service.getStatusPayload().pricing).toEqual({ '6x4': null, '9x6': null, '11x6': null })
+    expect(service.getStatusPayload().pricing).toEqual({
+      US: { '6x4': null, '9x6': null, '11x6': null },
+      CA: { '6x4': null, '9x6': null, '11x6': null },
+      GB: { '6x4': null, '9x6': null, '11x6': null },
+    })
   })
 
   it('reports mock mode alongside pricing under POSTGRID_MOCK', () => {
-    const service = new PostGridService({ ...base, price6x4: '1.11', price9x6: '1.86', price11x6: '2.24' })
+    const service = new PostGridService({
+      ...base,
+      pricing: { US: { '6x4': '0.902', '9x6': '1.023', '11x6': '1.289' } },
+    })
     const payload = service.getStatusPayload()
     expect(payload.mode).toBe('mock')
     expect(payload.mockMode).toBe(true)

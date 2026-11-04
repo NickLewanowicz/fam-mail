@@ -248,10 +248,11 @@ test.describe('Mode & price truth (ISSUE-0117)', () => {
     // Both Send buttons expose the truth via aria-describedby
     await expect(page.getByTestId('wizard-primary')).toHaveAttribute('aria-describedby', 'send-truth-bar')
 
-    // Size buttons ride their estimates; qualifier beside the hint
-    await expect(page.getByText('about $1.11')).toBeVisible()
-    await expect(page.getByText('about $1.86')).toBeVisible()
-    await expect(page.getByText('about $2.24')).toBeVisible()
+    // Size buttons ride their destination-country estimates (D3: US walk →
+    // US dashboard rates); qualifier beside the hint
+    await expect(page.getByText('about $0.90')).toBeVisible()
+    await expect(page.getByText('about $1.02')).toBeVisible()
+    await expect(page.getByText('about $1.29')).toBeVisible()
     await expect(page.getByText(/Estimates only — the final cost is set when the card is sent/)).toBeVisible()
 
     // Not-a-checkout grep gate: no Total/Pay/Checkout strings on the page

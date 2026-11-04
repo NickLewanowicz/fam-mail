@@ -128,6 +128,8 @@ const postgrid = new PostGridService({
   webhookSecret: config.postgrid.webhookSecret,
   size: config.postgrid.size,
   senderId: config.postgrid.senderId,
+  // D3: country-aware price estimates ride the status payload
+  pricing: config.postgrid.pricing,
 })
 
 // Register the PostGrid service so routes can access it via import

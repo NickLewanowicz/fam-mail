@@ -8,8 +8,9 @@ import { PostcardPreview, type ActiveZone } from '../components/postcard/Postcar
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { WizardActionBar } from '../components/wizard/WizardActionBar'
 import { priceFor, truthCopy } from '../utils/postcardPricing'
+import { dimensionAdvice, measureImage } from '../utils/printDimensions'
 import { restoredContentCopy } from '../utils/prefillRecipient'
-import { fetchPostgridStatus, type PostcardSizePricing, type PostgridApiMode } from '../utils/postgridApi'
+import { fetchPostgridStatus, type PostgridCountryPricing, type PostgridApiMode } from '../utils/postgridApi'
 import type { WizardStepActions } from '../components/wizard/AddressStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
@@ -26,6 +27,13 @@ const STEPS = [
 ] as const
 
 const STEP_ZONES: ActiveZone[] = [null, 'photo', 'message', 'address', null]
+
+// D1: pretty size labels for the print-resolution warning copy
+const SIZE_LABELS: Record<'6x4' | '9x6' | '11x6', string> = {
+  '6x4': '6×4"',
+  '9x6': '9×6"',
+  '11x6': '11×6"',
+}
 
 // D3: direction-aware step slide (June's spec, slice 3). Wrapper carries a
 // min-height so country/nav-only steps don't collapse mid-transition —
@@ -53,7 +61,30 @@ export default function CreatePage() {
   const reviewActionRef = useRef<WizardStepActions | null>(null)
   // ISSUE-0117: one mode fetch for the whole wizard (truth row + truth line)
   const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
-  const [postgridPricing, setPostgridPricing] = useState<PostcardSizePricing | null>(null)
+  const [postgridPricing, setPostgridPricing] = useState<PostgridCountryPricing | null>(null)
+  // D1 (warn, never reject): non-null when the uploaded photo is under the
+  // 300-DPI print minimum for the selected size. Advisory only — cleared
+  // automatically when the photo is replaced or the size changes.
+  const [softPrintWarning, setSoftPrintWarning] = useState<{ required: { width: number; height: number } } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const preview = postcard.image?.preview
+    if (!preview) {
+      setSoftPrintWarning(null)
+      return
+    }
+    measureImage(preview)
+      .then((px) => {
+        if (cancelled) return
+        const advice = dimensionAdvice(postcard.size, px)
+        setSoftPrintWarning(advice.ok ? null : { required: advice.required })
+      })
+      .catch(() => {
+        if (!cancelled) setSoftPrintWarning(null)
+      })
+    return () => { cancelled = true }
+  }, [postcard.image?.preview, postcard.size])
 
   useEffect(() => {
     let cancelled = false
@@ -536,6 +567,18 @@ export default function CreatePage() {
         </div>
         </div>
 
+        {/* D1: soft-print warning — amber, non-blocking, Photo + Review only.
+            Never gates sending; clears itself when the photo is replaced. */}
+        {softPrintWarning && (step === 1 || step === 4) && (
+          <div
+            role="status"
+            className="max-w-[640px] mx-auto mt-3 px-3 py-2 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-sm"
+          >
+            This photo may print soft at {SIZE_LABELS[postcard.size]} — about{' '}
+            {softPrintWarning.required.width}×{softPrintWarning.required.height} px looks crisper.
+          </div>
+        )}
+
         {/* Step content — one keyed panel; direction-aware slide (D3) */}
         <AnimatePresence mode="wait" custom={dir} initial={false}>
           <motion.div
@@ -608,6 +651,7 @@ export default function CreatePage() {
                     actionRef={reviewActionRef}
                     mode={postgridMode}
                     pricing={postgridPricing}
+                    countryCode={postcard.countryCode}
                   />
                 </div>
               </div>
@@ -622,7 +666,7 @@ export default function CreatePage() {
           <WizardActionBar
             step={step}
             mode={postgridMode}
-            truth={truthCopy(postgridMode, postcard.address?.firstName, priceFor(postgridPricing, postcard.size))}
+            truth={truthCopy(postgridMode, postcard.address?.firstName, priceFor(postgridPricing, postcard.countryCode, postcard.size))}
             onBack={handleBack}
             primaryLabel={
               step === 4 ? 'Send Postcard'

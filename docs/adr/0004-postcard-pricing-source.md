@@ -47,3 +47,27 @@ Existing plumbing (traced at 1e89725):
 - ISSUE-0117 (closed; the placeholder caveat is quoted in its closure note), `docs/design/mode-and-price-affordance-spec.md` Decision 3
 - `postgrid.ts:82-89`, `server.ts:495-497`, `postgridApi.ts:12-20`, `postcardPricing.ts`
 - ADR 0001 — house format
+
+---
+
+## Amendment — country-aware schema, sourced defaults (2026-11-04)
+
+Amended by the maintainer's decision-board round (D3, `docs/product-decisions.md`): pricing
+becomes **country-aware** and the placeholder defaults are replaced with **sourced** PostGrid
+dashboard rates (Starter tier, first-class/Lettermail per-piece).
+
+- **Config keys:** `POSTGRID_PRICE_<US|CA|GB>_<6X4|9X6|11X6>`. Sourced defaults — US $0.902 /
+  $1.023 / $1.289; CA $2.12 / $2.22 / $2.97; GB keys default to empty (rates not published,
+  "Talk to sales") and surface as `null`. Empty/whitespace/negative/NaN values surface as
+  `null` per country+size (parse lives in `PostGridService.getStatusPayload`, not at config
+  load — config carries raw decimal strings). The original flat `POSTGRID_PRICE_6X4`-style
+  keys are removed.
+- **Status payload:** `pricing` is keyed by destination country —
+  `{ US: {'6x4': number|null, '9x6': …, '11x6': …}, CA: {…}, GB: {…} }`. The backend wiring
+  gap from the original implementation (server.ts never passed the price fields into the
+  service, so the live payload was always all-null) is closed in the same change.
+- **Frontend:** `truthCopy` keeps its signature; callers resolve the recipient's country
+  (`priceFor(pricing, countryCode, size)`) and pass the price. Null price → the sentence
+  omits the price clause (qualifier stays unconditional, per the original decision). GB
+  recipients therefore see an honest price-less truth line and no size-button estimates.
+  Standard-class estimates remain out of scope; the "about …" qualifier stays.

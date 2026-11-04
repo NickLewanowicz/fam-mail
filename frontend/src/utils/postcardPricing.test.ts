@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { PRICE_QUALIFIER, estimateLabel, priceFor, truthCopy } from './postcardPricing'
-import type { PostcardSizePricing } from './postgridApi'
+import type { PostcardSizePricing, PostgridCountryPricing } from './postgridApi'
 
 const SIZES = ['6x4', '9x6', '11x6'] as const
 
@@ -64,13 +64,45 @@ describe('estimateLabel + priceFor (ADR 0004)', () => {
     expect(estimateLabel(0.5)).toBe('about $0.50')
   })
 
-  it('priceFor reads the per-size price out of the payload, null-safe', () => {
-    const pricing: PostcardSizePricing = { '6x4': 1.11, '9x6': null, '11x6': 2.24 }
-    expect(priceFor(pricing, '6x4')).toBe(1.11)
-    expect(priceFor(pricing, '9x6')).toBeNull()
-    expect(priceFor(pricing, '11x6')).toBe(2.24)
-    expect(priceFor(undefined, '6x4')).toBeNull()
-    expect(priceFor(null, '6x4')).toBeNull()
+  it('priceFor reads the destination-country price out of the payload, null-safe (D3)', () => {
+    const pricing: PostgridCountryPricing = {
+      US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+      CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+      GB: { '6x4': null, '9x6': null, '11x6': null },
+    }
+    expect(priceFor(pricing, 'US', '6x4')).toBe(0.902)
+    expect(priceFor(pricing, 'CA', '11x6')).toBe(2.97)
+    expect(priceFor(pricing, 'GB', '6x4')).toBeNull()
+    expect(priceFor(pricing, 'US', '9x6')).toBe(1.023)
+    // Null-safety on every argument
+    expect(priceFor(undefined, 'US', '6x4')).toBeNull()
+    expect(priceFor(null, 'CA', '6x4')).toBeNull()
+    expect(priceFor(pricing, null, '6x4')).toBeNull()
+    expect(priceFor(pricing, undefined, '6x4')).toBeNull()
+  })
+
+  it('truthCopy matrix (D3): US and CA price the clause, GB omits it', () => {
+    const pricing: PostgridCountryPricing = {
+      US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+      CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+      GB: { '6x4': null, '9x6': null, '11x6': null },
+    }
+    // US recipient: clause carries the US price
+    expect(truthCopy('live', 'Grace', priceFor(pricing, 'US', '6x4'))).toBe(
+      `This mails a real card to Grace for ${estimateLabel(0.902)}.`
+    )
+    // CA recipient: clause carries the (higher) CA Lettermail price
+    expect(truthCopy('live', 'Grace', priceFor(pricing, 'CA', '6x4'))).toBe(
+      `This mails a real card to Grace for ${estimateLabel(2.12)}.`
+    )
+    // GB recipient: unpriced — clause omitted, qualifier carries the caveat
+    expect(truthCopy('live', 'Grace', priceFor(pricing, 'GB', '9x6'))).toBe(
+      'This mails a real card to Grace.'
+    )
+    // No destination chosen yet: no price either
+    expect(truthCopy('live', 'Grace', priceFor(pricing, null, '6x4'))).toBe(
+      'This mails a real card to Grace.'
+    )
   })
 
   it('PRICE_QUALIFIER ships the estimates-only caveat', () => {

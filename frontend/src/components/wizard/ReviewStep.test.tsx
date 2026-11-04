@@ -288,7 +288,7 @@ describe('ReviewStep', () => {
     expect(screen.queryByText(/Test mode — no physical mail will be sent/i)).not.toBeInTheDocument()
   })
 
-  it('shows the live truth line with recipient and estimate', () => {
+  it('shows the live truth line with recipient and the destination-country estimate', () => {
     render(
       <ReviewStep
         postcard={basePostcard}
@@ -298,10 +298,16 @@ describe('ReviewStep', () => {
         sending={false}
         saving={false}
         mode="live"
-        pricing={{ '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }}
+        pricing={{
+          US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+          CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+          GB: { '6x4': null, '9x6': null, '11x6': null },
+        }}
+        countryCode="CA"
       />,
     )
-    expect(screen.getByText('This mails a real card to Jane for about $1.11.')).toBeInTheDocument()
+    // CA recipient: the Lettermail price, not the US first-class price
+    expect(screen.getByText('This mails a real card to Jane for about $2.12.')).toBeInTheDocument()
   })
 
   it('live truth line omits the price clause when the server has no price for the size', () => {
@@ -314,11 +320,39 @@ describe('ReviewStep', () => {
         sending={false}
         saving={false}
         mode="live"
-        pricing={{ '6x4': null, '9x6': null, '11x6': null }}
+        pricing={{
+          US: { '6x4': null, '9x6': null, '11x6': null },
+          CA: { '6x4': null, '9x6': null, '11x6': null },
+          GB: { '6x4': null, '9x6': null, '11x6': null },
+        }}
+        countryCode="US"
       />,
     )
     expect(screen.getByText('This mails a real card to Jane.')).toBeInTheDocument()
     expect(screen.queryByText(/about \$/)).not.toBeInTheDocument()
+  })
+
+  it('GB recipients see no price anywhere — unpriced market omits the clause and estimates (D3)', () => {
+    render(
+      <ReviewStep
+        postcard={basePostcard}
+        onBack={onBack}
+        onSend={onSend}
+        onSaveDraft={onSaveDraft}
+        sending={false}
+        saving={false}
+        mode="live"
+        pricing={{
+          US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+          CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+          GB: { '6x4': null, '9x6': null, '11x6': null },
+        }}
+        countryCode="GB"
+      />,
+    )
+    expect(screen.getByText('This mails a real card to Jane.')).toBeInTheDocument()
+    expect(screen.queryByText(/about \$/)).not.toBeInTheDocument()
+    expect(screen.getByText(/Estimates only — the final cost is set when the card is sent/)).toBeInTheDocument()
   })
 
   it('shows the mock-mode truth line', () => {
@@ -350,7 +384,7 @@ describe('ReviewStep', () => {
     expect(screen.getByText('Mode unavailable — check your connection before sending.')).toBeInTheDocument()
   })
 
-  it('size buttons carry their price estimate and the qualifier ships beside the hint', () => {
+  it('size buttons carry their destination-country estimate and the qualifier ships beside the hint', () => {
     render(
       <ReviewStep
         postcard={basePostcard}
@@ -360,12 +394,17 @@ describe('ReviewStep', () => {
         sending={false}
         saving={false}
         mode="test"
-        pricing={{ '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }}
+        pricing={{
+          US: { '6x4': 0.902, '9x6': 1.023, '11x6': 1.289 },
+          CA: { '6x4': 2.12, '9x6': 2.22, '11x6': 2.97 },
+          GB: { '6x4': null, '9x6': null, '11x6': null },
+        }}
+        countryCode="US"
       />,
     )
-    expect(screen.getByText('about $1.11')).toBeInTheDocument()
-    expect(screen.getByText('about $1.86')).toBeInTheDocument()
-    expect(screen.getByText('about $2.24')).toBeInTheDocument()
+    expect(screen.getByText('about $0.90')).toBeInTheDocument()
+    expect(screen.getByText('about $1.02')).toBeInTheDocument()
+    expect(screen.getByText('about $1.29')).toBeInTheDocument()
     expect(screen.getByText(/Estimates only — the final cost is set when the card is sent/)).toBeInTheDocument()
   })
 
@@ -379,12 +418,17 @@ describe('ReviewStep', () => {
         sending={false}
         saving={false}
         mode="test"
-        pricing={{ '6x4': 1.11, '9x6': null, '11x6': null }}
+        pricing={{
+          US: { '6x4': 0.902, '9x6': null, '11x6': null },
+          CA: { '6x4': 2.12, '9x6': null, '11x6': null },
+          GB: { '6x4': null, '9x6': null, '11x6': null },
+        }}
+        countryCode="US"
       />,
     )
-    expect(screen.getByText('about $1.11')).toBeInTheDocument()
-    expect(screen.queryByText('about $1.86')).not.toBeInTheDocument()
-    expect(screen.queryByText('about $2.24')).not.toBeInTheDocument()
+    expect(screen.getByText('about $0.90')).toBeInTheDocument()
+    expect(screen.queryByText('about $1.02')).not.toBeInTheDocument()
+    expect(screen.queryByText('about $1.29')).not.toBeInTheDocument()
   })
 })
 

@@ -6,11 +6,14 @@ export type PostgridApiMode = 'test' | 'live' | 'mock'
 
 export type PostcardSizePricing = Record<'6x4' | '9x6' | '11x6', number | null>
 
+/** D3: pricing is keyed by destination country; null = unpriced for that market. */
+export type PostgridCountryPricing = Record<'US' | 'CA' | 'GB', PostcardSizePricing>
+
 export interface PostgridStatusResponse {
   mode: PostgridApiMode
   mockMode: boolean
-  /** ADR 0004: server-side price estimates; null when unset/invalid per size */
-  pricing?: PostcardSizePricing
+  /** D3 (amending ADR 0004): per-country price estimates; null when unset/invalid */
+  pricing?: PostgridCountryPricing
 }
 
 export async function fetchPostgridStatus(): Promise<PostgridStatusResponse> {

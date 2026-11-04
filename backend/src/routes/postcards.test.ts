@@ -127,6 +127,7 @@ describe('handlePostcardCreate — Address Validation', () => {
     const req = makeRequest({
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const response = await handlePostcardCreate(req, mockUser, db)
     // Not a validation error (may be 500 if PostGrid not configured)
@@ -247,6 +248,25 @@ describe('handlePostcardCreate — Address Validation', () => {
     expect(data.errors!.some(e => e.message.includes('frontHTML, backHTML, message, or image'))).toBe(true)
   })
 
+  // D2 (decision board 2026-11-04): no silent back content — a card whose
+  // backHTML and message are both empty/absent rejects before PostGrid
+  // instead of mailing the old 'Thank you!' fallback.
+  it('rejects with the backHTML error when backHTML and message are both empty (D2)', async () => {
+    const req = makeRequest({ to: validUSAddress, frontHTML: '<html>Front</html>', backHTML: '' })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'backHTML' && e.message === 'Add a message or back content before sending')).toBe(true)
+  })
+
+  it('rejects a backHTML-absent, message-absent card with the backHTML error (D2)', async () => {
+    const req = makeRequest({ to: validUSAddress, frontHTML: '<html>Front</html>' })
+    const res = await handlePostcardCreate(req, mockUser, db)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'backHTML')).toBe(true)
+  })
+
   // --- Missing `to` entirely -------------------------------------------------
 
   it('rejects when to is missing entirely', async () => {
@@ -338,6 +358,7 @@ describe('handlePostcardCreate — Size Validation', () => {
     const req = makeRequest({
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
       size: '6x4',
     })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -348,6 +369,7 @@ describe('handlePostcardCreate — Size Validation', () => {
     const req = makeRequest({
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
       size: '9x6',
     })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -358,6 +380,7 @@ describe('handlePostcardCreate — Size Validation', () => {
     const req = makeRequest({
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
       size: '11x6',
     })
     const res = await handlePostcardCreate(req, mockUser, db)
@@ -486,6 +509,7 @@ describe('handlePostcardCreate — Return Address Validation', () => {
       to: validUSAddress,
       from: validUSAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -496,6 +520,7 @@ describe('handlePostcardCreate — Return Address Validation', () => {
       to: validUSAddress,
       from: validCAAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -620,6 +645,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, postalOrZip: '62704-1234' },
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -629,6 +655,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
     const req = makeRequest({
       to: { ...validCAAddress, postalOrZip: 'K1A0B1' },
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -640,6 +667,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, countryCode: 'us' },
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -649,6 +677,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, provinceOrState: 'il' },
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -660,6 +689,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, addressLine2: 'Apt 4B' },
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -672,6 +702,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
       message: '',
+      backHTML: '<html>Back</html>', // D2: message may be empty when backHTML carries the back
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -702,6 +733,7 @@ describe('handlePostcardCreate — Additional Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, addressLine1: 'A'.repeat(200) },
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -854,6 +886,7 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, addressLine1: 'A'.repeat(200) },
       frontHTML: '<html>Test</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -863,6 +896,7 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, postalOrZip: '62704-1234' },
       frontHTML: '<html>Test</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -872,6 +906,7 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
     const req = makeRequest({
       to: { ...validCAAddress, postalOrZip: 'K1A0B1' },
       frontHTML: '<html>Test</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -881,6 +916,7 @@ describe('handlePostcardCreate — Address Edge Cases', () => {
     const req = makeRequest({
       to: { ...validUSAddress, countryCode: 'us' },
       frontHTML: '<html>Test</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -908,14 +944,18 @@ describe('handlePostcardCreate — Message Edge Cases', () => {
     expect(res.status).not.toBe(400)
   })
 
-  it('accepts empty backHTML with valid frontHTML', async () => {
+  // D2 (decision board 2026-11-04): an empty backHTML with no message no
+  // longer passes — the card would have mailed PostGrid's silent fallback.
+  it('rejects empty backHTML with frontHTML only (D2: message or back content required)', async () => {
     const req = makeRequest({
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
       backHTML: '',
     })
     const res = await handlePostcardCreate(req, mockUser, db)
-    expect(res.status).not.toBe(400)
+    expect(res.status).toBe(400)
+    const data = await getResponse(res)
+    expect(data.errors!.some(e => e.field === 'backHTML')).toBe(true)
   })
 
   it('accepts message with markdown links', async () => {
@@ -1255,6 +1295,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     const req = makeRequest({
       to: validUSAddress,
       image: minimalJPEG,
+      backHTML: '<html>Back</html>', // D2: image alone cannot satisfy the back-content gate
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     // Should not be a validation error (may be 500 if PostGrid not configured)
@@ -1265,6 +1306,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
     const req = makeRequest({
       to: validUSAddress,
       image: minimalPNG,
+      backHTML: '<html>Back</html>', // D2: image alone cannot satisfy the back-content gate
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -1275,6 +1317,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
       image: minimalJPEG,
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -1334,6 +1377,7 @@ describe('handlePostcardCreate — Image Validation (Route Level)', () => {
       const req = makeRequest({
         to: validUSAddress,
         image: webp,
+        backHTML: '<html>Back</html>', // D2: back content present
       })
       const res = await handlePostcardCreate(req, mockUser, db)
       expect(res.status).toBe(200)
@@ -1708,6 +1752,7 @@ describe('handlePostcardCreate — Return Address Comprehensive', () => {
       to: validUSAddress,
       from: validCAAddress,
       frontHTML: '<html>Front</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -1743,6 +1788,7 @@ describe('handlePostcardCreate — Message Edge Cases Comprehensive', () => {
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
       message: '',
+      backHTML: '<html>Back</html>', // D2: message may be empty when backHTML carries the back
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -1753,6 +1799,7 @@ describe('handlePostcardCreate — Message Edge Cases Comprehensive', () => {
       to: validUSAddress,
       frontHTML: '<html>Front</html>',
       message: '   ',
+      backHTML: '<html>Back</html>', // D2: message may be blank when backHTML carries the back
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -1902,6 +1949,7 @@ describe('handlePostcardCreate — Return Address Missing/Null (#22)', () => {
       to: validUSAddress,
       from: { ...validUSAddress, addressLine1: 'X'.repeat(200) },
       frontHTML: '<html>Test</html>',
+      backHTML: '<html>Back</html>', // D2: back content present
     })
     const res = await handlePostcardCreate(req, mockUser, db)
     expect(res.status).not.toBe(400)
@@ -2271,6 +2319,7 @@ describe('handlePostcardCreate — structured recipient persistence (#109)', () 
       const req = makeRequest({
         to: validCAAddress,
         frontHTML: '<html>Front only</html>',
+        backHTML: '<html>Back</html>', // D2: back content present; still no image/message => no contentJson
       })
       const res = await handlePostcardCreate(req, mockUser, db)
       expect(res.status).toBe(200)

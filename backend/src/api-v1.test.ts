@@ -236,15 +236,17 @@ describe('Agent API /api/v1', () => {
       expect(request.from?.postalOrZip).toBe('06511')
     })
 
-    it('builds full-bleed image front artwork for image-only cards', async () => {
+    it('builds full-bleed image front artwork for image cards', async () => {
       // Minimal valid PNG header, base64-encoded
       const pngBase64 = Buffer.from(
         new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
       ).toString('base64')
+      // D2 keeps the message: with backHTML and message both empty the route
+      // now rejects, so this image-front pipeline rides on validBody's message
       const req = new Request('http://localhost/api/v1/postcards', {
         method: 'POST',
         headers: { 'x-api-key': 'fam_test_agent_key' },
-        body: JSON.stringify({ ...validBody, message: undefined, image: pngBase64 }),
+        body: JSON.stringify({ ...validBody, image: pngBase64 }),
       })
       const res = await handleRequest(req)
       expect(res.status).toBe(200)

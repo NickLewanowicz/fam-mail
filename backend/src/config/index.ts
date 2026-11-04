@@ -1,3 +1,12 @@
+/** Card sizes used in pricing config keys (`POSTGRID_PRICE_<COUNTRY>_<SIZE>`). */
+export type PricingSize = "6x4" | "9x6" | "11x6";
+
+/** Destination countries with pricing entries. */
+export type PricingCountry = "US" | "CA" | "GB";
+
+/** Raw decimal-string prices per country+size; parse happens in the service. */
+export type PricingConfig = Record<PricingCountry, Record<PricingSize, string>>;
+
 /**
  * Application configuration schema
  */
@@ -14,9 +23,7 @@ export interface Config {
     webhookSecret: string;
     size: "6x4" | "9x6" | "11x6";
     senderId: string;
-    price6x4: string;
-    price9x6: string;
-    price11x6: string;
+    pricing: PricingConfig;
   };
   oidc: {
     issuerUrl: string;
@@ -197,11 +204,29 @@ export function getConfig(): Config {
       webhookSecret: getEnv("POSTGRID_WEBHOOK_SECRET", ""),
       size: getEnvEnum("POSTCARD_SIZE", "6x4", ["6x4", "9x6", "11x6"] as const),
       senderId: getEnv("POSTCARD_SENDER_ID", ""),
-      // ADR 0004: price estimates surface via GET /api/postgrid/status.
-      // Decimal strings; absent/invalid values surface as null per size.
-      price6x4: getEnv("POSTGRID_PRICE_6X4", "1.11"),
-      price9x6: getEnv("POSTGRID_PRICE_9X6", "1.86"),
-      price11x6: getEnv("POSTGRID_PRICE_11X6", "2.24"),
+      // D3 (decision board 2026-11-04, amending ADR 0004): country-aware
+      // pricing — POSTGRID_PRICE_<US|CA|GB>_<6X4|9X6|11X6>. Defaults are the
+      // maintainer-sourced PostGrid dashboard rates (Starter tier, first-class
+      // / Lettermail per-piece). GB rates are not published ("Talk to
+      // sales"), so GB keys default to empty and surface as null. Decimal
+      // strings; empty/invalid values surface as null per country+size.
+      pricing: {
+        US: {
+          "6x4": getEnv("POSTGRID_PRICE_US_6X4", "0.902"),
+          "9x6": getEnv("POSTGRID_PRICE_US_9X6", "1.023"),
+          "11x6": getEnv("POSTGRID_PRICE_US_11X6", "1.289"),
+        },
+        CA: {
+          "6x4": getEnv("POSTGRID_PRICE_CA_6X4", "2.12"),
+          "9x6": getEnv("POSTGRID_PRICE_CA_9X6", "2.22"),
+          "11x6": getEnv("POSTGRID_PRICE_CA_11X6", "2.97"),
+        },
+        GB: {
+          "6x4": getEnv("POSTGRID_PRICE_GB_6X4", ""),
+          "9x6": getEnv("POSTGRID_PRICE_GB_9X6", ""),
+          "11x6": getEnv("POSTGRID_PRICE_GB_11X6", ""),
+        },
+      },
     },
     oidc: {
       issuerUrl: devMode ? getEnv("OIDC_ISSUER_URL", "https://dev.example.com") : getEnvRequired("OIDC_ISSUER_URL"),
