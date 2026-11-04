@@ -48,12 +48,24 @@ Returns both tokens and user info immediately. No OIDC provider required.
    GET /api/auth/callback?code=...&state=...
    ```
 
-3. Callback redirects to frontend with tokens:
+3. Callback redirects to frontend with a **one-time ticket** (60-second TTL, single use):
    ```
-   /auth/callback?token=...&refreshToken=...
+   /auth/callback?ticket=<uuid>
    ```
 
-4. Use the access token for authenticated requests.
+4. Frontend exchanges the ticket for the token pair:
+   ```bash
+   POST /api/auth/callback/exchange
+   { "ticket": "<uuid>" }
+   ```
+   Returns `{ accessToken, refreshToken }` (200, `Cache-Control: no-store`).
+   Errors: `400` missing/malformed ticket, `401` unknown/expired/consumed
+   ticket or session gone, `429` rate limited.
+
+5. Use the access token for authenticated requests.
+
+Tokens never appear in any URL — access logs, proxies, referer headers,
+and history capture at most a dead-in-60-seconds nonce (ADR 0003, #86).
 
 #### Token Refresh
 
