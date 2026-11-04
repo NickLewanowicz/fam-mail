@@ -67,7 +67,12 @@ export async function setupMockApi(page: Page) {
     route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ mode: 'test', mockMode: false }),
+      // ADR 0004: the status payload carries server-side price estimates
+      body: JSON.stringify({
+        mode: 'test',
+        mockMode: false,
+        pricing: { '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 },
+      }),
     })
   )
 
