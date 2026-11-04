@@ -4,9 +4,13 @@ import { API_BASE_URL } from './apiConfig'
 
 export type PostgridApiMode = 'test' | 'live' | 'mock'
 
+export type PostcardSizePricing = Record<'6x4' | '9x6' | '11x6', number | null>
+
 export interface PostgridStatusResponse {
   mode: PostgridApiMode
   mockMode: boolean
+  /** ADR 0004: server-side price estimates; null when unset/invalid per size */
+  pricing?: PostcardSizePricing
 }
 
 export async function fetchPostgridStatus(): Promise<PostgridStatusResponse> {

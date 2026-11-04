@@ -3,7 +3,8 @@ import type { UsePostcardReturn } from '../../hooks/usePostcard'
 import type { WizardStepActions } from './AddressStep'
 import { toast } from 'sonner'
 import type { PostgridApiMode } from '../../utils/postgridApi'
-import { PRICE_ESTIMATES, PRICE_QUALIFIER, truthCopy } from '../../utils/postcardPricing'
+import { PRICE_QUALIFIER, estimateLabel, priceFor, truthCopy } from '../../utils/postcardPricing'
+import type { PostcardSizePricing } from '../../utils/postgridApi'
 
 interface Props {
   postcard: UsePostcardReturn
@@ -19,6 +20,8 @@ interface Props {
   /** ISSUE-0117: PostGrid mode, lifted to CreatePage (single fetch). Absent
    *  = unavailable — the truth line fails closed. */
   mode?: PostgridApiMode | null
+  /** ADR 0004: server-side price estimates per size; absent = no estimates */
+  pricing?: PostcardSizePricing | null
 }
 
 function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: string }) {
@@ -34,7 +37,7 @@ function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: st
   )
 }
 
-export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint, actionRef, mode = null }: Props) {
+export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, sending, saving, keyboardHint, actionRef, mode = null, pricing = null }: Props) {
   const [scheduleAt, setScheduleAt] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const { image, message, address, returnAddress, size, setSize, isComplete } = postcard
@@ -84,7 +87,9 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               onClick={() => setSize(s)}
             >
               <span>{s === '6x4' ? '6×4"' : s === '9x6' ? '9×6"' : '11×6"'}</span>
-              <span className="text-[11px] text-current opacity-80">{PRICE_ESTIMATES[s]}</span>
+              {priceFor(pricing, s) !== null && (
+                <span className="text-[11px] text-current opacity-80">{estimateLabel(priceFor(pricing, s) as number)}</span>
+              )}
             </button>
           ))}
         </div>
@@ -107,7 +112,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
                 : 'bg-zinc-50 border border-zinc-200 text-zinc-500'
           }`}
         >
-          {truthCopy(mode, address?.firstName, size)}
+          {truthCopy(mode, address?.firstName, size, priceFor(pricing, size))}
         </p>
         {/* Schedule for later — uses the drafts schedule API; the backend
             dispatcher mails the draft when the date passes */}

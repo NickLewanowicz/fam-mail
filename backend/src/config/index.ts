@@ -14,6 +14,9 @@ export interface Config {
     webhookSecret: string;
     size: "6x4" | "9x6" | "11x6";
     senderId: string;
+    price6x4: string;
+    price9x6: string;
+    price11x6: string;
   };
   oidc: {
     issuerUrl: string;
@@ -194,6 +197,11 @@ export function getConfig(): Config {
       webhookSecret: getEnv("POSTGRID_WEBHOOK_SECRET", ""),
       size: getEnvEnum("POSTCARD_SIZE", "6x4", ["6x4", "9x6", "11x6"] as const),
       senderId: getEnv("POSTCARD_SENDER_ID", ""),
+      // ADR 0004: price estimates surface via GET /api/postgrid/status.
+      // Decimal strings; absent/invalid values surface as null per size.
+      price6x4: getEnv("POSTGRID_PRICE_6X4", "1.11"),
+      price9x6: getEnv("POSTGRID_PRICE_9X6", "1.86"),
+      price11x6: getEnv("POSTGRID_PRICE_11X6", "2.24"),
     },
     oidc: {
       issuerUrl: devMode ? getEnv("OIDC_ISSUER_URL", "https://dev.example.com") : getEnvRequired("OIDC_ISSUER_URL"),

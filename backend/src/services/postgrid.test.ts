@@ -283,7 +283,7 @@ describe('PostGridService', () => {
         size: "6x4",
         senderId: "",
       })
-      expect(service.getStatusPayload()).toEqual({ mode: "mock", mockMode: true })
+      expect(service.getStatusPayload()).toEqual({ mode: "mock", mockMode: true, pricing: { "6x4": null, "9x6": null, "11x6": null } })
     })
 
     it("getStatusPayload returns effective test when forceTestMode", () => {
@@ -297,7 +297,7 @@ describe('PostGridService', () => {
         size: "6x4",
         senderId: "",
       })
-      expect(service.getStatusPayload()).toEqual({ mode: "test", mockMode: false })
+      expect(service.getStatusPayload()).toEqual({ mode: "test", mockMode: false, pricing: { "6x4": null, "9x6": null, "11x6": null } })
     })
 
     it("setRuntimeMode throws in mock mode", () => {
@@ -328,7 +328,7 @@ describe('PostGridService', () => {
       expect(service.getActiveKey()).toBe("pg_test_x")
       service.setRuntimeMode("live")
       expect(service.getActiveKey()).toBe("pg_live_y")
-      expect(service.getStatusPayload()).toEqual({ mode: "live", mockMode: false })
+      expect(service.getStatusPayload()).toEqual({ mode: "live", mockMode: false, pricing: { "6x4": null, "9x6": null, "11x6": null } })
       service.setRuntimeMode("test")
       expect(service.getActiveKey()).toBe("pg_test_x")
     })
@@ -548,3 +548,67 @@ describe('PostGridService — sender fields (#100)', () => {
     expect(body.get('from[addressLine2]')).toBeNull()
   })
 })
+
+// ============================================================================
+// ADR 0004 — pricing surfaces via the status payload
+// ============================================================================
+
+describe('PostGridService — status payload pricing (ADR 0004)', () => {
+  const base = {
+    mode: 'test' as const,
+    testApiKey: 't',
+    liveApiKey: 'l',
+    forceTestMode: false,
+    mockMode: true,
+    webhookSecret: '',
+    size: '6x4' as const,
+    senderId: '',
+  }
+
+  it('defaults pricing to the placeholder decimals when env is absent', () => {
+    // config/index.ts defaults: 1.11 / 1.86 / 2.24
+    const service = new PostGridService({
+      ...base,
+      price6x4: '1.11',
+      price9x6: '1.86',
+      price11x6: '2.24',
+    })
+    const payload = service.getStatusPayload()
+    expect(payload.pricing).toEqual({ '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 })
+    expect(payload.mode).toBe('mock')
+    expect(payload.mockMode).toBe(true)
+  })
+
+  it('parses valid decimal-string overrides to numbers', () => {
+    const service = new PostGridService({
+      ...base,
+      price6x4: '1.23',
+      price9x6: '2',
+      price11x6: '0.5',
+    })
+    expect(service.getStatusPayload().pricing).toEqual({ '6x4': 1.23, '9x6': 2, '11x6': 0.5 })
+  })
+
+  it('surfaces null per size for invalid or empty price strings', () => {
+    const service = new PostGridService({
+      ...base,
+      price6x4: 'cheap',
+      price9x6: '-3',
+      price11x6: '   ',
+    })
+    expect(service.getStatusPayload().pricing).toEqual({ '6x4': null, '9x6': null, '11x6': null })
+  })
+
+  it('surfaces all-null pricing when the constructor carries no price fields (legacy shape)', () => {
+    const service = new PostGridService('test_sk_PLACEHOLDER', true)
+    expect(service.getStatusPayload().pricing).toEqual({ '6x4': null, '9x6': null, '11x6': null })
+  })
+
+  it('reports mock mode alongside pricing under POSTGRID_MOCK', () => {
+    const service = new PostGridService({ ...base, price6x4: '1.11', price9x6: '1.86', price11x6: '2.24' })
+    const payload = service.getStatusPayload()
+    expect(payload.mode).toBe('mock')
+    expect(payload.mockMode).toBe(true)
+  })
+})
+

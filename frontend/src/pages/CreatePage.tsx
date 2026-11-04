@@ -7,9 +7,9 @@ import { usePostcard } from '../hooks/usePostcard'
 import { PostcardPreview, type ActiveZone } from '../components/postcard/PostcardPreview'
 import { ReviewStep } from '../components/wizard/ReviewStep'
 import { WizardActionBar } from '../components/wizard/WizardActionBar'
-import { truthCopy } from '../utils/postcardPricing'
+import { priceFor, truthCopy } from '../utils/postcardPricing'
 import { restoredContentCopy } from '../utils/prefillRecipient'
-import { fetchPostgridStatus, type PostgridApiMode } from '../utils/postgridApi'
+import { fetchPostgridStatus, type PostcardSizePricing, type PostgridApiMode } from '../utils/postgridApi'
 import type { WizardStepActions } from '../components/wizard/AddressStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
@@ -53,15 +53,22 @@ export default function CreatePage() {
   const reviewActionRef = useRef<WizardStepActions | null>(null)
   // ISSUE-0117: one mode fetch for the whole wizard (truth row + truth line)
   const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
+  const [postgridPricing, setPostgridPricing] = useState<PostcardSizePricing | null>(null)
 
   useEffect(() => {
     let cancelled = false
     ;(async () => {
       try {
         const status = await fetchPostgridStatus()
-        if (!cancelled) setPostgridMode(status.mode)
+        if (!cancelled) {
+          setPostgridMode(status.mode)
+          setPostgridPricing(status.pricing ?? null)
+        }
       } catch {
-        if (!cancelled) setPostgridMode(null)
+        if (!cancelled) {
+          setPostgridMode(null)
+          setPostgridPricing(null)
+        }
       }
     })()
     return () => { cancelled = true }
@@ -600,6 +607,7 @@ export default function CreatePage() {
                     saving={saving}
                     actionRef={reviewActionRef}
                     mode={postgridMode}
+                    pricing={postgridPricing}
                   />
                 </div>
               </div>
@@ -614,7 +622,7 @@ export default function CreatePage() {
           <WizardActionBar
             step={step}
             mode={postgridMode}
-            truth={truthCopy(postgridMode, postcard.address?.firstName, postcard.size)}
+            truth={truthCopy(postgridMode, postcard.address?.firstName, postcard.size, priceFor(postgridPricing, postcard.size))}
             onBack={handleBack}
             primaryLabel={
               step === 4 ? 'Send Postcard'
