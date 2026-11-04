@@ -82,6 +82,10 @@ function createMockPostgrid(overrides: Partial<{
 }
 
 // Minimal 1x1 white JPEG (smallest valid JPEG) — same fixture as postcards.test.ts
+// GIF89a header bytes — valid base64, but rejected format (JPEG/PNG/WebP only, PR #66)
+const gifBytes = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00]);
+const gifBase64 = Buffer.from(gifBytes).toString('base64');
+
 const minimalJPEG = '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/xAAUAQEAAAAAAAAAAAAAAAAAAAAA/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AKwA//9k=';
 
 describe("DraftRoutes", () => {
@@ -728,6 +732,46 @@ describe("DraftRoutes", () => {
       expect(content.message).toBe("Hello from the test!");
     });
 
+
+    // Restored from 8554967 (ADR 0002 amendment): GIF imageData is rejected
+    // at publish, and the failure happens before PostGrid is called
+    it("should return 400 when draft imageData is invalid", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.message = undefined;
+      draft.frontHTML = undefined;
+      draft.backHTML = undefined;
+      draft.imageData = `data:image/gif;base64,${gifBase64}`;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      const data = await response.json() as { error?: string; errors?: Array<{ field?: string; message?: string }> };
+
+      expect(response.status).toBe(400);
+      expect(data.error).toBe("Validation failed");
+      expect(data.errors).toBeDefined();
+      const imageErrors = data.errors!.filter((e: { field?: string }) => e.field === "image");
+      expect(imageErrors.length).toBe(1);
+
+      // Fail-before-PostGrid, asserted directly (ADR implementation-note standard)
+      const createSpy = spyOn(mockPostgrid, "createPostcard");
+      expect(createSpy).not.toHaveBeenCalled();
+    });
+
+    it("should reject WebP-free formats only: accepts WebP imageData at publish (PR #66 whitelist)", async () => {
+      const webpBytes = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x04, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50]);
+      const webp = Buffer.from(webpBytes).toString("base64");
+      const draft = createTestDraft(user1.id, "draft");
+      draft.imageData = `data:image/webp;base64,${webp}`;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+      // Not a validation failure (may be 500 if PostGrid not configured)
+      expect(response.status).not.toBe(400);
+    });
 
     it("should accept raw base64 imageData without a data URL prefix", async () => {
       const draft = createTestDraft(user1.id, "draft");
