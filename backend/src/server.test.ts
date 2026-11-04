@@ -1,3 +1,15 @@
+// IMPORT-ORDER CONTRACT: bun test runs all files in one process and caches
+// modules across files. `api-v1.test.ts` (alphabetically first) is the
+// process owner of `./server` — its beforeAll pins the env (non-dev, real
+// OIDC_ISSUER_URL) and serves a fake discovery document across the import,
+// so the cached module is production-shaped for every later file. This
+// file's harness deletes DEV_MODE and re-serves the same fake discovery
+// around its own import, which is what makes standalone
+// `bun test src/server.test.ts <complete env>` work too. Do NOT add a
+// static `import { … } from './server'` here — a top-level import would
+// evaluate the server module BEFORE the beforeAll env block (it would try
+// to open the default DATABASE_PATH and, non-hermetically, perform OIDC
+// discovery). Capture what you need inside beforeAll instead.
 import { describe, it, expect, beforeAll, beforeEach, afterEach, spyOn } from 'bun:test'
 import { JWTService } from './services/jwtService'
 import type { User } from './models/user'
