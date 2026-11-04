@@ -22,6 +22,25 @@ beforeAll(() => {
   process.env.OIDC_CLIENT_SECRET = process.env.OIDC_CLIENT_SECRET || 'test-client-secret'
   process.env.OIDC_REDIRECT_URI = process.env.OIDC_REDIRECT_URI || 'http://localhost:3000/auth/callback'
   process.env.LLM_API_KEY = process.env.LLM_API_KEY || 'test-llm-key'
+
+  // #89 hardening: this suite must never reach the network, in any file
+  // ordering or ambient env. Inject a mock service into the registry so
+  // every "accepts"/validation test below exercises handlePostcardCreate
+  // against the mock boundary (same pattern as the WebP test at the bottom
+  // of this file). Cross-file top-level env assignments elsewhere in the
+  // suite used to auto-initialize a REAL singleton at first import here.
+  setPostgridService(
+    new PostGridService({
+      mode: 'test',
+      testApiKey: 't',
+      liveApiKey: 'l',
+      forceTestMode: false,
+      mockMode: true,
+      webhookSecret: '',
+      size: '6x4',
+      senderId: '',
+    })
+  )
 })
 
 // ---------------------------------------------------------------------------

@@ -43,6 +43,9 @@ describe('Agent API /api/v1', () => {
     process.env.ADMIN_EMAILS = 'admin@example.com'
     // One key with label, one without ("key::email" form)
     process.env.API_KEYS = 'fam_test_agent_key:hermes-agent:agent-user@example.com,fam_second_key::agent-user@example.com'
+    // #89: this file owns the process-wide ./server module — DEV_MODE keeps
+    // import-time OIDC discovery offline (bare/no-env runs must not egress)
+    process.env.DEV_MODE = 'true'
 
     const module = await import('./server')
     handleRequest = module.handleRequest
@@ -50,6 +53,12 @@ describe('Agent API /api/v1', () => {
     postgrid = module.postgrid
     jwtService = module.jwtService
     config = module.config
+
+    // #89: the mode API must behave as the real (non-mock) service; ambient
+    // POSTGRID_MOCK=true makes setRuntimeMode throw by design (postgrid.ts
+    // "Cannot change PostGrid mode while mock mode is enabled"). This suite
+    // owns the process-wide instance — restore nothing.
+    ;(postgrid as unknown as { mockMode: boolean }).mockMode = false
 
     // Map the API key to a real user row
     agentUser = db.getUserByEmail('agent-user@example.com') ?? undefined as unknown as User
