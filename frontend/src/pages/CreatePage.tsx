@@ -622,7 +622,7 @@ export default function CreatePage() {
           <WizardActionBar
             step={step}
             mode={postgridMode}
-            truth={truthCopy(postgridMode, postcard.address?.firstName, postcard.size, priceFor(postgridPricing, postcard.size))}
+            truth={truthCopy(postgridMode, postcard.address?.firstName, priceFor(postgridPricing, postcard.size))}
             onBack={handleBack}
             primaryLabel={
               step === 4 ? 'Send Postcard'

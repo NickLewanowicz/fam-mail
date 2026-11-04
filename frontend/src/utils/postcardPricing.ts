@@ -22,7 +22,6 @@ export function estimateLabel(price: number): string {
 export function truthCopy(
   mode: PostgridApiMode | null,
   firstName: string | undefined,
-  size: PostcardSize,
   price: number | null
 ): string {
   if (mode === 'live') {

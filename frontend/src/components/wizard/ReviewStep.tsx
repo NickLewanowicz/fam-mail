@@ -112,7 +112,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
                 : 'bg-zinc-50 border border-zinc-200 text-zinc-500'
           }`}
         >
-          {truthCopy(mode, address?.firstName, size, priceFor(pricing, size))}
+          {truthCopy(mode, address?.firstName, priceFor(pricing, size))}
         </p>
         {/* Schedule for later — uses the drafts schedule API; the backend
             dispatcher mails the draft when the date passes */}

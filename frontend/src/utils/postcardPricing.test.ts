@@ -8,38 +8,41 @@ describe('truthCopy (#117/#0004 — the single send-truth source)', () => {
   it('live mode names the recipient and the server estimate', () => {
     const pricing: PostcardSizePricing = { '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }
     for (const size of SIZES) {
-      expect(truthCopy('live', 'Grace', size, pricing[size])).toBe(
+      expect(truthCopy('live', 'Grace', pricing[size])).toBe(
         `This mails a real card to Grace for ${estimateLabel(pricing[size])}.`
       )
     }
   })
 
+
   it('omits the price clause when the server has no price for the size', () => {
-    expect(truthCopy('live', 'Grace', '6x4', null)).toBe(
+    expect(truthCopy('live', 'Grace', null)).toBe(
       'This mails a real card to Grace.'
     )
   })
 
   it('empty firstName falls back to "your recipient"', () => {
-    expect(truthCopy('live', undefined, '6x4', 1.11)).toBe(
+    expect(truthCopy('live', undefined, 1.11)).toBe(
       `This mails a real card to your recipient for ${estimateLabel(1.11)}.`
     )
-    expect(truthCopy('live', '', '9x6', 1.86)).toBe(
+    expect(truthCopy('live', '', 1.86)).toBe(
       `This mails a real card to your recipient for ${estimateLabel(1.86)}.`
     )
   })
 
-  it('test and mock modes carry the fail-safe practice sentence regardless of price', () => {
+  it('test and mock modes carry the fail-safe practice sentence regardless of price and size', () => {
+    const pricing: PostcardSizePricing = { '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }
     for (const mode of ['test', 'mock'] as const) {
       for (const size of SIZES) {
-        expect(truthCopy(mode, 'Grace', size, 2.24)).toBe('Practice send — nothing will be mailed.')
+        expect(truthCopy(mode, 'Grace', pricing[size])).toBe('Practice send — nothing will be mailed.')
       }
     }
   })
 
   it('null mode fails closed — no false promise either way', () => {
+    const pricing: PostcardSizePricing = { '6x4': 1.11, '9x6': 1.86, '11x6': 2.24 }
     for (const size of SIZES) {
-      expect(truthCopy(null, 'Grace', size, 2.24)).toBe(
+      expect(truthCopy(null, 'Grace', pricing[size])).toBe(
         'Mode unavailable — check your connection before sending.'
       )
     }
@@ -48,7 +51,7 @@ describe('truthCopy (#117/#0004 — the single send-truth source)', () => {
   it('a 60-character recipient name is carried whole (wraps at render, never truncated)', () => {
     const long = 'Barnaby Thaddeus Montgomery-Fitzwilliam Alistair Pemberton XXIIII'
     expect(long.length).toBeGreaterThanOrEqual(60)
-    const copy = truthCopy('live', long, '11x6', 2.24)
+    const copy = truthCopy('live', long, 2.24)
     expect(copy).toContain(long)
     expect(copy.endsWith('.')).toBe(true)
   })
