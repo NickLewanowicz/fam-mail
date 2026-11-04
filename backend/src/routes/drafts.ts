@@ -219,6 +219,14 @@ export class DraftRoutes {
       allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or an image is required' })
     }
 
+    // D2 (decision board 2026-11-04): no silent back content — every card
+    // carries intentional words. With both empty/absent the service used to
+    // mail PostGrid with a 'Thank you!' fallback; now the route rejects
+    // before PostGrid per ADR 0002's house rule.
+    if (!(draft.backHTML ?? '').trim() && !(draft.message ?? '').trim()) {
+      allErrors.push({ field: 'backHTML', message: 'Add a message or back content before sending' })
+    }
+
     // Validate image if present (same rules as the direct postcard creation
     // route — ADR 0002 amendment: builder builds, route validates)
     if (draft.imageData) {

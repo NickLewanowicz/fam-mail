@@ -550,6 +550,76 @@ describe('PostGridService — sender fields (#100)', () => {
 })
 
 // ============================================================================
+// D2 (decision board 2026-11-04) — no silent back content: backHTML goes to
+// PostGrid verbatim; the old 'Thank you!' fallback is gone. The billable
+// routes gate presence before this service is called.
+// ============================================================================
+
+describe('PostGridService — backHTML passthrough (D2)', () => {
+  const toAddress = {
+    firstName: 'John',
+    lastName: 'Doe',
+    addressLine1: '123 Main St',
+    city: 'Ottawa',
+    provinceOrState: 'ON',
+    postalOrZip: 'K1A 0B1',
+    countryCode: 'CA',
+  }
+
+  function serviceWithCapturedFetch() {
+    const mockFetch = mock(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ id: 'pc_d2', status: 'ready' }),
+      })
+    )
+    global.fetch = mockFetch as unknown as typeof fetch
+    const service = new PostGridService({
+      mode: 'test',
+      testApiKey: 'test_sk_PLACEHOLDER',
+      liveApiKey: 'live_sk_PLACEHOLDER',
+      forceTestMode: false,
+      mockMode: false,
+      webhookSecret: '',
+      size: '6x4',
+      senderId: '',
+    })
+    return { mockFetch, service }
+  }
+
+  function bodyOf(mockFetch: ReturnType<typeof mock>): URLSearchParams {
+    const call = mockFetch.mock.calls[0]
+    return call[1].body as URLSearchParams
+  }
+
+  it('sends backHTML verbatim, with no Thank you! fallback', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+
+    await service.createPostcard({
+      to: toAddress,
+      frontHTML: '<html>Front</html>',
+      backHTML: '<html><body>Custom words</body></html>',
+    })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('backHTML')).toBe('<html><body>Custom words</body></html>')
+  })
+
+  it('omits the backHTML field when absent (routes gate presence before PostGrid)', async () => {
+    const { mockFetch, service } = serviceWithCapturedFetch()
+
+    await service.createPostcard({
+      to: toAddress,
+      frontHTML: '<html>Front</html>',
+    })
+
+    const body = bodyOf(mockFetch)
+    expect(body.get('backHTML')).toBeNull()
+    expect(body.get('frontHTML')).toBe('<html>Front</html>')
+  })
+})
+
+// ============================================================================
 // ADR 0004 — pricing surfaces via the status payload
 // ============================================================================
 

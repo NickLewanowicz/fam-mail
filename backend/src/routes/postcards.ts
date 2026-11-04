@@ -63,6 +63,13 @@ export async function handlePostcardCreate(req: Request, user: User, db: Databas
       allErrors.push({ field: 'content', message: 'At least one of frontHTML, backHTML, message, or image is required' })
     }
 
+    // D2 (decision board 2026-11-04): no silent back content — mirrors the
+    // drafts publish gate exactly. Both backHTML and message empty/absent
+    // rejects before PostGrid instead of mailing a fallback.
+    if (!(backHTML ?? '').trim() && !(message ?? '').trim()) {
+      allErrors.push({ field: 'backHTML', message: 'Add a message or back content before sending' })
+    }
+
     if (image) {
       const imageResult = validateImage(image)
       if (!imageResult.valid) {

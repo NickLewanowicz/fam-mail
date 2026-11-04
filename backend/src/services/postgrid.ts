@@ -171,7 +171,12 @@ export class PostGridService {
       if (request.frontHTML) {
         formData.append('frontHTML', request.frontHTML)
       }
-      formData.append('backHTML', request.backHTML || 'Thank you!')
+      // D2: backHTML goes out verbatim — the old `|| 'Thank you!'` silent
+      // default is gone; the billable routes gate back content before
+      // PostGrid is ever called (drafts.ts / postcards.ts).
+      if (request.backHTML) {
+        formData.append('backHTML', request.backHTML)
+      }
       formData.append('size', request.size || '6x4')
 
       const response = await fetch(`${this.baseUrl}/postcards`, {

@@ -636,9 +636,15 @@ describe("DraftRoutes", () => {
       // Should have exactly one content error
       const contentErrors = data.errors!.filter((e: { field?: string }) => e.field === "content");
       expect(contentErrors.length).toBe(1);
+      // D2: the double-empty draft also trips the back-content gate
+      expect(data.errors!.some((e: { field?: string }) => e.field === "backHTML")).toBe(true);
     });
 
-    it("should publish an image-only draft (imageData counts as content)", async () => {
+    // D2 (decision board 2026-11-04): flipped from "image-only publishes" —
+    // a draft with neither message nor backHTML now rejects before PostGrid
+    // (every card carries intentional words). imageData still counts as
+    // front content, but it cannot satisfy the back-content gate.
+    it("should return 400 for an image-only draft with no message or backHTML (D2)", async () => {
       const draft = createTestDraft(user1.id, "draft");
       draft.message = undefined;
       draft.frontHTML = undefined;
@@ -666,14 +672,28 @@ describe("DraftRoutes", () => {
       const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, spyPostgrid);
       const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
       const response = await routes.publish(req, user1);
-      const data = await response.json() as { success?: boolean };
+      const data = await response.json() as { success?: boolean; errors?: Array<{ field?: string }> };
 
+      // D2 (decision board 2026-11-04): an image-only draft has no message
+      // and no backHTML — it rejects instead of mailing a silent fallback.
+      expect(response.status).toBe(400);
+      expect(data.success).toBeUndefined();
+      expect(data.errors!.some((e: { field?: string }) => e.field === "backHTML")).toBe(true);
+      expect(capturedRequest).toBeNull();
+    });
+
+    it("should publish a frontHTML-only draft when a message is present (D2 gate passes)", async () => {
+      const draft = createTestDraft(user1.id, "draft");
+      draft.frontHTML = "<html><body>Hand-written front</body></html>";
+      draft.imageData = undefined;
+      db.insertDraft(draft);
+
+      const routes = new DraftRoutes(db, null as unknown as AuthMiddleware, mockPostgrid);
+      const req = createRequest(`http://localhost:8484/api/drafts/${draft.id}`);
+      const response = await routes.publish(req, user1);
+
+      // Message (from the factory) satisfies the D2 back-content gate
       expect(response.status).toBe(200);
-      expect(data.success).toBe(true);
-      expect(capturedRequest).not.toBeNull();
-      // Image must reach PostGrid as the front, not be silently dropped
-      expect(capturedRequest.frontHTML).toContain("<img");
-      expect(capturedRequest.frontHTML).toContain(minimalJPEG);
     });
 
     it("should build frontHTML from imageData while message renders the back", async () => {
@@ -775,7 +795,8 @@ describe("DraftRoutes", () => {
 
     it("should accept raw base64 imageData without a data URL prefix", async () => {
       const draft = createTestDraft(user1.id, "draft");
-      draft.message = undefined;
+      // D2: message stays (factory default) — the back-content gate must not
+      // block this raw-base64 front pipeline
       draft.frontHTML = undefined;
       draft.backHTML = undefined;
       draft.imageData = minimalJPEG;
