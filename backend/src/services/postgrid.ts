@@ -1,5 +1,12 @@
 import type { PostGridPostcardRequest, PostGridPostcardResponse, PostGridError } from '../types/postgrid'
+import type { PricingConfig, PricingCountry, PricingSize } from '../config'
 import { logger } from '../utils/logger'
+
+/** Parsed price per size; null = unpriced (unset/invalid). */
+export type PricedSizes = Record<PricingSize, number | null>
+
+/** Status-payload pricing: one entry per destination country (D3). */
+export type PricedCountries = Record<PricingCountry, PricedSizes>
 
 export interface PostGridConfig {
   mode: "test" | "live";
@@ -10,10 +17,8 @@ export interface PostGridConfig {
   webhookSecret: string;
   size: "6x4" | "9x6" | "11x6";
   senderId: string;
-  /** ADR 0004: decimal strings parsed for the status payload; absent/invalid -> null */
-  price6x4?: string;
-  price9x6?: string;
-  price11x6?: string;
+  /** D3 (amending ADR 0004): decimal strings parsed for the status payload; absent/invalid -> null */
+  pricing?: Partial<PricingConfig>;
 }
 
 export class PostGridService {
@@ -82,21 +87,27 @@ export class PostGridService {
 
   /**
    * Payload for GET /api/postgrid/status — effective mailing mode, or `mock` when POSTGRID_MOCK is on.
+   * D3: pricing is keyed by destination country; empty/whitespace/negative/NaN -> null.
    */
   getStatusPayload(): {
     mode: "test" | "live" | "mock"
     mockMode: boolean
-    pricing: { "6x4": number | null; "9x6": number | null; "11x6": number | null }
+    pricing: PricedCountries
   } {
     const parsePrice = (value?: string): number | null => {
       if (value === undefined || value.trim() === '') return null
       const parsed = Number(value)
       return Number.isFinite(parsed) && parsed >= 0 ? parsed : null
     }
-    const pricing = {
-      '6x4': parsePrice(this.config.price6x4),
-      '9x6': parsePrice(this.config.price9x6),
-      '11x6': parsePrice(this.config.price11x6),
+    const countryPricing = (country: PricingCountry): PricedSizes => ({
+      '6x4': parsePrice(this.config.pricing?.[country]?.['6x4']),
+      '9x6': parsePrice(this.config.pricing?.[country]?.['9x6']),
+      '11x6': parsePrice(this.config.pricing?.[country]?.['11x6']),
+    })
+    const pricing: PricedCountries = {
+      US: countryPricing('US'),
+      CA: countryPricing('CA'),
+      GB: countryPricing('GB'),
     }
     if (this.mockMode) {
       return { mode: "mock", mockMode: true, pricing }

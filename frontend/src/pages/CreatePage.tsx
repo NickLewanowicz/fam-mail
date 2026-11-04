@@ -10,7 +10,7 @@ import { WizardActionBar } from '../components/wizard/WizardActionBar'
 import { priceFor, truthCopy } from '../utils/postcardPricing'
 import { dimensionAdvice, measureImage } from '../utils/printDimensions'
 import { restoredContentCopy } from '../utils/prefillRecipient'
-import { fetchPostgridStatus, type PostcardSizePricing, type PostgridApiMode } from '../utils/postgridApi'
+import { fetchPostgridStatus, type PostgridCountryPricing, type PostgridApiMode } from '../utils/postgridApi'
 import type { WizardStepActions } from '../components/wizard/AddressStep'
 import { CountryStep } from '../components/wizard/CountryStep'
 import { AddressStep } from '../components/wizard/AddressStep'
@@ -61,7 +61,7 @@ export default function CreatePage() {
   const reviewActionRef = useRef<WizardStepActions | null>(null)
   // ISSUE-0117: one mode fetch for the whole wizard (truth row + truth line)
   const [postgridMode, setPostgridMode] = useState<PostgridApiMode | null>(null)
-  const [postgridPricing, setPostgridPricing] = useState<PostcardSizePricing | null>(null)
+  const [postgridPricing, setPostgridPricing] = useState<PostgridCountryPricing | null>(null)
   // D1 (warn, never reject): non-null when the uploaded photo is under the
   // 300-DPI print minimum for the selected size. Advisory only — cleared
   // automatically when the photo is replaced or the size changes.
@@ -651,6 +651,7 @@ export default function CreatePage() {
                     actionRef={reviewActionRef}
                     mode={postgridMode}
                     pricing={postgridPricing}
+                    countryCode={postcard.countryCode}
                   />
                 </div>
               </div>
@@ -665,7 +666,7 @@ export default function CreatePage() {
           <WizardActionBar
             step={step}
             mode={postgridMode}
-            truth={truthCopy(postgridMode, postcard.address?.firstName, priceFor(postgridPricing, postcard.size))}
+            truth={truthCopy(postgridMode, postcard.address?.firstName, priceFor(postgridPricing, postcard.countryCode, postcard.size))}
             onBack={handleBack}
             primaryLabel={
               step === 4 ? 'Send Postcard'

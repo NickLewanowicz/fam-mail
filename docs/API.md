@@ -1129,10 +1129,12 @@ Authorization: Bearer <access_token>
 ```json
 {
   "mode": "test",
-  "testMode": true,
-  "forceTestMode": false,
   "mockMode": false,
-  "apiKeyConfigured": true
+  "pricing": {
+    "US": { "6x4": 0.902, "9x6": 1.023, "11x6": 1.289 },
+    "CA": { "6x4": 2.12, "9x6": 2.22, "11x6": 2.97 },
+    "GB": { "6x4": null, "9x6": null, "11x6": null }
+  }
 }
 ```
 
@@ -1140,11 +1142,9 @@ Authorization: Bearer <access_token>
 
 | Field | Type | Description |
 |-------|------|-------------|
-| mode | string | Current mode: `"test"` or `"live"` |
-| testMode | boolean | Whether test mode is active |
-| forceTestMode | boolean | Whether test mode is forced by config |
+| mode | string | Effective mode: `"test"`, `"live"`, or `"mock"` (POSTGRID_MOCK) |
 | mockMode | boolean | Whether mock mode is active (no API calls) |
-| apiKeyConfigured | boolean | Whether an API key is configured |
+| pricing | object | Per-country price estimates (ADR 0004 as amended, D3). Dollars per piece for the recipient's country; `null` when unset/invalid (GB is unpriced by default — rates not published) |
 
 **Error Responses**:
 

@@ -177,3 +177,56 @@ describe("parseApiKeys", () => {
     }
   });
 });
+
+describe("PostGrid pricing config (D3 — country-aware ADR 0004)", () => {
+  // Keep the env clean around every case so defaults are observable
+  const PRICE_KEYS = [
+    "POSTGRID_PRICE_US_6X4", "POSTGRID_PRICE_US_9X6", "POSTGRID_PRICE_US_11X6",
+    "POSTGRID_PRICE_CA_6X4", "POSTGRID_PRICE_CA_9X6", "POSTGRID_PRICE_CA_11X6",
+    "POSTGRID_PRICE_GB_6X4", "POSTGRID_PRICE_GB_9X6", "POSTGRID_PRICE_GB_11X6",
+  ] as const;
+
+  afterEach(() => {
+    for (const key of PRICE_KEYS) delete process.env[key];
+  });
+
+  function mockRequiredEnv() {
+    process.env.DEV_MODE = "true";
+    process.env.POSTGRID_MOCK = "true";
+  }
+
+  it("defaults to the sourced dashboard rates: US first-class, CA Lettermail, GB unpriced", () => {
+    mockRequiredEnv();
+    const config = getConfig();
+    expect(config.postgrid.pricing).toEqual({
+      US: { "6x4": "0.902", "9x6": "1.023", "11x6": "1.289" },
+      CA: { "6x4": "2.12", "9x6": "2.22", "11x6": "2.97" },
+      GB: { "6x4": "", "9x6": "", "11x6": "" },
+    });
+  });
+
+  it("env overrides replace the per-country defaults", () => {
+    mockRequiredEnv();
+    process.env.POSTGRID_PRICE_US_6X4 = "1.05";
+    process.env.POSTGRID_PRICE_CA_11X6 = "3.50";
+    const config = getConfig();
+    expect(config.postgrid.pricing.US["6x4"]).toBe("1.05");
+    expect(config.postgrid.pricing.US["9x6"]).toBe("1.023"); // untouched default
+    expect(config.postgrid.pricing.CA["11x6"]).toBe("3.50");
+  });
+
+  it("accepts explicit empty strings for unpriced countries (surfaces as null downstream)", () => {
+    mockRequiredEnv();
+    process.env.POSTGRID_PRICE_GB_6X4 = "";
+    const config = getConfig();
+    expect(config.postgrid.pricing.GB["6x4"]).toBe("");
+    expect(config.postgrid.pricing.US["6x4"]).toBe("0.902");
+  });
+
+  it("carries invalid strings through untouched — parse-to-null happens in the service", () => {
+    mockRequiredEnv();
+    process.env.POSTGRID_PRICE_US_9X6 = "not-a-price";
+    const config = getConfig();
+    expect(config.postgrid.pricing.US["9x6"]).toBe("not-a-price");
+  });
+});
