@@ -1,4 +1,4 @@
-import { describe, it, expect, spyOn, beforeEach, afterEach } from "bun:test";
+import { describe, it, expect, spyOn, beforeEach, afterEach, beforeAll, afterAll } from "bun:test";
 import { Database } from "../database";
 import { DraftRoutes } from "./drafts";
 import { processDueDrafts } from "../services/scheduler";
@@ -10,17 +10,39 @@ import { unlinkSync, existsSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 
-// Set required environment variables for tests
-process.env.POSTGRID_TEST_API_KEY = "test-key";
-process.env.POSTGRID_LIVE_API_KEY = "test-key";
-process.env.OIDC_ISSUER_URL = "https://accounts.google.com";
-process.env.OIDC_CLIENT_ID = "test-client-id";
-process.env.OIDC_CLIENT_SECRET = "test-client-secret";
-process.env.OIDC_REDIRECT_URI = "http://localhost:5173/auth/callback";
-process.env.JWT_SECRET = "test-jwt-secret-key-at-least-32-chars";
+// Required environment variables for tests — set in beforeAll (with
+// afterAll restore) rather than at module top level: top-level env writes
+// leak into the shared bun test process and once auto-initialized a REAL
+// PostGrid singleton in services/postgrid.ts during another suite (#89).
+const TEST_ENV: Record<string, string> = {
+  POSTGRID_TEST_API_KEY: "test-key",
+  POSTGRID_LIVE_API_KEY: "test-key",
+  OIDC_ISSUER_URL: "https://accounts.google.com",
+  OIDC_CLIENT_ID: "test-client-id",
+  OIDC_CLIENT_SECRET: "test-client-secret",
+  OIDC_REDIRECT_URI: "http://localhost:5173/auth/callback",
+  JWT_SECRET: "test-jwt-secret-key-at-least-32-chars",
+};
 // IMAP vars intentionally omitted — not required for beta (#18)
 
+let savedTestEnv: Record<string, string | undefined> = {};
+
 const TEST_DB = join(tmpdir(), `test-drafts-${Date.now()}.db`);
+
+beforeAll(() => {
+  savedTestEnv = {};
+  for (const [key, value] of Object.entries(TEST_ENV)) {
+    savedTestEnv[key] = process.env[key];
+    process.env[key] = value;
+  }
+});
+
+afterAll(() => {
+  for (const [key, value] of Object.entries(savedTestEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+});
 
 // Create a mock PostGrid service for publish tests (defined outside describe for bun:test scoping)
 function createMockPostgrid(overrides: Partial<{

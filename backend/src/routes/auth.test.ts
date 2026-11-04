@@ -1,4 +1,4 @@
-import { describe, it, expect, mock, beforeEach, afterEach, afterAll } from 'bun:test'
+import { describe, it, expect, mock, beforeEach, afterEach, afterAll, beforeAll } from 'bun:test'
 import { setupAuthRoutes, _clearStateStore, _stateStoreSize, stopCleanupTimer } from './auth'
 import { JWTService } from '../services/jwtService'
 import { AuthMiddleware } from '../middleware/auth'
@@ -8,19 +8,25 @@ import { join } from 'path'
 import { tmpdir } from 'os'
 import { unlinkSync, existsSync } from 'fs'
 
-// Set required environment variables for testing
-process.env.POSTGRID_TEST_API_KEY = 'test-api-key'
-process.env.POSTGRID_LIVE_API_KEY = 'test-live-api-key'
-process.env.JWT_SECRET = 'test-secret-key-for-testing-minimum-32-chars'
-process.env.JWT_EXPIRES_IN = '1h'
-process.env.JWT_REFRESH_EXPIRES_IN = '7d'
-process.env.ALLOWED_ORIGINS = 'http://localhost:3000'
-process.env.PORT = '3000'
-process.env.OIDC_CLIENT_ID = 'test-client-id'
-process.env.OIDC_CLIENT_SECRET = 'test-client-secret'
-process.env.OIDC_REDIRECT_URI = 'http://localhost:3000/auth/callback'
-process.env.OIDC_ISSUER_URL = 'https://accounts.google.com'
+// Required environment variables for testing — set in beforeAll (with
+// afterAll restore) rather than at module top level: top-level env writes
+// leak into the shared bun test process (#89).
+const TEST_ENV: Record<string, string> = {
+  POSTGRID_TEST_API_KEY: 'test-api-key',
+  POSTGRID_LIVE_API_KEY: 'test-live-api-key',
+  JWT_SECRET: 'test-secret-key-for-testing-minimum-32-chars',
+  JWT_EXPIRES_IN: '1h',
+  JWT_REFRESH_EXPIRES_IN: '7d',
+  ALLOWED_ORIGINS: 'http://localhost:3000',
+  PORT: '3000',
+  OIDC_CLIENT_ID: 'test-client-id',
+  OIDC_CLIENT_SECRET: 'test-client-secret',
+  OIDC_REDIRECT_URI: 'http://localhost:3000/auth/callback',
+  OIDC_ISSUER_URL: 'https://accounts.google.com',
+}
 // IMAP vars intentionally omitted — not required for beta (#18)
+
+let savedTestEnv: Record<string, string | undefined> = {}
 
 // Test user data
 const testUser: User = {
@@ -68,7 +74,23 @@ const mockOidcService = {
   handleCallback: mockHandleCallback,
 } as unknown as import('../services/oidcService').OIDCService
 
-// Setup routes
+beforeAll(() => {
+  savedTestEnv = {};
+  for (const [key, value] of Object.entries(TEST_ENV)) {
+    savedTestEnv[key] = process.env[key];
+    process.env[key] = value;
+  }
+});
+
+afterAll(() => {
+  for (const [key, value] of Object.entries(savedTestEnv)) {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
+});
+
+// Setup routes — module-level construction reads no env (handlers read
+// getConfig() per request, after beforeAll has set it)
 const routes = setupAuthRoutes(mockOidcService, jwtService, authMiddleware, db)
 
 // Helper function to create a test request
