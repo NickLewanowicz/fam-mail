@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { exchangeTicket } from '../../services/authApi'
 
 export function AuthCallbackPage() {
   const { handleCallbackToken, isAuthenticated } = useAuth()
@@ -11,8 +12,7 @@ export function AuthCallbackPage() {
   useEffect(() => {
     if (hasProcessed.current) return
 
-    const token = searchParams.get('token')
-    const refreshToken = searchParams.get('refreshToken')
+    const ticket = searchParams.get('ticket')
     const urlError = searchParams.get('error')
 
     if (urlError) {
@@ -20,15 +20,27 @@ export function AuthCallbackPage() {
       return
     }
 
-    if (token) {
+    // ADR 0003 (#86): the callback delivers a one-time ticket — never
+    // tokens. The ticket is exchanged via POST; the token pair never
+    // touches a URL. Legacy ?token= params are ignored (pre-upgrade URLs).
+    if (ticket) {
       hasProcessed.current = true
-      handleCallbackToken(token, refreshToken ?? undefined)
-      // Clean up URL
-      window.history.replaceState({}, '/', '/')
+      void (async () => {
+        try {
+          const tokens = await exchangeTicket(ticket)
+          handleCallbackToken(tokens.accessToken, tokens.refreshToken)
+          // URL tidiness — no longer load-bearing (the ticket is dead)
+          window.history.replaceState({}, '/', '/')
+        } catch {
+          // Unknown/expired/consumed ticket or exchange failure — a
+          // retryable login, never a dead loop
+          setError('Sign-in window expired or failed. Please try again.')
+        }
+      })()
       return
     }
 
-    // No token and no error — redirect to login
+    // No ticket and no error — redirect to login
     setError('No authentication token received.')
   }, [handleCallbackToken, searchParams])
 

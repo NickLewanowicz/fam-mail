@@ -44,6 +44,35 @@ export interface LoginResult {
   refreshToken?: string
 }
 
+/** ISSUE-0086 / ADR 0003: exchange the one-time callback ticket for the
+ *  token pair. Pre-auth (no Bearer), plain fetch — same as initiateLogin.
+ *  Throws AuthApiError on any non-OK exchange (unknown/expired/consumed
+ *  ticket, rate limit, server error). */
+export async function exchangeTicket(ticket: string): Promise<{ accessToken: string; refreshToken: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/callback/exchange`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ticket }),
+  })
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Ticket exchange failed' }))
+    throw new AuthApiError(
+      errorData.error || `Ticket exchange failed with status ${response.status}`,
+      response.status
+    )
+  }
+
+  const data = await response.json() as { accessToken?: string; refreshToken?: string }
+  if (!data.accessToken || !data.refreshToken) {
+    throw new AuthApiError('Ticket exchange returned an incomplete token pair', 500)
+  }
+
+  return { accessToken: data.accessToken, refreshToken: data.refreshToken }
+}
+
 export async function initiateLogin(): Promise<LoginResult> {
   const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
     method: 'POST',
