@@ -1,6 +1,14 @@
 import { describe, it, expect, mock, afterEach } from 'bun:test'
 import { PostGridService, setPostgridService, getPostgridService } from './postgrid'
 
+// #89 hygiene: fetch stubs in this file overwrite the net-guard's guarded
+// fetch — restore the original after each test so later files keep the
+// guard active.
+const originalFetch = globalThis.fetch
+afterEach(() => {
+  globalThis.fetch = originalFetch
+})
+
 describe('PostGridService', () => {
   it('should set test mode when flag is true', () => {
     const testService = new PostGridService('test_sk_PLACEHOLDER', true)

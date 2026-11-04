@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+import { afterEach, describe, it, expect } from "bun:test";
 import { LLMService } from "./llm";
 
 // Type-safe mock fetch
@@ -101,3 +101,11 @@ describe("LLM Service", () => {
     await expect(service.parseEmail(email)).rejects.toThrow("Missing required field");
   });
 });
+
+// #89 hygiene: fetch stubs here overwrite the net-guard's guarded fetch —
+// restore the original after each test so later files keep the guard active.
+const originalFetch = globalThis.fetch
+afterEach(() => {
+  global.fetch = originalFetch
+})
+

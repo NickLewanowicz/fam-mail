@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterEach } from 'bun:test'
+import { describe, it, expect, beforeAll, afterEach, spyOn } from 'bun:test'
 import { JWTService } from './services/jwtService'
 import { devRefreshResponse } from './server'
 import type { User } from './models/user'
@@ -48,6 +48,12 @@ describe('Backend Server', () => {
             expiresIn: '7d',
             refreshExpiresIn: '30d',
         })
+
+        // #89: health tests must never hit PostGrid's letters endpoint (the
+        // closure service goes real without POSTGRID_MOCK). Spy the
+        // boundary — 'up' is what a 401 from the real endpoint returns too.
+        const healthSpy = spyOn(postgrid, 'checkHealth')
+        healthSpy.mockResolvedValue({ status: 'up' })
     })
 
     describe('OPTIONS requests', () => {
@@ -423,7 +429,9 @@ describe('Backend Server', () => {
             const data = (await res.json()) as { mode: string; mockMode: boolean }
 
             expect(res.status).toBe(200)
-            expect(data.mockMode).toBe(false)
+            // The endpoint mirrors the service truthfully — assert the
+            // mirror relationship, not an env-dependent constant (#89)
+            expect(data.mockMode).toBe(postgrid.isMockMode())
             expect(data.mode === 'test' || data.mode === 'live').toBe(true)
         })
 
@@ -472,6 +480,11 @@ describe('Backend Server', () => {
         })
 
         it('POST /api/postgrid/mode switches to live then back to test', async () => {
+            // #89: ambient POSTGRID_MOCK=true makes setRuntimeMode throw by
+            // design (mock mode must not be toggleable) — this test asserts
+            // the toggle contract, so force the shared instance non-mock.
+            // The describe-level afterEach already restores runtime mode.
+            (postgrid as unknown as { mockMode: boolean }).mockMode = false
             const user = insertAuthUser('admin@example.com')
             const token = await jwtService.generateAccessToken(user)
 

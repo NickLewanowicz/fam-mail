@@ -136,3 +136,20 @@ The message string must match `postcards.ts:54` exactly. Validation already runs
 - `backend/src/services/postgrid.ts:138-151` — from[...] append + omission guard; `:138-139` comment on undeliverable-mail destruction
 - PostGrid print-mail API, create postcard: docs.postgrid.com — `from` (Contact) in every example; field-name caveat per ISSUE-0100
 - ADR 0001 — house format; validation-before-PostGrid and sanitization authorities unchanged by this decision
+
+---
+
+## Amendment (2026-11-03): image-format strictness — the open half of ISSUE-0118
+
+**Traced at main 1e89725.** The direct route gates image bytes before PostGrid: `postcards.ts:66-70` runs `validateImage(image)` into the aggregated `allErrors` (field `image`). Publish does not: `publishDraftById` (`drafts.ts:168`) validates to/from/message/size (`:189-226` — the from-gate above shipped in day2 PR #107) but never touches `draft.imageData`; `:248-250` feeds it straight into `buildImageFrontHTML` → `imageToDataUri` (`htmlSanitizer.ts:319-327`), which *sniffs* magic bytes only to pick a mime label (unrecognized bytes get labeled `image/jpeg`) and enforces nothing. A GIF — or a corrupt or oversized payload — persisted in a draft publishes to PostGrid unvalidated. Billable.
+
+The stricter contract is not hypothetical: PR #85 (f6f8b90) shipped `validateImage(extractImageBase64(draft.imageData))` at publish, with a data-URI-prefix-stripping helper (`drafts.ts:26-29` at f6f8b90) and the comment "same rules as the direct postcard creation route"; 8554967 removed it and its two tests.
+
+**Decision: route-level `validateImage` gate in publish, restored to byte parity with the direct route. The sanitizer stays a pure builder.**
+
+- **Where the gate goes:** in `publishDraftById`'s `allErrors` block, immediately after the content check (`drafts.ts:209-211`), before the 400 return (`:228`): `if (draft.imageData) { const imageResult = validateImage(extractImageBase64(draft.imageData)); if (!imageResult.valid) allErrors.push(...imageResult.errors) }`. Restore `extractImageBase64` as a local helper exactly as PR #85 had it (drafts.ts, above `draftSizeToPostGridSize`), and add `validateImage` to the imports at `drafts.ts:8`.
+- **Why not sanitizer-level:** AGENTS.md names `htmlSanitizer.ts` the HTML-safety authority; format/size/corruption validation lives in exactly one validator (`validation.ts:197`) — no duplicates. A throw inside `buildImageFrontHTML` would (a) turn publish validation failures into 500s instead of the aggregated 400 every other field produces, (b) sit beneath the direct route's already-passed 400 gate as dead code, and (c) bury a billable-path rejection inside an HTML builder. Builder builds; route validates.
+- **Coverage:** the scheduler inherits the gate for free (`processDueDrafts` → `publishDraftById`, same composition as the from-gate). Draft create/update stay ungated — drafts are non-billable until publish, the same boundary reasoning as the `from` decision; `imageData` remains storable-unvalidated and only publish rejects loudly.
+- **Whitelist:** `validateImage`'s JPEG/PNG/WebP is operative — WebP was added deliberately (17b3d7e, PR #66). SKILL.md's matrix line "JPEG, PNG (no … WebP)" is stale relative to that shipped decision; maintainer corrects the skill doc, no code change here.
+- **Required tests (`drafts.test.ts`, `POSTGRID_MOCK=true`):** restore 8554967's two scenarios — (1) GIF89a magic bytes as `data:image/gif;base64,…` → 400 `Validation failed`, exactly one error with `field: 'image'`, mock `createPostcard` **not called** (spy assertion, per this ADR's implementation-note standard); (2) valid JPEG as bare base64 without a prefix → publish reaches the mock (pins `extractImageBase64` normalization in both directions).
+- **Known gap, deliberately not bundled:** `validateImage` checks format, size (10 MB), and corruption, but not print dimensions (SKILL.md's 1875×1275 minimum) — both routes share that gap. Print-quality dimension gating is Ray's lane and its own decision; not smuggled into this hardening round.
