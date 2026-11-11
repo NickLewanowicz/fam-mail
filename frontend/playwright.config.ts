@@ -40,10 +40,15 @@ export default defineConfig({
     },
   ],
 
-  webServer: {
-    command: 'pnpm dev --port 5173',
-    port: 5173,
-    reuseExistingServer: !process.env.CI,
-    timeout: 30000,
-  },
+  // When E2E_BASE_URL points at an explicitly started server (e.g. a
+  // production build under `vite preview`, as in docs/screenshots/README.md),
+  // don't spawn a dev server — the caller owns the server lifecycle.
+  webServer: process.env.E2E_BASE_URL
+    ? undefined
+    : {
+        command: 'pnpm dev --port 5173',
+        port: 5173,
+        reuseExistingServer: !process.env.CI,
+        timeout: 30000,
+      },
 });

@@ -3,26 +3,37 @@
 [![CI](https://github.com/NickLewanowicz/fam-mail/actions/workflows/ci.yml/badge.svg)](https://github.com/NickLewanowicz/fam-mail/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Send physical postcards through a web UI backed by [PostGrid](https://www.postgrid.com/) (printing and USPS/Canada Post/Royal Mail delivery).
+Turn a photo and a few words into a **real postcard** in someone's mailbox. Fam Mail is a small,
+self-hosted web app for sending sentimental, physical postcards to the family and friends you
+actually miss — compose a card in the browser, preview exactly what will print, and PostGrid handles
+the printing and postage (USPS, Canada Post, Royal Mail).
+
+Built for memory-making, not marketing: one card, one person, at a time.
 
 ## What it does
 
-Fam Mail is a full-stack app for composing postcards (photo, Markdown message, addresses), previewing front and back with country-specific safe zones, and submitting them to PostGrid for real printing and mailing. An optional **email-to-postcard** mode can watch an IMAP mailbox, parse requests with an LLM, and create mail automatically.
+Compose postcards (photo, Markdown message, addresses) in a 5-step wizard, preview front and back
+with country-specific safe zones, and submit to PostGrid for real printing and mailing. Save drafts,
+schedule cards for later, resend a favorite with one tap, and track everything in your history. An
+optional **email-to-postcard** mode (paused, experimental) can watch an IMAP mailbox, parse requests
+with an LLM, and create mail automatically.
 
 ## Features
 
 - [x] **5-step postcard wizard** — Destination, photo upload, rich text message, address entry, review & send
-- [x] **Live preview** — Interactive 3D-flip postcard with country-specific safe zones (US, CA, GB) and real card sizes (6×4″, 9×6″, 11×6″)
-- [x] **Rich text messages** — Bold, italic, underline, strikethrough, headings, lists, and text colors that render on the printed card
-- [x] **Drafts** — Save and resume work; managed via the REST API
-- [x] **OIDC sign-in** — Any OIDC provider (Pocket ID, Google, etc.) with JWT access/refresh tokens
-- [x] **Agent API** — Static API keys (`/api/v1`) so Hermes, OpenClaw, or scripts can send postcards on your behalf
-- [x] **PostGrid integration** — Test mode, live mode, or mock mode for printing and mailing
-- [x] **Security** — CORS, rate limits, security headers, XSS-sanitized Markdown
-- [x] **SQLite** — Users, drafts, sessions, and email pipeline state
-- [x] **Docker** — Single image serving API and static frontend on one port
-- [x] **Tests** — Backend (`bun test`) and frontend (`vitest`) unit tests
-- [x] **Responsive** — Fully functional on mobile and desktop
+- [x] **Live 3D-flip preview** — country-specific safe zones (US, CA, GB) and real card sizes (6×4″, 9×6″, 11×6″)
+- [x] **Rich text messages** — bold, italic, headings, lists, and text colors that render on the printed card
+- [x] **Drafts & history** — save and resume; "Again" restores a past card's photo, message, and recipient
+- [x] **Schedule sends** — queue a card for a birthday or anniversary
+- [x] **Honest pricing** — per-country, per-size estimates shown before you send (US, Canada; more coming)
+- [x] **OIDC sign-in** — any OIDC provider with JWT access/refresh tokens; single-use ticket exchange, tokens never in URLs
+- [x] **Agent API** — static API keys (`/api/v1`) so assistants and scripts can send postcards on your behalf
+- [x] **Print safety** — format, size, and corruption checks; low-resolution warnings; XSS-sanitized content
+- [x] **Mobile-first** — bottom tab bar, thumb-zone actions, and animations that feel at home on a phone
+- [x] **PostGrid integration** — test mode, live mode, or mock mode
+- [x] **SQLite** — users, drafts, sessions, and sent-card history (self-host friendly)
+- [x] **Docker** — one image serves the API and the static frontend on one port
+- [x] **Tests** — backend (`bun test`, network-isolated) and frontend (`vitest`) suites
 
 ## Tech stack
 
@@ -38,47 +49,58 @@ Fam Mail is a full-stack app for composing postcards (photo, Markdown message, a
 
 ### Desktop (1280×800)
 
-| Photo Upload | Message Editor |
+| Dashboard | Photo Upload |
 |:---:|:---:|
-| ![Photo](docs/screenshots/desktop-photo.png) | ![Message](docs/screenshots/desktop-message.png) |
+| ![Dashboard](docs/screenshots/desktop-dashboard.png) | ![Photo](docs/screenshots/desktop-photo.png) |
 
-| Review & Send |
-|:---:|
-| ![Review](docs/screenshots/desktop-review.png) |
-
-### Mobile (375×812)
-
-| Login | Dashboard | Destination |
-|:---:|:---:|:---:|
-| ![Login](docs/screenshots/mobile-01-login.png) | ![Dashboard](docs/screenshots/mobile-02-dashboard.png) | ![Destination](docs/screenshots/mobile-03-destination.png) |
-
-| Photo | Message | Address |
-|:---:|:---:|:---:|
-| ![Photo](docs/screenshots/mobile-05-photo-uploaded.png) | ![Message](docs/screenshots/mobile-06-message.png) | ![Address](docs/screenshots/mobile-07-address.png) |
-
-| Review | Sent! |
+| Message Editor | Review & Send |
 |:---:|:---:|
-| ![Review](docs/screenshots/mobile-08-review.png) | ![Sent](docs/screenshots/mobile-09-sent.png) |
+| ![Message](docs/screenshots/desktop-message.png) | ![Review](docs/screenshots/desktop-review.png) |
+
+### Mobile (390×844)
+
+| Dashboard | Destination |
+|:---:|:---:|
+| ![Dashboard](docs/screenshots/mobile-dashboard.png) | ![Create](docs/screenshots/mobile-create.png) |
+
+| Review | History |
+|:---:|:---:|
+| ![Review](docs/screenshots/mobile-review.png) | ![History](docs/screenshots/mobile-history.png) |
+
+## Roadmap
+
+Things I'm excited about, roughly in the order I'll get to them:
+
+- **LLM assistant integration** *(messing with it locally now)* — the Agent API (`/api/v1`) is live
+  and API-key authenticated; the plan is to make it pleasant for LLM agents like Hermes or OpenClaw
+  to compose and send real cards on your behalf: "send Mom a birthday card" should just work.
+- **More countries & rates** — GB pricing via PostGrid sales contact, then EU expansion.
+- **Print-quality guardrails** — smarter low-resolution handling (auto-downscale/upscale suggestions
+  at upload; the current amber warning is step one).
+- **Email-to-postcard revival** — the paused IMAP + LLM pipeline, rebuilt on the current stack.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
+| [Docs index](docs/README.md) | Start here — hub for all documentation |
 | [Architecture](docs/ARCHITECTURE-1.0.0.md) | System design and data flow |
 | [Deployment](docs/DEPLOYMENT.md) | Production setup, Docker, nginx |
 | [API Reference](docs/API.md) | HTTP endpoints and schemas |
+| [Agent API](docs/agent-api.md) | Machine API keys for assistants and automation |
+| [Product decisions](docs/product-decisions.md) | Maintainer product decision log |
+| [ADR Index](docs/adr/) | Architecture decision records (0001–0004) |
 | [Contributing](docs/CONTRIBUTING.md) | Development workflow and PR guidelines |
 | [Security Policy](SECURITY.md) | Security guidelines and vulnerability reporting |
-| [Agent API](docs/agent-api.md) | Machine API keys for Hermes/OpenClaw/automation |
 | [Troubleshooting](docs/troubleshooting.md) | Common self-hosting issues and fixes |
 | [FAQ](docs/FAQ.md) | Quick answers to common questions |
 | [Upgrading](UPGRADING.md) | Backup → pull → restart, rollback |
 | [Support](SUPPORT.md) | How to get help (and what best-effort means) |
 | [Environment Reference](docs/environment.md) | Every env var, default, and requirement |
-| [Backups](scripts/backup.sh) | SQLite-safe backup script (Database not found: /data/fammail.db) |
+| [Screenshots manifest](docs/screenshots/README.md) | What each screenshot shows + how to regenerate |
 | [Changelog](CHANGELOG.md) | Version history and notable changes |
-| [Feature Board](docs/FEATURES.md) | Roadmap and 30-iteration enhancement log |
-| [ADR Index](docs/adr/) | Architecture decision records |
+| [Feature Board](docs/FEATURES.md) | Roadmap and enhancement log |
+| [Backups](scripts/backup.sh) | SQLite-safe backup script |
 
 ## Quick start with Docker
 
@@ -134,9 +156,11 @@ OIDC_REDIRECT_URI=http://localhost:8484/api/auth/callback
 JWT_SECRET=your-secret-at-least-32-characters-long
 ```
 
-For quick local testing without an OIDC provider, set `DEV_MODE=true` to bypass authentication and auto-create a dev user.
+For quick local testing without an OIDC provider, set `DEV_MODE=true` to bypass authentication and
+auto-create a dev user.
 
-See `backend/.env.example` and the root `.env.example` for the full variable list (IMAP, LLM, webhooks, etc.).
+See `backend/.env.example` and the root `.env.example` for the full variable list (IMAP, LLM,
+pricing, webhooks, etc.).
 
 ### Run
 
@@ -156,12 +180,12 @@ Responses are JSON unless the server is serving static assets. Authenticated rou
 | Area | Description |
 |------|-------------|
 | Health | System health and dependency checks |
-| Auth | OIDC login, token management, user info |
+| Auth | OIDC login, single-use ticket exchange, token management, user info |
 | Postcards | Direct postcard creation and sending |
 | Drafts | Draft CRUD, publish, schedule management |
-| PostGrid | Service status and mode toggling (admins only) |
+| PostGrid | Service status, mode toggling (admins only), per-country pricing |
 | Webhooks | Email-to-postcard webhook processing |
-| **Agent API** | `/api/v1` — API-key auth for machine integrations (Hermes, OpenClaw) |
+| **Agent API** | `/api/v1` — API-key auth for machine integrations |
 
 See [docs/API.md](docs/API.md) for full request/response schemas, authentication details, and error codes. Agents and automations: see [docs/agent-api.md](docs/agent-api.md).
 
@@ -177,13 +201,21 @@ pnpm --filter backend test
 pnpm --filter frontend test
 ```
 
+Regenerate the documentation screenshots:
+
+```bash
+cd frontend && npx playwright test capture.spec
+```
+
+See the [screenshots manifest](docs/screenshots/README.md) for what each image shows.
+
 ## Repository layout
 
 ```
 fam-mail/
 ├── backend/src/     # HTTP server, routes, PostGrid, auth, DB
 ├── frontend/src/    # React UI
-├── docs/            # Contributing, architecture notes, README screenshots
+├── docs/            # Docs hub, API reference, ADRs, screenshots
 ├── docker-compose.yml
 ├── Dockerfile
 └── pnpm-workspace.yaml
@@ -197,7 +229,7 @@ The image installs workspace dependencies, runs `pnpm build` in `frontend`, bund
 
 ## Environment variables
 
-See `.env.example` and `backend/.env.example`. Groupings include PostGrid, OIDC/JWT, server port and database path, optional IMAP and LLM settings for the email pipeline, and webhook secrets.
+See `.env.example` and `backend/.env.example`. Groupings include PostGrid (mode, keys, per-country pricing), OIDC/JWT, server port and database path, optional IMAP and LLM settings for the email pipeline, and webhook secrets.
 
 ## Honest limits & alternatives
 
@@ -207,7 +239,6 @@ postcards and handing them to PostGrid. It is deliberately **not**:
 - a CRM or full address book (recipients are entered per card),
 - a marketing/bulk-mail tool (rate limits are intentionally tight — it costs
   real money per card),
-- an email-to-postcard automation platform (the IMAP/LLM pipeline is paused),
 - a hosted service — you run it, you own the database and the PostGrid bill.
 
 If you need bulk mail merges, address verification APIs, or template-heavy
@@ -219,9 +250,6 @@ of in an afternoon — welcome, this is it.
 
 PRs welcome. Development happens with AI assistance under human review — see
 [CONTRIBUTING](docs/CONTRIBUTING.md) for the workflow and conventions.
-
-See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md). Development is AI-assisted
-under human review — details in the contributing guide.
 
 ## License
 
