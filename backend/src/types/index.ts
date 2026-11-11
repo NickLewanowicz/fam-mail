@@ -7,7 +7,10 @@
 
 // Address — mirrors PostGridAddress from ./postgrid.ts but used as the
 // canonical "address" type in Draft, route handlers, and database mappings.
-export interface Address {
+// A type alias (not an interface) so it stays assignable to the database
+// layer's `Record<string, unknown>` payload shapes (interfaces do not get
+// implicit index signatures; aliases do).
+export type Address = {
   firstName: string
   lastName: string
   addressLine1: string

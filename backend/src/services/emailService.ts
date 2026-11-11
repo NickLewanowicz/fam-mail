@@ -1,6 +1,6 @@
 import { getPostgridService } from './postgrid'
 import { EmailParser, type EmailParseResult, type ParsedEmail } from './emailParser'
-import type { PostGridPostcardRequest } from '../types/postgrid'
+import type { PostGridPostcardRequest, PostGridPostcardResponse } from '../types/postgrid'
 import { logger } from '../utils/logger'
 
 export interface EmailData {

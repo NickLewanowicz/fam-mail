@@ -17,7 +17,9 @@ export interface Draft {
   updatedAt: string
 }
 
-export interface ImageMetadata {
+// Type alias (not interface) for Record<string, unknown> assignability with
+// the database layer payload shapes — see types/index.ts Address note.
+export type ImageMetadata = {
   width: number
   height: number
   format: string

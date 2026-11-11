@@ -12,6 +12,7 @@
     "clean": "rm -rf dist",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
+    "capture": "playwright test capture.spec",
     "test:run": "vitest run",
     "shots": "playwright test tests/screenshots && git add ../docs/screenshots || true"
   },

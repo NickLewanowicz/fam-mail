@@ -112,7 +112,10 @@ export class IMAPService {
       since.getTime() > 0 ? { since } : "1:*",
       { envelope: true, bodyParts: [''], source: true }
     )) {
-      await this.processMessage(msg as EmailMessage);
+      // imapflow's FetchMessageObject overlaps EmailMessage only partially
+      // (envelope/uid/source are populated per the fetch options above; the
+      // paused pipeline maps the rest downstream) — hence the two-step cast.
+      await this.processMessage(msg as unknown as EmailMessage);
     }
   }
 

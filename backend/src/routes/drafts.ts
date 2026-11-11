@@ -1,7 +1,8 @@
 import { Database } from '../database'
 import { AuthMiddleware } from '../middleware/auth'
-import type { Draft } from '../models/draft'
+import type { Draft, ImageMetadata } from '../models/draft'
 import type { User } from '../models/user'
+import type { Address } from '../types'
 import { jsonResponse } from '../middleware/headers'
 import type { PostGridService } from '../services/postgrid'
 import type { PostGridPostcardRequest, PostGridError } from '../types/postgrid'
@@ -44,13 +45,13 @@ export class DraftRoutes {
 
   async create(req: Request, user: User): Promise<Response> {
     const body = await req.json() as {
-      recipientAddress: Record<string, unknown>
-      senderAddress?: Record<string, unknown>
+      recipientAddress: Address
+      senderAddress?: Address
       message?: string
       frontHTML?: string
       backHTML?: string
       imageData?: string
-      imageMetadata?: Record<string, unknown>
+      imageMetadata?: ImageMetadata
       size?: '6x4' | '9x6' | '11x6'
     }
 

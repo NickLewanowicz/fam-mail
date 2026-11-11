@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { PostcardPreview } from './PostcardPreview'
 import type { Address } from '../../types/address'
 
@@ -424,6 +424,54 @@ describe('PostcardPreview', () => {
       )
       expect(container.querySelector('span[style]')).toBeNull()
       expect(screen.getByText('pwn')).toBeInTheDocument()
+    })
+  })
+
+  // ISSUE-0123: headless Chromium ignores backface-visibility on composited
+  // 3D layers, so once the flip settles the inactive face must be hard-hidden
+  // (opacity 0) instead of relying on backface culling alone.
+  describe('capture-safe face hiding (ISSUE-0123)', () => {
+    const getFace = (container: HTMLElement, testid: string): HTMLElement => {
+      const face = container.querySelector(`[data-testid="${testid}"]`)
+      expect(face).not.toBeNull()
+      return face as HTMLElement
+    }
+
+    it('hides the resting back face when showing the front', () => {
+      const { container } = render(
+        <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} />,
+      )
+      expect(getFace(container, 'preview-back').style.opacity).toBe('0')
+      expect(getFace(container, 'preview-front').style.opacity).toBe('1')
+    })
+
+    it('hides the resting front face when showing the back', () => {
+      const { container } = render(
+        <PostcardPreview image={null} message="" address={null} showBack onFlip={onFlip} />,
+      )
+      expect(getFace(container, 'preview-front').style.opacity).toBe('0')
+      expect(getFace(container, 'preview-back').style.opacity).toBe('1')
+    })
+
+    it('keeps both faces painted during the flip, then re-hides the inactive one', () => {
+      vi.useFakeTimers()
+      try {
+        const { container, rerender } = render(
+          <PostcardPreview image={null} message="" address={null} showBack={false} onFlip={onFlip} />,
+        )
+        // Flip starts: both faces must exist and stay painted (no pop)
+        rerender(
+          <PostcardPreview image={null} message="" address={null} showBack onFlip={onFlip} />,
+        )
+        expect(getFace(container, 'preview-front').style.opacity).toBe('1')
+        expect(getFace(container, 'preview-back').style.opacity).toBe('1')
+        // Past the 400ms flip duration, the new resting state hides the front
+        act(() => { vi.advanceTimersByTime(500) })
+        expect(getFace(container, 'preview-front').style.opacity).toBe('0')
+        expect(getFace(container, 'preview-back').style.opacity).toBe('1')
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 })
