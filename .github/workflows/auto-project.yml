@@ -6,12 +6,35 @@ on:
   pull_request:
     types: [opened]
 
+# Least privilege: this job never touches repo content, and its action uses
+# the PROJECT_TOKEN input rather than the automatic GITHUB_TOKEN.
+permissions:
+  contents: read
+
+env:
+  # The secrets context is not readable from `if:` conditions, but the env
+  # context is — expose the secret through it so the step below can skip
+  # itself when the token is not configured.
+  PROJECT_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+
 jobs:
   add-to-project:
     name: Add to Fammail Features board
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@v1.0.2
+      # ISSUE-0124: this run used to fail on every push/PR ("Input required
+      # and not supplied: github-token") because secrets.PROJECT_TOKEN was
+      # never set. Passing the default GITHUB_TOKEN is NOT a substitute here:
+      # actions/add-to-project@v1.0.2 documents github-token as a personal
+      # access token with repo+project scopes, and the target board is
+      # user-owned (github.com/users/NickLewanowicz/projects/4) — the
+      # automatic token cannot be granted access to a user-owned Projects V2
+      # board, so the run would just fail differently. Until a fine-grained
+      # PROJECT_TOKEN (projects:write) is added as a repo secret, skip the
+      # step so the check is green (skipped) instead of permanently red.
+      - name: Add to project (skipped until PROJECT_TOKEN secret is set)
+        if: ${{ env.PROJECT_TOKEN != '' }}
+        uses: actions/add-to-project@v1.0.2
         with:
           project-url: https://github.com/users/NickLewanowicz/projects/4
           github-token: ${{ secrets.PROJECT_TOKEN }}
