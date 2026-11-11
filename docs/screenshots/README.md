@@ -26,6 +26,11 @@ current app surface. Nothing here is hand-edited or hand-shot.
 
 Notes on what you will (and won't) see:
 
+- **Every capture is the single warm ink theme** (June's
+  [`warm-theme-unification-spec.md`](../design/warm-theme-unification-spec.md)):
+  `bg-ink-bg` page, `bg-ink-surface` cards/nav, clay CTAs. There is no light
+  mode and no toggle anymore; wizard step panels are the deliberate paper
+  surface (`bg-paper`, stone text) that previews the printed card.
 - **Review captures show an amber "This photo may print soft at 6×4″" banner.**
   That is the D1 low-resolution warning working as designed — the e2e fixture
   photo (600×400) is below the print minimum. It is expected; do not "fix" the

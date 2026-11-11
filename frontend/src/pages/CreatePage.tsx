@@ -387,7 +387,7 @@ export default function CreatePage() {
         <span className="sr-only">Loading…</span>
         <div className="flex justify-center pt-2">
           <div className="w-full max-w-[640px]">
-            <div className="skeleton motion-reduce:animate-none bg-zinc-200 dark:bg-zinc-800 aspect-[3/2] rounded-lg" aria-hidden />
+            <div className="skeleton motion-reduce:animate-none bg-ink-raised aspect-[3/2] rounded-lg" aria-hidden />
           </div>
         </div>
       </div>
@@ -402,11 +402,11 @@ export default function CreatePage() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-lg border border-zinc-200 p-8 text-center"
+            className="bg-paper rounded-lg border border-paper-border/60 p-8 text-center"
           >
             <div className="text-5xl mb-4">✉️</div>
-            <h2 className="text-xl font-semibold text-zinc-900">Postcard Sent!</h2>
-            <p className="text-zinc-500 text-sm mt-1">Your postcard is on its way</p>
+            <h2 className="text-xl font-semibold text-stone-900">Postcard Sent!</h2>
+            <p className="text-stone-500 text-sm mt-1">Your postcard is on its way</p>
 
             {result.testMode && (
               <div className="inline-flex items-center gap-1 px-2 py-1 mt-3 text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 rounded">
@@ -415,18 +415,18 @@ export default function CreatePage() {
             )}
 
             {result.postcard && (
-              <div className="bg-zinc-50 rounded-md border border-zinc-200 p-3 mt-5 text-left space-y-2">
+              <div className="bg-stone-100 rounded-md border border-stone-200 p-3 mt-5 text-left space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">ID</span>
-                  <span className="font-mono text-xs text-zinc-600">{result.postcard.id}</span>
+                  <span className="text-stone-400">ID</span>
+                  <span className="font-mono text-xs text-stone-600">{result.postcard.id}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">Status</span>
+                  <span className="text-stone-400">Status</span>
                   <span className="text-xs font-medium text-blue-600">{result.postcard.status}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-zinc-400">To</span>
-                  <span className="text-zinc-900">{result.postcard.to.firstName} {result.postcard.to.lastName}</span>
+                  <span className="text-stone-400">To</span>
+                  <span className="text-stone-900">{result.postcard.to.firstName} {result.postcard.to.lastName}</span>
                 </div>
               </div>
             )}
@@ -434,14 +434,14 @@ export default function CreatePage() {
             <div className="flex flex-col gap-2 mt-6">
               <button
                 onClick={() => { postcard.reset(); setResult(null); goTo(0); setActiveDraftId(null) }}
-                className="press active:scale-[0.97] w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800"
+                className="press active:scale-[0.97] w-full h-10 bg-clay text-ink-bg text-sm font-medium rounded-md hover:bg-clay-hover"
               >
                 Create Another
               </button>
-              <button onClick={() => navigate('/')} className="press text-sm text-zinc-500 hover:text-zinc-700 py-2">
+              <button onClick={() => navigate('/')} className="press text-sm text-stone-500 hover:text-stone-700 py-2">
                 Back to Dashboard
               </button>
-              <button onClick={() => navigate('/history')} className="press text-sm text-zinc-500 hover:text-zinc-700 py-2">
+              <button onClick={() => navigate('/history')} className="press text-sm text-stone-500 hover:text-stone-700 py-2">
                 View postcard history
               </button>
             </div>
@@ -485,7 +485,7 @@ export default function CreatePage() {
                     isActive
                       ? 'text-ink-bg'
                       : isDone
-                        ? 'bg-zinc-900 text-white'
+                        ? 'bg-ink-raised text-warm-text2'
                         : 'border-2 border-ink-line text-warm-text3'
                   }`}>
                     {isActive && (
@@ -521,7 +521,7 @@ export default function CreatePage() {
 
         {autosaveState !== 'idle' && (
           <div className="flex justify-end px-2 mb-1" aria-live="polite">
-            <span className="text-[11px] text-zinc-400">
+            <span className="text-[11px] text-warm-text3">
               {autosaveState === 'saving' ? 'Saving…' : 'Draft saved'}
             </span>
           </div>

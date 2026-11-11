@@ -43,12 +43,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       }
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+        <div className="min-h-screen flex items-center justify-center bg-ink-bg">
           <div className="card bg-base-100 shadow-xl max-w-md w-full mx-4">
             <div className="card-body text-center">
               <div className="text-5xl mb-4">📮</div>
-              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Something went wrong</h2>
-              <p className="text-zinc-500 dark:text-zinc-400 mt-2">
+              <h2 className="text-2xl font-semibold text-warm-text">Something went wrong</h2>
+              <p className="text-warm-text2 mt-2">
                 That's on us, not you. Try again — if it keeps happening, reload
                 the page or include the error below in a bug report.
               </p>
@@ -61,7 +61,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               )}
               <div className="card-actions justify-center mt-6 gap-2">
                 <button
-                  className="press h-10 px-4 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800"
+                  className="press h-10 px-4 rounded-md bg-clay text-ink-bg text-sm font-medium hover:bg-clay-hover"
                   onClick={this.handleReset}
                 >
                   Try again

@@ -2,13 +2,13 @@
 import { test, expect } from '@playwright/test'
 import { setupMockAuth, setupMockApi } from '../e2e/helpers'
 
-test('contrast sweep: light (dashboard)', async ({ page }) => {
+test('contrast sweep: dashboard (warm)', async ({ page }) => {
   await setupMockAuth(page)
   await setupMockApi(page)
   await page.setViewportSize({ width: 1280, height: 800 })
   await page.goto('/')
   await page.waitForTimeout(1500)
-  const failures = await page.evaluate(() => {
+  const sweep = () => page.evaluate(() => {
     function lum(r: number, g: number, b: number) {
       const f = (c: number) => { const s = c / 255; return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4) }
       return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
@@ -82,9 +82,46 @@ test('contrast sweep: light (dashboard)', async ({ page }) => {
     }
     return out
   })
-  console.log('LIGHT-MODE CONTRAST FAILURES:')
+  const emptyFailures = await sweep()
+  // Seeded-draft pass (spec §3.5): the empty mock state hides the draft
+  // cards — sweep again over a card grid ("No photo" well, name/meta,
+  // ready+draft chips, scheduled chip composites).
+  const seeded = [
+    {
+      id: 'draft-contrast-1',
+      userId: 'user-e2e-test',
+      recipientAddress: { firstName: 'Grace', lastName: 'Hopper' },
+      message: 'Happy birthday Grace! Wishing you a wonderful year ahead.',
+      state: 'ready',
+      size: '6x4',
+      scheduledFor: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'draft-contrast-2',
+      userId: 'user-e2e-test',
+      recipientAddress: { firstName: 'Sam', lastName: 'Lee' },
+      message: 'No photo on this one',
+      state: 'draft',
+      size: '6x4',
+      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    },
+  ]
+  await page.route('**/api/drafts', (route) => {
+    if (route.request().method() === 'GET') {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ drafts: seeded }) })
+    }
+    return route.continue()
+  })
+  await page.reload()
+  await page.waitForTimeout(1500)
+  const seededFailures = await sweep()
+  const failures = [...emptyFailures, ...seededFailures]
+  console.log('DASHBOARD CONTRAST FAILURES:')
   failures.forEach((f) => console.log('  ' + f))
-  expect(failures, 'light-mode contrast failures').toEqual([])
+  expect(failures, 'dashboard contrast failures').toEqual([])
 })
 
 test('contrast sweep: editor (create flow)', async ({ page }) => {

@@ -32,7 +32,7 @@ export function LoginPage() {
   const displayError = error || callbackError
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50" data-theme="fammail">
+    <div className="min-h-screen flex items-center justify-center bg-ink-bg">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -41,26 +41,26 @@ export function LoginPage() {
       >
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">✉️</div>
-          <h1 className="text-xl font-semibold text-zinc-900">Fam Mail</h1>
-          <p className="text-zinc-500 text-sm mt-1">Send postcards to the people you love</p>
+          <h1 className="text-xl font-semibold text-warm-text">Fam Mail</h1>
+          <p className="text-warm-text2 text-sm mt-1">Send postcards to the people you love</p>
         </div>
 
-        <div className="bg-white rounded-lg border border-zinc-200 p-6">
+        <div className="bg-ink-surface rounded-lg border border-ink-line p-6">
           {displayError && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-50 border border-red-200 text-red-700 text-sm mb-4">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-900/40 border border-red-700/50 text-red-300 text-sm mb-4">
               <span>{displayError}</span>
             </div>
           )}
 
           <button
-            className="press active:scale-[0.97] w-full h-10 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50"
+            className="press active:scale-[0.97] w-full h-10 bg-clay text-ink-bg text-sm font-medium rounded-md hover:bg-clay-hover disabled:opacity-50"
             onClick={handleLogin}
             disabled={isLoading}
           >
             {isLoading ? 'Redirecting...' : 'Sign In'}
           </button>
 
-          <p className="text-xs text-center text-zinc-500 mt-3">Secured with OAuth</p>
+          <p className="text-xs text-center text-warm-text3 mt-3">Secured with OAuth</p>
         </div>
       </motion.div>
     </div>

@@ -127,16 +127,16 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
 
   const field = (label: string, key: keyof Address, placeholder: string, half = false, isReturn = false) => (
     <div className={half ? 'w-full' : 'w-full'}>
-      <label className="block py-1 text-xs font-medium text-zinc-600">{label}</label>
+      <label className="block py-1 text-xs font-medium text-stone-600">{label}</label>
       <input
         type="text"
         maxLength={key === 'provinceOrState' ? 2 : key === 'postalOrZip' ? 10 : 120}
         autoComplete={AUTOCOMPLETE[key]}
         inputMode={key === 'postalOrZip' ? ((isReturn ? returnForm.countryCode : form.countryCode).toUpperCase() === 'US' ? 'numeric' : 'text') : undefined}
-        className={`w-full rounded-md border bg-white px-2.5 h-11 text-base text-zinc-900 placeholder:text-zinc-400 outline-none transition-colors ${
+        className={`w-full rounded-md border bg-paper px-2.5 h-11 text-base text-stone-900 placeholder:text-stone-400 outline-none transition-colors ${
           isReturn
-            ? returnErrors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
-            : errors[key] ? 'border-red-400 focus:border-red-500' : 'border-zinc-300 focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400'
+            ? returnErrors[key] ? 'border-red-400 focus:border-red-500' : 'border-stone-300 focus:border-stone-500 focus:ring-1 focus:ring-stone-400'
+            : errors[key] ? 'border-red-400 focus:border-red-500' : 'border-stone-300 focus:border-stone-500 focus:ring-1 focus:ring-stone-400'
         }`}
         placeholder={placeholder}
         value={isReturn ? returnForm[key] : form[key]}
@@ -151,20 +151,20 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-xl font-bold text-zinc-900">Recipient Address</h2>
-        <p className="text-zinc-600 text-sm mt-1">Where should we send this postcard?</p>
+        <h2 className="text-xl font-bold text-stone-900">Recipient Address</h2>
+        <p className="text-stone-600 text-sm mt-1">Where should we send this postcard?</p>
       </div>
 
       {recent.length > 0 && (
         <div>
-          <p className="text-xs font-medium text-zinc-500 mb-1.5">Send to a recent recipient</p>
+          <p className="text-xs font-medium text-stone-500 mb-1.5">Send to a recent recipient</p>
           <div className="flex flex-wrap gap-1.5">
             {recent.map((r, i) => (
               <button
                 key={`${r.firstName}-${r.addressLine1}-${i}`}
                 type="button"
                 onClick={() => setForm({ ...EMPTY_ADDRESS, ...r })}
-                className="press inline-flex items-center min-h-11 px-3 rounded-full border border-zinc-200 bg-white text-xs text-zinc-700 hover:border-zinc-500 hover:bg-zinc-50"
+                className="press inline-flex items-center min-h-11 px-3 rounded-full border border-stone-200 bg-paper text-xs text-stone-700 hover:border-stone-500 hover:bg-stone-100"
               >
                 {r.firstName} {r.lastName} · {r.city}
               </button>
@@ -186,14 +186,14 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
       <div className="grid grid-cols-2 gap-3">
         {field('ZIP/Postal Code', 'postalOrZip', 'M5V 2T6', true)}
         <div>
-          <label className="block py-1 text-xs font-medium text-zinc-600">Country</label>
+          <label className="block py-1 text-xs font-medium text-stone-600">Country</label>
           {countryCode ? (
-            <div className="w-full rounded-md border border-zinc-200 bg-zinc-50 px-2.5 py-1.5 text-sm text-zinc-700">
+            <div className="w-full rounded-md border border-stone-200 bg-stone-100 px-2.5 py-1.5 text-sm text-stone-700">
               {countryCode === 'US' ? 'United States' : countryCode === 'CA' ? 'Canada' : countryCode === 'GB' ? 'United Kingdom' : countryCode}
             </div>
           ) : (
             <select
-              className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+              className="w-full rounded-md border border-stone-300 bg-paper px-2.5 h-11 text-base text-stone-900 outline-none transition-colors focus:border-stone-500 focus:ring-1 focus:ring-stone-400"
               value={form.countryCode} onChange={e => update('countryCode', e.target.value)}>
               <option value="US">United States</option>
               <option value="CA">Canada</option>
@@ -203,7 +203,7 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
         </div>
       </div>
 
-      <div className="border-t border-zinc-200 my-2" />
+      <div className="border-t border-stone-200 my-2" />
 
       {/* Return address toggle */}
       <div>
@@ -212,22 +212,22 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
               rect, so the hit surface must be the control itself */}
           <input
             type="checkbox"
-            className="appearance-none h-11 w-11 rounded-md border-2 border-zinc-300 checked:border-zinc-900 checked:bg-zinc-900 checked:after:content-['✓'] checked:after:text-white checked:after:text-xl checked:after:flex checked:after:items-center checked:after:justify-center transition-colors"
+            className="appearance-none h-11 w-11 rounded-md border-2 border-stone-300 checked:border-stone-900 checked:bg-stone-900 checked:after:content-['✓'] checked:after:text-white checked:after:text-xl checked:after:flex checked:after:items-center checked:after:justify-center transition-colors"
             checked={showReturn}
             onChange={e => setShowReturn(e.target.checked)}
           />
-          <span className="text-sm text-zinc-800">Use a different return address</span>
+          <span className="text-sm text-stone-800">Use a different return address</span>
         </label>
         {!showReturn && (
-          <p className="text-zinc-500 text-xs mt-1 ml-7">If unchecked, the recipient address will also be used as the return address.</p>
+          <p className="text-stone-500 text-xs mt-1 ml-7">If unchecked, the recipient address will also be used as the return address.</p>
         )}
       </div>
 
       {showReturn && (
         <>
           <div>
-            <h3 className="text-lg font-semibold text-zinc-900">Return Address</h3>
-            <p className="text-zinc-600 text-sm mt-1">Where should the postcard be returned from?</p>
+            <h3 className="text-lg font-semibold text-stone-900">Return Address</h3>
+            <p className="text-stone-600 text-sm mt-1">Where should the postcard be returned from?</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -243,9 +243,9 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
           <div className="grid grid-cols-2 gap-3">
             {field('ZIP/Postal Code', 'postalOrZip', 'M5V 2T6', true, true)}
             <div>
-              <label className="block py-1 text-xs font-medium text-zinc-600">Country</label>
+              <label className="block py-1 text-xs font-medium text-stone-600">Country</label>
               <select
-                className="w-full rounded-md border border-zinc-300 bg-white px-2.5 h-11 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-500 focus:ring-1 focus:ring-zinc-400"
+                className="w-full rounded-md border border-stone-300 bg-paper px-2.5 h-11 text-base text-stone-900 outline-none transition-colors focus:border-stone-500 focus:ring-1 focus:ring-stone-400"
                 value={returnForm.countryCode} onChange={e => updateReturn('countryCode', e.target.value)}>
                 <option value="US">United States</option>
                 <option value="CA">Canada</option>
@@ -258,13 +258,13 @@ export function AddressStep({ address, returnAddress, onAddressChange, onReturnA
 
       <div className="flex justify-between pt-4 max-md:hidden">
         <button
-          className="press px-4 h-11 rounded-md text-sm font-medium text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+          className="press px-4 h-11 rounded-md text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900"
           onClick={onBack}
         >
           Back
         </button>
         <button
-          className="press active:scale-[0.97] px-4 h-11 rounded-md bg-zinc-900 text-white text-sm font-medium hover:bg-zinc-800"
+          className="press active:scale-[0.97] px-4 h-11 rounded-md bg-clay text-ink-bg text-sm font-medium hover:bg-clay-hover"
           onClick={handleSubmit}
         >
           Next: Review

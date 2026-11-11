@@ -149,14 +149,14 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 bg-white flex flex-col rounded-xl overflow-hidden z-10"
+      className="absolute inset-0 bg-paper flex flex-col rounded-xl overflow-hidden z-10"
     >
-      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-zinc-100 shrink-0 overflow-x-auto">
+      <div className="relative flex items-center gap-1 px-2 py-1.5 border-b border-stone-100 shrink-0 overflow-x-auto">
         {TOOLBAR_ACTIONS.map((action) => (
           <button
             key={action.label}
             type="button"
-            className={`press w-11 h-11 shrink-0 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center ${action.iconClass ?? ''}`}
+            className={`press w-11 h-11 shrink-0 rounded-md text-sm font-medium text-stone-500 hover:text-stone-900 hover:bg-stone-100 active:bg-stone-200 flex items-center justify-center ${action.iconClass ?? ''}`}
             title={action.label}
             aria-label={action.label}
             // Keep focus (and any text selection) in the textarea — clicking a
@@ -170,7 +170,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div>
           <button
             type="button"
-            className="press w-11 h-11 shrink-0 rounded-md text-sm font-medium text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200 flex items-center justify-center"
+            className="press w-11 h-11 shrink-0 rounded-md text-sm font-medium text-stone-500 hover:text-stone-900 hover:bg-stone-100 active:bg-stone-200 flex items-center justify-center"
             title="Text color"
             aria-label="Text color"
             aria-haspopup="true"
@@ -184,7 +184,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
             <div
               role="menu"
               aria-label="Text color palette"
-              className="absolute top-full left-2 mt-1 z-30 flex flex-wrap items-center gap-1.5 px-2 py-1.5 bg-white border border-zinc-200 rounded-lg shadow-lg max-w-[240px]"
+              className="absolute top-full left-2 mt-1 z-30 flex flex-wrap items-center gap-1.5 px-2 py-1.5 bg-paper border border-stone-200 rounded-lg shadow-lg max-w-[240px]"
             >
               {TEXT_COLORS.map((color) => (
                 <button
@@ -198,7 +198,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
                   onClick={() => applyTextColor(color.hex)}
                 >
                   <span
-                    className="w-6 h-6 rounded-full border border-zinc-200 group-hover:ring-2 group-hover:ring-offset-1 group-hover:ring-zinc-300"
+                    className="w-6 h-6 rounded-full border border-stone-200 group-hover:ring-2 group-hover:ring-offset-1 group-hover:ring-stone-300"
                     style={{ backgroundColor: color.hex }}
                   />
                 </button>
@@ -207,7 +207,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
           )}
         </div>
         <select
-          className="ml-1 h-11 rounded-md border border-zinc-200 bg-white px-1.5 text-xs text-zinc-600 outline-none hover:border-zinc-300 focus:border-zinc-400"
+          className="ml-1 h-11 rounded-md border border-stone-200 bg-paper px-1.5 text-xs text-stone-600 outline-none hover:border-stone-300 focus:border-stone-400"
           title="Insert an occasion template at the cursor"
           aria-label="Insert occasion template"
           value=""
@@ -226,7 +226,7 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
         <div className="flex-1" />
         <button
           type="button"
-          className="press min-h-11 min-w-11 px-3 inline-flex items-center justify-center rounded-lg font-medium bg-zinc-900 text-white text-xs hover:bg-zinc-800"
+          className="press min-h-11 min-w-11 px-3 inline-flex items-center justify-center rounded-lg font-medium bg-clay text-ink-bg text-xs hover:bg-clay-hover"
           onClick={onClose}
         >
           Done
@@ -234,27 +234,27 @@ export function InlineMessageEditor({ message, onMessageChange, onClose }: Props
       </div>
       <textarea
         ref={textareaRef}
-        className="flex-1 w-full p-3 text-[13px] leading-relaxed font-serif text-stone-800 bg-transparent border-0 outline-none resize-none placeholder:text-zinc-400"
+        className="flex-1 w-full p-3 text-[13px] leading-relaxed font-serif text-stone-800 bg-transparent border-0 outline-none resize-none placeholder:text-stone-400"
         placeholder="Dear friend,&#10;&#10;Thinking of you..."
         value={message}
         onChange={(e) => onMessageChange(e.target.value)}
         maxLength={MAX_LENGTH}
       />
-      <div className="px-3 py-1.5 border-t border-zinc-100 shrink-0 flex justify-between items-center">
+      <div className="px-3 py-1.5 border-t border-stone-100 shrink-0 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className="w-16 h-1 rounded-full bg-zinc-100 overflow-hidden">
+          <div className="w-16 h-1 rounded-full bg-stone-100 overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-300 ${
-                charRatio > 0.9 ? 'bg-red-500' : charRatio > 0.7 ? 'bg-amber-500' : 'bg-zinc-400'
+                charRatio > 0.9 ? 'bg-red-500' : charRatio > 0.7 ? 'bg-amber-500' : 'bg-stone-400'
               }`}
               style={{ width: `${charRatio * 100}%` }}
             />
           </div>
-          <span className={`text-[11px] ${charRatio > 0.9 ? 'text-red-700' : charRatio > 0.8 ? 'text-amber-700' : 'text-zinc-500'}`} aria-live="off">
+          <span className={`text-[11px] ${charRatio > 0.9 ? 'text-red-700' : charRatio > 0.8 ? 'text-amber-700' : 'text-stone-500'}`} aria-live="off">
             {message.length}/{MAX_LENGTH} · {message.trim() ? message.trim().split(/\s+/).length : 0} words
           </span>
         </div>
-        <span className="text-[10px] text-zinc-400">Markdown</span>
+        <span className="text-[10px] text-stone-400">Markdown</span>
       </div>
     </motion.div>
   )
