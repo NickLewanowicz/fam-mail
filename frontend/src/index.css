@@ -11,22 +11,14 @@
   }
 
   body {
-    @apply bg-zinc-50 text-zinc-900;
+    @apply bg-ink-bg text-warm-text;
   }
 }
 
 @layer base {
   :focus-visible {
-    outline: 2px solid #18181b;
+    outline: 2px solid #e09a6b;
     outline-offset: 2px;
-  }
-  .dark :focus-visible {
-    outline-color: #e4e4e7;
-  }
-
-  /* The create-flow editor is dark even in light mode */
-  [data-editor] :focus-visible {
-    outline-color: #e09a6b;
   }
 }
 

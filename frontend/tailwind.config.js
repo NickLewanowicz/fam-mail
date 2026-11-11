@@ -1,6 +1,5 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -75,50 +74,23 @@ export default {
   daisyui: {
     themes: [
       {
+        // Warm ink theme (docs/design/warm-theme-unification-spec.md): the
+        // single app theme. Semantic values match the token vocabulary in
+        // theme.extend.colors so DaisyUI primitives (dropdown, skeleton,
+        // toast, ConfirmDialog) render on the same surfaces as the app.
         fammail: {
-          "primary": "#18181b",
-          "primary-content": "#ffffff",
-          "secondary": "#71717a",
-          "secondary-content": "#ffffff",
-          "accent": "#2563eb",
-          "accent-content": "#ffffff",
-          "neutral": "#18181b",
-          "neutral-content": "#fafafa",
-          "base-100": "#ffffff",
-          "base-200": "#f4f4f5",
-          "base-300": "#e4e4e7",
-          "base-content": "#18181b",
-          "info": "#2563eb",
-          "info-content": "#ffffff",
-          "success": "#16a34a",
-          "success-content": "#ffffff",
-          "warning": "#d97706",
-          "warning-content": "#ffffff",
-          "error": "#dc2626",
-          "error-content": "#ffffff",
-          "--rounded-box": "0.5rem",
-          "--rounded-btn": "0.375rem",
-          "--rounded-badge": "0.375rem",
-          "--animation-btn": "0.15s",
-          "--animation-input": "0.15s",
-          "--btn-focus-scale": "1",
-          "--tab-radius": "0.375rem",
-        },
-      },
-      {
-        "fammail-dark": {
-          "primary": "#e4e4e7",
-          "primary-content": "#18181b",
-          "secondary": "#a1a1aa",
-          "secondary-content": "#18181b",
-          "accent": "#60a5fa",
-          "accent-content": "#0f172a",
-          "neutral": "#27272a",
-          "neutral-content": "#e4e4e7",
-          "base-100": "#18181b",
-          "base-200": "#27272a",
-          "base-300": "#3f3f46",
-          "base-content": "#e4e4e7",
+          "primary": "#CE7A57",
+          "primary-content": "#3B1D1E",
+          "secondary": "#C7AEA3",
+          "secondary-content": "#3B1D1E",
+          "accent": "#E09A6B",
+          "accent-content": "#3B1D1E",
+          "neutral": "#562D2E",
+          "neutral-content": "#F7EDE5",
+          "base-100": "#482527",
+          "base-200": "#3B1D1E",
+          "base-300": "#6B3A38",
+          "base-content": "#F7EDE5",
           "info": "#60a5fa",
           "info-content": "#0f172a",
           "success": "#4ade80",

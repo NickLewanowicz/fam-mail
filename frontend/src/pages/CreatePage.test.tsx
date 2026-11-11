@@ -185,7 +185,7 @@ describe('#116 — draft load restores the destination country', () => {
     // destination (postcard.countryCode === 'CA'), not the US default
     await waitFor(() => {
       const canada = screen.getByRole('button', { name: /Canada/ })
-      expect(canada.className).toContain('border-zinc-900')
+      expect(canada.className).toContain('border-stone-900')
     })
   })
 })

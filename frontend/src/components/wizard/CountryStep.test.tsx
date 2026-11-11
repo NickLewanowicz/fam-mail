@@ -49,7 +49,7 @@ describe('CountryStep', () => {
     expect(screen.getByText('🇬🇧')).toBeInTheDocument()
   })
 
-  it('highlights selected country with border-zinc-900 in className', () => {
+  it('highlights selected country with border-stone-900 in className', () => {
     const { container } = render(
       <CountryStep
         countryCode="CA"
@@ -59,10 +59,10 @@ describe('CountryStep', () => {
     )
     const buttons = container.querySelectorAll('button')
     const caButton = buttons[1]
-    expect(caButton?.className).toContain('border-zinc-900')
+    expect(caButton?.className).toContain('border-stone-900')
   })
 
-  it('non-selected countries use border-zinc-200, not the selected border', () => {
+  it('non-selected countries use border-stone-200, not the selected border', () => {
     const { container } = render(
       <CountryStep
         countryCode="US"
@@ -73,8 +73,8 @@ describe('CountryStep', () => {
     const buttons = container.querySelectorAll('button')
     const caButton = buttons[1]
     const caClasses = caButton?.className.split(/\s+/) ?? []
-    expect(caClasses).toContain('border-zinc-200')
-    expect(caClasses).not.toContain('border-zinc-900')
+    expect(caClasses).toContain('border-stone-200')
+    expect(caClasses).not.toContain('border-stone-900')
   })
 
   it('calls onCountryChange and onNext when US is clicked', () => {

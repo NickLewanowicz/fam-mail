@@ -164,7 +164,7 @@ export function PostcardPreview({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between px-1">
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+        <span className="text-xs font-medium text-warm-text2 uppercase tracking-wider">
           {showBack ? 'Back' : 'Front'} — {SIZE_LABELS[size]}
         </span>
         <button
@@ -222,7 +222,7 @@ export function PostcardPreview({
               <>
                 {imageFile && (
                   <div
-                    className="absolute bottom-2 left-2 z-10 px-2 py-0.5 rounded-full bg-zinc-950/60 text-[10px] text-white"
+                    className="absolute bottom-2 left-2 z-10 px-2 py-0.5 rounded-full bg-black/60 text-[10px] text-white"
                     title={`${imageFile.name} · ${(imageFile.size / 1024 / 1024).toFixed(2)} MB`}
                   >
                     {imageFile.name.length > 24 ? imageFile.name.slice(0, 21) + '…' : imageFile.name} · {(imageFile.size / 1024 / 1024).toFixed(1)} MB
@@ -231,7 +231,7 @@ export function PostcardPreview({
                 <img src={image} alt="Postcard front" className="w-full h-full object-cover" />
                 {isPhotoActive && (
                   <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200 flex items-end justify-center pb-5">
-                    <span className="px-3 py-1.5 bg-white text-sm font-medium rounded-md text-zinc-700">
+                    <span className="px-3 py-1.5 bg-paper text-sm font-medium rounded-md text-stone-700">
                       Change photo
                     </span>
                   </div>
@@ -254,7 +254,7 @@ export function PostcardPreview({
                 isDragActive ? 'bg-clay/10' : isPhotoActive ? 'bg-ink-raised' : 'bg-ink-surface'
               }`}>
                 {isPhotoActive ? (
-                  <div className={`border-2 border-dashed rounded-lg w-[80%] h-[75%] flex flex-col items-center justify-center gap-2 transition-colors group-hover:border-zinc-400 group-hover:bg-zinc-50 ${
+                  <div className={`border-2 border-dashed rounded-lg w-[80%] h-[75%] flex flex-col items-center justify-center gap-2 transition-colors group-hover:border-warm-ring group-hover:bg-ink-surface ${
                     isDragActive ? 'border-warm-ring bg-ink-raised' : 'border-ink-line'
                   }`}>
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-8 h-8 text-warm-text2 group-hover:text-warm-text transition-colors">

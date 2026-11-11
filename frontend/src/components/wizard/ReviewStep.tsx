@@ -34,7 +34,7 @@ function CheckItem({ ok, warn, label }: { ok: boolean; warn?: boolean; label: st
       }`}>
         {ok ? '✓' : warn ? '!' : '×'}
       </div>
-      <span className="text-sm text-zinc-600">{label}</span>
+      <span className="text-sm text-stone-600">{label}</span>
     </div>
   )
 }
@@ -56,11 +56,11 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
     <div className="space-y-4">
 
       <div>
-        <h2 className="text-lg font-semibold text-zinc-900">Review & Send</h2>
-        <p className="text-zinc-500 text-sm mt-0.5">Double-check everything before sending</p>
+        <h2 className="text-lg font-semibold text-stone-900">Review & Send</h2>
+        <p className="text-stone-500 text-sm mt-0.5">Double-check everything before sending</p>
       </div>
 
-      <div className="bg-zinc-50 rounded-md border border-zinc-200 p-3">
+      <div className="bg-stone-100 rounded-md border border-stone-200 p-3">
         <CheckItem ok={!!image} label={image ? 'Photo uploaded' : 'Photo missing'} />
         <CheckItem ok={!!message.trim()} warn={!message.trim()} label={message.trim() ? `Message (${message.length} chars)` : 'Message missing — required to send'} />
         <CheckItem
@@ -75,7 +75,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
 
       {/* Size selector */}
       <div>
-        <label className="text-sm font-medium text-zinc-700 mb-2 block">Postcard size</label>
+        <label className="text-sm font-medium text-stone-700 mb-2 block">Postcard size</label>
         <div className="flex gap-2">
           {(['6x4', '9x6', '11x6'] as const).map(s => (
             <button
@@ -83,8 +83,8 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               type="button"
               className={`press flex-1 h-11 scroll-mb-24 flex flex-col items-center justify-center leading-tight rounded-md text-sm font-medium border ${
                 size === s
-                  ? 'bg-zinc-900 text-white border-zinc-900'
-                  : 'bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400'
+                  ? 'bg-stone-900 text-paper border-stone-900'
+                  : 'bg-paper text-stone-600 border-stone-200 hover:border-stone-400'
               }`}
               onClick={() => setSize(s)}
             >
@@ -96,7 +96,7 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
             </button>
           ))}
         </div>
-        <p className="text-xs text-zinc-500 mt-1">
+        <p className="text-xs text-stone-500 mt-1">
           {size === '6x4' ? 'Standard' : size === '9x6' ? 'Large' : 'Extra-large'} — {PRICE_QUALIFIER}
         </p>
       </div>
@@ -112,25 +112,25 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               ? 'bg-red-50 border border-red-200 text-red-700'
               : mode === 'test' || mode === 'mock'
                 ? 'bg-amber-50 border border-amber-200 text-amber-700'
-                : 'bg-zinc-50 border border-zinc-200 text-zinc-500'
+                : 'bg-stone-100 border border-stone-200 text-stone-500'
           }`}
         >
           {truthCopy(mode, address?.firstName, priceFor(pricing, countryCode, size))}
         </p>
         {/* Schedule for later — uses the drafts schedule API; the backend
             dispatcher mails the draft when the date passes */}
-        <details className="rounded-md border border-zinc-200 px-3 py-2">
-          <summary className="text-sm text-zinc-600 cursor-pointer select-none py-3 -my-1">Schedule for later…</summary>
+        <details className="rounded-md border border-stone-200 px-3 py-2">
+          <summary className="text-sm text-stone-600 cursor-pointer select-none py-3 -my-1">Schedule for later…</summary>
           <div className="flex items-center gap-2 mt-2">
             <input
               type="datetime-local"
-              className="flex-1 min-w-0 h-11 rounded-md border border-zinc-300 bg-white px-2.5 text-base text-zinc-900 outline-none transition-colors focus:border-zinc-500"
+              className="flex-1 min-w-0 h-11 rounded-md border border-stone-300 bg-paper px-2.5 text-base text-stone-900 outline-none transition-colors focus:border-stone-500"
               value={scheduleAt}
               min={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
               onChange={(e) => setScheduleAt(e.target.value)}
             />
             <button
-              className="press h-11 px-3 rounded-md border border-zinc-300 text-sm font-medium text-zinc-800 hover:border-zinc-500 disabled:opacity-50"
+              className="press h-11 px-3 rounded-md border border-stone-300 text-sm font-medium text-stone-800 hover:border-stone-500 disabled:opacity-50"
               disabled={!scheduleAt || !isComplete || scheduling}
               onClick={async () => {
                 const when = new Date(scheduleAt)
@@ -150,18 +150,18 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
               {scheduling ? 'Scheduling...' : 'Save & schedule'}
             </button>
           </div>
-          <p className="text-xs text-zinc-500 mt-1.5">The card is saved now and mailed automatically when the date arrives.</p>
+          <p className="text-xs text-stone-500 mt-1.5">The card is saved now and mailed automatically when the date arrives.</p>
         </details>
 
         <button
           aria-describedby="send-truth-panel"
-          className="press active:scale-[0.97] max-md:hidden w-full h-11 bg-zinc-900 text-white text-sm font-medium rounded-md hover:bg-zinc-800 disabled:opacity-50 flex items-center justify-center gap-2"
+          className="press active:scale-[0.97] max-md:hidden w-full h-11 bg-clay text-ink-bg text-sm font-medium rounded-md hover:bg-clay-hover disabled:opacity-50 flex items-center justify-center gap-2"
           disabled={!isComplete || sending}
           onClick={onSend}
         >
           {sending ? (
             <>
-              <div className="w-4 h-4 border-2 border-zinc-400 border-t-white rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-ink-bg/40 border-t-ink-bg rounded-full animate-spin" />
               Sending...
             </>
           ) : (
@@ -169,14 +169,14 @@ export function ReviewStep({ postcard, onBack, onSend, onSaveDraft, onSchedule, 
           )}
         </button>
         {keyboardHint && !sending && (
-          <p className="text-center text-[11px] text-zinc-500">{keyboardHint}</p>
+          <p className="text-center text-[11px] text-stone-500">{keyboardHint}</p>
         )}
         <div className="flex gap-2">
-          <button className="press max-md:hidden flex-1 h-11 text-sm text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-md" onClick={onBack}>
+          <button className="press max-md:hidden flex-1 h-11 text-sm text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md" onClick={onBack}>
             Back
           </button>
           <button
-            className="press flex-1 h-11 scroll-mb-24 text-sm text-zinc-600 border border-zinc-200 hover:border-zinc-300 rounded-md disabled:opacity-50"
+            className="press flex-1 h-11 scroll-mb-24 text-sm text-stone-600 border border-stone-200 hover:border-stone-300 rounded-md disabled:opacity-50"
             disabled={!address?.firstName || saving}
             onClick={onSaveDraft}
           >
