@@ -23,9 +23,11 @@ export interface PostGridConfig {
 
 export class PostGridService {
   private config: PostGridConfig
-  private apiKey: string
+  // Safe defaults; the constructor always overwrites them (either the legacy
+  // or the config branch sets both — ISSUE-0125 source typecheck).
+  private apiKey: string = ''
   private baseUrl: string
-  private isTestMode: boolean
+  private isTestMode: boolean = false
   private mockMode: boolean
 
   constructor(configOrApiKey?: PostGridConfig | string, testMode = false) {
@@ -141,6 +143,7 @@ export class PostGridService {
         live: false,
         status: 'ready',
         to: request.to,
+        from: request.to,
         sendDate: new Date().toISOString(),
         size: request.size || '6x4',
         createdAt: new Date().toISOString(),

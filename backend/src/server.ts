@@ -17,6 +17,7 @@ import { setupAuthRoutes } from './routes/auth'
 import { DraftRoutes } from './routes/drafts'
 import { startScheduledDraftDispatcher } from './services/scheduler'
 import type { LLMConfig } from './services/llm'
+import type { User } from './models/user'
 import { logger } from './utils/logger'
 import pkg from '../../package.json'
 
@@ -184,7 +185,7 @@ function withSecurityHeaders(response: Response, req: Request): Response {
 /** Create (or reuse) the DEV_MODE user and mint a token pair for it. */
 async function devLoginResponse(req: Request): Promise<Response> {
   const devEmail = 'dev@fammail.local'
-  let user = db.getUserByEmail?.(devEmail)
+  let user: User | undefined = db.getUserByEmail?.(devEmail)
   if (!user) {
     user = {
       id: crypto.randomUUID(),
@@ -194,6 +195,7 @@ async function devLoginResponse(req: Request): Promise<Response> {
       emailVerified: true,
       firstName: 'Dev',
       lastName: 'User',
+      avatarUrl: undefined,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     }
@@ -563,7 +565,9 @@ async function routeRequest(req: Request): Promise<Response> {
     if (rateLimitResponse) return withSecurityHeaders(rateLimitResponse, req)
 
     const keyAuth = apiKeyMiddleware.authenticate(req)
-    if (keyAuth.error) {
+    // `!== undefined` (not truthiness) so TS narrows ApiKeyAuthResult to the
+    // success member — `error: string` on the failure branch can be falsy.
+    if (keyAuth.error !== undefined) {
       return withSecurityHeaders(jsonResponse({ error: keyAuth.error }, 401, req), req)
     }
     // Same validation + PostGrid pipeline as the interactive web route.
@@ -572,7 +576,9 @@ async function routeRequest(req: Request): Promise<Response> {
 
   if (url.pathname === '/api/v1/postcards' && req.method === 'GET') {
     const keyAuth = apiKeyMiddleware.authenticate(req)
-    if (keyAuth.error) {
+    // `!== undefined` (not truthiness) so TS narrows ApiKeyAuthResult to the
+    // success member — `error: string` on the failure branch can be falsy.
+    if (keyAuth.error !== undefined) {
       return withSecurityHeaders(jsonResponse({ error: keyAuth.error }, 401, req), req)
     }
     const limitParam = parseInt(new URL(req.url).searchParams.get('limit') ?? '50', 10)
@@ -593,7 +599,9 @@ async function routeRequest(req: Request): Promise<Response> {
 
   if (url.pathname.match(/^\/api\/v1\/postcards\/[^/]+$/) && req.method === 'GET') {
     const keyAuth = apiKeyMiddleware.authenticate(req)
-    if (keyAuth.error) {
+    // `!== undefined` (not truthiness) so TS narrows ApiKeyAuthResult to the
+    // success member — `error: string` on the failure branch can be falsy.
+    if (keyAuth.error !== undefined) {
       return withSecurityHeaders(jsonResponse({ error: keyAuth.error }, 401, req), req)
     }
     const id = url.pathname.split('/')[4]

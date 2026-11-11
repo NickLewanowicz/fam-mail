@@ -76,6 +76,10 @@ export class OIDCService {
     )
 
     const claims = tokens.claims()
+    if (!claims) {
+      // openid-client returns undefined when the provider omits the ID token
+      throw new Error('OIDC token response did not include ID token claims')
+    }
 
     const userInfo: Record<string, unknown> = await client.fetchUserInfo(
       this.config,

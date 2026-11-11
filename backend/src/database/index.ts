@@ -572,10 +572,10 @@ export class Database {
       `);
       stmt.run(
         data.id,
-        data.userId || data.user_id,
+        data.userId || data.user_id || null,
         data.token,
         data.refreshToken || data.refresh_token || null,
-        data.expiresAt || data.expires_at
+        data.expiresAt || data.expires_at || null
       );
     } catch (error) {
       throw new DatabaseError("Failed to insert session", error);
