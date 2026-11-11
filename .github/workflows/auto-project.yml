@@ -34,7 +34,7 @@ jobs:
       # step so the check is green (skipped) instead of permanently red.
       - name: Add to project (skipped until PROJECT_TOKEN secret is set)
         if: ${{ env.PROJECT_TOKEN != '' }}
-        uses: actions/add-to-project@v1.0.2
+        uses: actions/add-to-project@v2.0.1
         with:
           project-url: https://github.com/users/NickLewanowicz/projects/4
           github-token: ${{ secrets.PROJECT_TOKEN }}
