@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useCallback, useRef, useState } from 'react'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { fileToDataUrl } from '../../utils/imageData'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -12,6 +12,19 @@ import { InlineMessageEditor } from './InlineMessageEditor'
 import { InlineAddressForm } from './InlineAddressForm'
 
 const MAX_PHOTO_SIZE = 10 * 1024 * 1024
+
+/**
+ * ISSUE-0123: headless Chromium (Playwright captures / CI) ignores
+ * `backface-visibility: hidden` on composited 3D layers, so the card's
+ * inactive face bleeds through the active one — mirrored — in committed
+ * screenshots. We keep the 400ms rotateY flip untouched, but once the flip
+ * settles we stop relying on backface culling alone and hard-hide the face
+ * that is facing away (opacity 0). In headed browsers this is invisible
+ * (culling already hides that face); in capture environments it removes the
+ * bleed-through. Only opacity is used — `visibility: hidden` would also
+ * change hit-testing and keyboard focus, which the interactive flip relies on.
+ */
+const FLIP_SETTLE_MS = T.flip.duration * 1000 + 50
 
 const SIZE_LABELS: Record<PostcardSize, string> = {
   '6x4': '6×4″',
@@ -44,6 +57,21 @@ export function PostcardPreview({
   const [editingAddress, setEditingAddress] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
   const reduce = useReducedMotion()
+
+  // True when no flip animation is in flight. On mount (no animation yet)
+  // the resting state is already settled; the layout effect below only arms
+  // it on showBack changes so both faces stay painted during the flip.
+  const [flipSettled, setFlipSettled] = useState(true)
+  const firstRender = useRef(true)
+  useLayoutEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    setFlipSettled(false)
+    const timer = setTimeout(() => setFlipSettled(true), FLIP_SETTLE_MS)
+    return () => clearTimeout(timer)
+  }, [showBack])
 
   const isPhotoActive = activeZone === 'photo'
   const isMessageActive = activeZone === 'message'
@@ -170,13 +198,18 @@ export function PostcardPreview({
         >
           {/* Front */}
           <div
+            data-testid="preview-front"
             className={`absolute inset-0 rounded-lg overflow-hidden transition-shadow duration-200 ${
               isPhotoActive ? 'shadow-xl ring-2 ring-warm-ring' : 'shadow-lg'
             } ${isPhotoActive ? 'cursor-pointer' : ''}`}
             style={{
               backfaceVisibility: 'hidden',
-              // Reduced motion: crossfade faces instead of rotateY
-              opacity: reduce ? (showBack ? 0 : 1) : 1,
+              // Reduced motion: crossfade faces instead of rotateY.
+              // Full motion: hide the resting inactive face for capture
+              // environments where backface culling is not honored (0123).
+              opacity: reduce
+                ? (showBack ? 0 : 1)
+                : (flipSettled && showBack ? 0 : 1),
               transition: reduce ? 'opacity 150ms linear' : undefined,
             }}
             {...getRootProps()}
@@ -239,6 +272,7 @@ export function PostcardPreview({
 
           {/* Back */}
           <div
+            data-testid="preview-back"
             className="absolute inset-0 rounded-lg overflow-hidden shadow-lg bg-paper"
             style={reduce
               ? {
@@ -246,7 +280,12 @@ export function PostcardPreview({
                   opacity: showBack ? 1 : 0,
                   transition: 'opacity 150ms linear',
                 }
-              : { backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+              : {
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
+                  // At rest the inactive face is hard-hidden (ISSUE-0123)
+                  opacity: flipSettled && !showBack ? 0 : 1,
+                }}
           >
             <div className="h-full flex relative">
               {/* Message area */}
