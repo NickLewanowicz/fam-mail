@@ -142,12 +142,13 @@ The backend process loads `.env` from the **`backend/`** package directory when 
 cp backend/.env.example backend/.env
 ```
 
-Edit `backend/.env`. Minimum for the web UI and API:
+Edit `backend/.env`. Minimum for the web UI and API (when running outside Docker, also set `DATABASE_PATH=./data/fammail.db` — the default `/data/fammail.db` only exists inside the container):
 
 ```env
 POSTGRID_MODE=test
 POSTGRID_TEST_API_KEY=your_test_key
 POSTGRID_LIVE_API_KEY=your_live_key
+DATABASE_PATH=./data/fammail.db
 
 OIDC_ISSUER_URL=https://accounts.google.com/.well-known/openid-configuration
 OIDC_CLIENT_ID=your_google_client_id
