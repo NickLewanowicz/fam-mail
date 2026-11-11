@@ -15,7 +15,7 @@
     "imapflow": "^1.2.4",
     "isomorphic-dompurify": "^2.34.0",
     "jose": "^5.9.6",
-    "marked": "^17.0.0",
+    "marked": "^18.1.2",
     "openid-client": "^6.1.0"
   },
   "devDependencies": {
