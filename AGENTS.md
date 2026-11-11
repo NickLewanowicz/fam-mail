@@ -13,7 +13,7 @@ Fam-mail is a web application for sending **physical postcards** via [PostGrid](
 | Backend | `backend/` | Manual HTTP routing (no framework), SQLite, PostGrid, OIDC → JWT |
 | Frontend | `frontend/` | React Router v7, Tailwind + **DaisyUI 5**, wizard-based postcard builder |
 | Monorepo | `pnpm-workspace.yaml` | Always **pnpm**, never npm or yarn |
-| Database | `DATABASE_PATH` (default `./data/fam-mail.db`) | SQLite |
+| Database | `DATABASE_PATH` (default `/data/fammail.db` — Docker; set `./data/fammail.db` for bare-metal dev) | SQLite |
 | CI | `.github/workflows/ci.yml` | GitHub Actions |
 | Docs | `docs/` | Architecture, deployment, contributing |
 
@@ -74,7 +74,7 @@ Detailed matrices and field rules: `.claude/skills/postcard-validation/SKILL.md`
 - **react-hook-form + zod is the standard for multi-field forms** (address forms); plain controlled inputs remain fine for 1–2-field forms (country picker, login). Zod address schemas should mirror backend validation. (ADR 0001)
 - Wizard steps live under `frontend/src/components/wizard/` (e.g. photo, message, address, review); postcard preview under `frontend/src/components/postcard/`.
 - **UI layering** (ADR 0001): DaisyUI for styled primitives and theme tokens; `radix-ui` headless primitives for dialogs/popovers/menus; never add a second styled component kit.
-- **Message editing** uses TipTap 3 constrained to the message HTML contract (ADR 0001, Phase 3); editor output is untrusted input — server-side DOMPurify (`backend/src/utils/htmlSanitizer.ts`) is the only sanitization authority.
+- **Message editing** uses a Markdown textarea + toolbar (`frontend/src/components/postcard/InlineMessageEditor.tsx`) rendered to HTML via `marked`; editor output is untrusted input — server-side DOMPurify (`backend/src/utils/htmlSanitizer.ts`) is the only sanitization authority.
 - **File uploads** go through react-dropzone + shared validation — do not hand-roll drag/drop or FileReader plumbing.
 - **Destructive actions** use `ConfirmDialog` (radix-ui AlertDialog, `frontend/src/components/ui/ConfirmDialog.tsx`); user feedback uses sonner toasts — no `window.confirm`, no per-page error banners.
 - Architecture decisions live in `docs/adr/` — read ADR 0001 before adding UI dependencies.
